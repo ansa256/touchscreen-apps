@@ -8,15 +8,6 @@
  */
 #include "stm32f30x.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
-#ifdef __cplusplus
-}
-#endif
-
 #include "Pages.h"
 
 /**

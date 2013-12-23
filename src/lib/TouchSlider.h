@@ -19,8 +19,8 @@
  * @{
  */
 /** @addtogroup Slider
-  * @{
-  */
+ * @{
+ */
 /**
  * @name SliderOptions
  * Options for TouchSlider::initSlider() - they can be or-ed together
@@ -110,9 +110,10 @@ public:
 	void setBarColor(uint16_t barColor);
 	void setBarThresholdColor(uint16_t barThresholdColor);
 	void printCaption(void);
-	uint16_t printValue(void);
+	int printValue(void);
 
 private:
+
 	// Start of list of touch slider
 	static TouchSlider * sListStart;
 	/*

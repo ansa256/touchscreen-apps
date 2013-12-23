@@ -45,17 +45,6 @@ void allLedsOff(void) {
 	STM_EVAL_LEDOff(LED9);
 	STM_EVAL_LEDOff(LED5);
 }
-void toggleAllLeds(void) {
-	/* LEDs Off */
-	STM_EVAL_LEDOff(LED3);
-	STM_EVAL_LEDOff(LED6);
-	STM_EVAL_LEDOff(LED7);
-	STM_EVAL_LEDOff(LED4);
-	STM_EVAL_LEDOff(LED10);
-	STM_EVAL_LEDOff(LED8);
-	STM_EVAL_LEDOff(LED9);
-	STM_EVAL_LEDOff(LED5);
-}
 
 void CycleLEDs(void) {
 	/* Toggle LD3 */

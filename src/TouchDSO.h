@@ -42,18 +42,21 @@ void autoACZeroCalibration(void);
 void initAcquisition(void);
 void startAcquisition(void);
 void readADS7846Channels(void);
-void acquireDataByDMA(void);
 
 float getRawAttenuationFactor(int rangeIndex);
 void setOffsetGridCount(int aOffsetGridCount);
 void computeAutoTrigger(void);
 void computeAutoRange(void);
 void computeAutoOffset(void);
+
+void computePeriodFrequency(void);
+
 void setLevelAndHysteresis(int aRawTriggerValue, int aRawTriggerHysteresis);
 bool changeInputRange(int aValue);
 void adjustPreTriggerBuffer(uint16_t* tTempBuffer);
 uint16_t computeNumberOfSamplesToTimeout(uint16_t aTimebaseIndex);
 void findMinMaxAverage(void);
+bool setInputRange(int aValue);
 
 void drawGridLinesWithHorizLabelsAndTriggerLine(uint16_t aColor);
 //void drawHorizontalLineLabels(void);
@@ -65,14 +68,13 @@ void printTriggerInfo(void);
 
 void printInfo(void);
 void clearInfo(const uint8_t aInfoLineNumber);
-void drawDataBuffer(uint16_t aColor, uint16_t *aDataBufferPointer, uint16_t aClearBeforeColor);
+void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, uint16_t aClearBeforeColor);
 void drawRemainingDataBufferValues(uint16_t aDrawColor);
 
 void initScaleValuesForDisplay(void);
 void testDSOConversions(void);
 int getDisplayFrowRawInputValue(int aAdcValue);
 int getDisplayFrowMultipleRawValues(uint16_t * aAdcValuePtr, int aCount);
-int getXScaleCorrectedValue(int aValue);
 
 void initRawToDisplayFactors(void);
 int getRawOffsetValueFromGridCount(int aCount);
@@ -90,30 +92,22 @@ float getFloatFromDisplayValue(uint8_t aValue);
 #define TIMING_GRID_WIDTH (DSO_DISPLAY_WIDTH / 10) // 32
 #define DISPLAY_AC_ZERO_OFFSET_GRID_COUNT (-3)
 #define DISPLAY_VALUE_FOR_ZERO (DSO_DISPLAY_HEIGHT - 2) // Zero line is not exactly at bottom of display to improve readability
-
 #define INFO_UPPER_MARGIN 1
 #define INFO_LEFT_MARGIN 4
-
-#define SLIDER_VPICKER_X (22 * FONT_WIDTH)
-#define SLIDER_TLEVEL_X (19 * FONT_WIDTH)
-
-#define TRIGGER_LEVEL_INFO_LARGE_X INFO_LEFT_MARGIN + (11 * FONT_WIDTH)
-#define TRIGGER_LEVEL_INFO_SMALL_X (INFO_LEFT_MARGIN + (33 * FONT_WIDTH))
-
-#define TRIGGER_HIGH_DISPLAY_OFFSET 7 // for trigger state line
 
 /******************************
  * Measurement control values
  ******************************/
 #define CHANGE_REQUESTED_TIMEBASE 0x01
 
-#define TIMEBASE_FAST_MODES 5 // first modes are fast free running modes
-#define TIMEBASE_INDEX_DRAW_WHILE_ACQUIRE 15 // min index where chart is drawn while buffer is filled
-#define TIMEBASE_NUMBER_OF_ENTRIES 19 // the number of different timebase provided
-#define TIMEBASE_NUMBER_OF_EXCACT_ENTRIES 6 // the number of exact float value for timebase because of granularity of clock division
-#define TIMEBASE_NUMBER_OF_XSCALE_CORRECTION 3  // number of timebase which are simulated by display XSale factor
-#define TIMEBASE_INDEX_MILLIS 9 // min index to switch to ms instead of us display
-#define TIMEBASE_INDEX_START_VALUE 10
+#define TIMEBASE_FAST_MODES 7 // first modes are fast DMA modes
+#define TIMEBASE_INDEX_DRAW_WHILE_ACQUIRE 17 // min index where chart is drawn while buffer is filled
+#define TIMEBASE_NUMBER_OF_ENTRIES 21 // the number of different timebase provided - 1. entry is not uses until interleaved acquisition is implemented
+#define TIMEBASE_NUMBER_OF_EXCACT_ENTRIES 8 // the number of exact float value for timebase because of granularity of clock division
+#define TIMEBASE_NUMBER_OF_XSCALE_CORRECTION 5  // number of timebase which are simulated by display XSale factor
+#define TIMEBASE_INDEX_MILLIS 11 // min index to switch to ms instead of ns display
+#define TIMEBASE_INDEX_MICROS 2 // min index to switch to us instead of ns display
+#define TIMEBASE_INDEX_START_VALUE 12
 extern const uint8_t xScaleForTimebase[TIMEBASE_NUMBER_OF_XSCALE_CORRECTION];
 extern const uint16_t TimebaseDivValues[TIMEBASE_NUMBER_OF_ENTRIES];
 extern const float TimebaseExactDivValues[TIMEBASE_NUMBER_OF_EXCACT_ENTRIES];
@@ -169,8 +163,9 @@ struct MeasurementControlStruct { // Used by:
 	volatile bool TriggerPhaseJustEnded; // ISR -> main loop - signal for draw while acquire
 
 	// Read phase for ISR and single shot mode see SEGMENT_...
-	uint8_t ActualPhase; // ISR
-	bool SingleShotMode; // ISR + GUI
+	volatile uint8_t ActualPhase; // ISR
+	volatile bool isSingleShotMode; // ISR + GUI
+	volatile bool doPretriggerCopyForDisplay; // signal from loop to ISR to copy the pre trigger area for display - useful for single shot
 
 	// Trigger
 	bool TriggerSlopeRising; // ISR
@@ -186,11 +181,12 @@ struct MeasurementControlStruct { // Used by:
 
 	// computed values from display buffer
 	float PeriodMicros;
-	uint16_t FrequencyHertz;
+	uint32_t FrequencyHertz;
 
 	// Statistics (for auto range/offset/trigger)
 	uint16_t RawValueMin;
 	uint16_t RawValueMax;
+
 	uint16_t RawValueAverage;
 
 	// Timebase
@@ -198,8 +194,6 @@ struct MeasurementControlStruct { // Used by:
 	int8_t NewIndexTimebase; // set by touch handler
 	int8_t IndexTimebase;
 	uint8_t IndexADCInputMUXChannel;
-
-	int actualDSOReadingACZeroForInputRange; // factor according to input range = RawDSOReadingACZero * RawAttenuationFactor[MeasurementControl.IndexInputRange];
 
 	// Range
 	bool RangeAutomatic; // RANGE_MODE_AUTOMATIC, MANUAL
@@ -248,7 +242,7 @@ struct DataBufferStruct {
 	// to detect end of acquisition in interrupt service routine
 	volatile uint16_t * DataBufferEndPointer; // pointer to last valid data in databuffer | Thread -> ISR (for stop)
 
-	// Pointer for horizontal scrolling
+	// Pointer for horizontal scrolling, initialized with value 2 divs before trigger point to show pre trigger values
 	uint16_t * DataBufferDisplayStart;
 	/**
 	 * consists of 2 regions - first pre trigger region, second data region
@@ -262,8 +256,11 @@ extern struct DataBufferStruct DataBufferControl;
  * ADC channel infos
  */
 #define START_ADC_CHANNEL_INDEX 0  // see also ChannelSelectButtonString
+#define ADC_CHANNEL_NO_ATTENUATOR_INDEX 2  // see also ChannelSelectButtonString
+#define ADC_CHANNEL_NO_ATTENUATOR_MIN_RANGE_INDEX 1
+#define ADC_CHANNEL_NO_ATTENUATOR_MAX_RANGE_INDEX 5
 #define ADC_CHANNEL_COUNT 6 // The number of ADC channel
-extern char * ADCInputMUXChannelStrings[ADC_CHANNEL_COUNT];
+extern const char * const ADCInputMUXChannelStrings[ADC_CHANNEL_COUNT];
 extern char ADCInputMUXChannelChars[ADC_CHANNEL_COUNT];
 extern uint8_t ADCInputMUXChannels[ADC_CHANNEL_COUNT];
 
@@ -280,12 +277,19 @@ extern uint8_t ADCInputMUXChannels[ADC_CHANNEL_COUNT];
 #define DRAW_MODE_LINE 0x01    // draw as line - otherwise draw only measurement pixel
 #define DRAW_MODE_TRIGGER 0x02 // Trigger state is displayed
 #define SCALE_CHANGE_DELAY_MILLIS 2000
-#define DRAW_HISTORY_LEVELS 4
+#define DRAW_HISTORY_LEVELS 4 // 0 = No history, 3 = history high
 struct DisplayControlStruct {
 	uint8_t TriggerLevelDisplayValue; // For clearing old line of manual trigger level setting
 	uint8_t DisplayBufferDrawMode;
 	uint8_t DisplayMode;
-	int8_t XScale; // 2 means 2 Pixel per data value, -2 means 2 data values per pixel
+	/**
+	 * XScale > 1 : expansion by factor XScale
+	 * XScale == 1 : expansion by 1.5
+	 * XScale == 0 : identity
+	 * XScale == -1 : compression by 1.5
+	 * XScale < -1 : compression by factor -XScale
+	 */
+	int8_t XScale; // Factor for X Data expansion(>0) or compression(<0). 2->display 1 value 2 times -2->display average of 2 values etc.
 	uint16_t DisplayIncrementPixel; // corresponds to XScale
 	uint16_t EraseColors[DRAW_HISTORY_LEVELS];
 	uint16_t EraseColor;

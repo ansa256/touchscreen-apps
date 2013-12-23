@@ -36,17 +36,17 @@
  * B	|5	|HY32D		|WR
  * B	|6	|I2C		|CLK
  * B	|7	|I2C		|SDA
- * B	|8	|CAN		|RX - not used yet
- * B	|9	|CAN		|TX - not used yet
+ * B	|8	|IR			|IR input (CAN RX)
+ * B	|9	|IR			|IR LED (CAN TX)
  * B	|10	|HY32D		|RD
- * B	|13-15	|SPI2	|not used yet
+ * B	|13-15|SPI2	|not used yet
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
  * C	|0	|ADC2		|Channel 6 / AccuCap-Input 1
  * C	|1	|ADC2		|Channel 7 / AccuCap-Input 2
  * C	|4	|SD CARD	|INT input / CardDetect
  * C	|5	|SD CARD	|CS
  * C	|6	|TIM3		|Tone signal output
- * C	|7,8,9	|DSO	|Attenuator control
+ * C	|7,8,9|DSO	|Attenuator control
  * C	|10	|USART		|TX - not used yet
  * C	|11	|USART		|RX - not used yet
  * C	|12	|DSO		|AC mode of preamplifier
@@ -64,6 +64,7 @@
  * E	|5	|LSM303		|INT input 2
  * E	|6	|		 	|
  * E	|7	|DEBUG		|
+ * E	|13 |LED		|
  * E	|8-15|LED		|Onboard LEDs
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
  * F full	|0,1|Clock		|Clock generator
@@ -80,11 +81,16 @@
  *
  * Timer	|Function
  * ---------|--------
+ * 1	    |
  * 2	    | Frequency synthesizer
  * 3	    | PWM tone generation -> Pin C6
  * 4	    | PWM backlight led -> Pin F6
  * 6	    | ADC Timebase
  * 7	    | DAC Timebase
+ * 8	    |
+ * 15		| IR handler Interrupt
+ * 16		|
+ * 17		| PWM IR generation -> Pin B9
  *
  *
  *  Interrupt priority (lower value is higher priority)
@@ -94,13 +100,13 @@
  * Prio	| ISR Nr| Name  			| Usage
  * -----|---------------------------|-------------
  * 0 1	| 0x22 | ADC1_2_IRQn		| ADC EOC
- * 0 1	| 0x1B | DMA1_Channel1_IRQn	| ADC DMA
+ * 0 3	| 0x16 | EXTI0				| User button - for screenshots
  * 1 0	| 0x0F | SysTick_IRQn		| SysTick
  * 1 0	| 0x2A | USBWakeUp_IRQn		|
  * 2 0	| 0x24 | USB_LP_CAN1_RX0_IRQn|
- * 3 3	| 0x16 | EXTI0				| User button
+ * 2 3	| 0x17 | EXTI1				| Touch
+ * 3 0	| 0x1B | DMA1_Channel1_IRQn	| ADC DMA
  * 3 3	| 0x46 | TIM6_DAC_IRQn		| ADC Timer - not used yet
- * 3 3	| 0x17 | EXTI1				| Touch
  * 3 3	| 0x1A | EXTI4				| MMC card detect
  *
  */
@@ -129,6 +135,7 @@ typedef enum {
 
 #define Set_DebugPin() (DEBUG_GPIO_PORT->BSRR = DEBUG_PIN)
 #define Reset_DebugPin() (DEBUG_GPIO_PORT->BRR = DEBUG_PIN)
+#define Toggle_DebugPin() (DEBUG_GPIO_PORT->ODR ^= GPIO_Pin_7)
 void Debug_IO_initalize(void);
 
 #define HY32D_CS_PIN                          GPIO_Pin_0
@@ -192,6 +199,7 @@ uint32_t ADC_getCFGR(void);
 void DSO_initializeAttenuatorAndAC(void);
 void DSO_setAttenuator(uint8_t aValue);
 void DSO_setACRange(bool aValue);
+bool DSO_getACRange(void);
 
 // ADC timer
 void ADC_initalizeTimer6();
@@ -219,10 +227,13 @@ extern uint16_t sReading3Volt; // Approximately 4096
 void SPI1_initialize(void);
 void SPI1_setPrescaler(uint16_t aPrescaler);
 uint16_t SPI1_getPrescaler(void);
-uint8_t SPI1_sendReceive(uint8_t byte);
 uint8_t SPI1_sendReceiveFast(uint8_t byte);
 
 //RTC
+void RTC_setMagicNumber(void);
+bool RTC_checkMagicNumber(void);
+
+extern bool RTC_DateIsValid; // true if year != 0
 void RTC_initialize_LSE(void);
 DWORD get_fattime(void);
 void fillTimeStructure(struct tm *aTimeStructurePtr);
@@ -236,16 +247,16 @@ uint32_t RTC_ReadBackupDataRegister(uint8_t aIndex);
 
 // Misc
 __STATIC_INLINE uint32_t getSysticValue(void) {
-	return SysTick ->VAL;
+	return SysTick->VAL;
 }
 __STATIC_INLINE uint32_t getSysticReloadValue(void) {
-	return SysTick ->LOAD;
+	return SysTick->LOAD;
 }
 __STATIC_INLINE void clearSystic(void) {
-	SysTick ->VAL = 0;
+	SysTick->VAL = 0;
 }
 __STATIC_INLINE bool hasSysticCounted(void) {
-	return (SysTick ->CTRL & SysTick_CTRL_COUNTFLAG_Msk);
+	return (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk);
 }
 
 // Tone
@@ -269,7 +280,7 @@ void setTimeoutLED(void);
 void resetTimeoutLED(void);
 
 void DAC_init(void);
-void DAC_Timer_initialize(uint32_t aPeriod);
+void DAC_Timer_initialize(uint32_t aAutoreload);
 void DAC_Timer_SetReloadValue(uint32_t aReloadValue);
 void DAC_Start(void);
 void DAC_Stop(void);
@@ -278,7 +289,11 @@ void DAC_ModeNoise(void);
 void DAC_TriangleAmplitude(unsigned int aAmplitude);
 void DAC_SetOutputValue(uint16_t aOutputValue);
 
-void HIRES_Timer_initialize(uint32_t aPeriod);
+void IR_Timer_initialize(uint16_t aAutoreload);
+void IR_Timer_Start(void);
+void IR_Timer_Stop(void);
+
+void HIRES_Timer_initialize(uint32_t aAutoreload);
 void HIRES_Timer_SetReloadValue(uint32_t aReloadValue);
 void HIRES_Timer_Start(void);
 uint32_t HIRES_Timer_Stop(void);

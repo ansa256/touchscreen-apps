@@ -5,7 +5,7 @@
  * @author  Armin Joachimsmeyer
  * armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
- * @version 1.0.0
+ * @version 1.5.0
  *
  */
 #ifndef HY32D_h
@@ -53,6 +53,7 @@ extern "C" {
 extern uint8_t DisplayBuffer1[DISPLAY_WIDTH];
 extern uint8_t DisplayBuffer2[DISPLAY_WIDTH];
 extern bool isInitializedHY32D;
+extern volatile uint32_t sDrawLock;
 
 void initHY32D(void);
 void setDimDelayMillis(int32_t aTimeMillis);
@@ -74,23 +75,24 @@ void drawRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color
 void drawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color);
 void fillCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color);
 
-uint16_t drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color);
-uint16_t drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color);
+int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color);
+int drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color);
 int drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer, uint8_t aSize, uint16_t aColor,
 		uint16_t aBackgroundColor);
-uint16_t drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color);
+int drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color);
 
 void clearDisplay(uint16_t color);
 void drawPixel(uint16_t x0, uint16_t y0, uint16_t color);
 uint16_t readPixel(uint16_t aXPos, uint16_t aYPos);
 void fillRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
-uint16_t drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, char *s, uint8_t size, uint16_t color, uint16_t bg_color);
+int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const char *s, uint8_t size, uint16_t color, uint16_t bg_color);
 void storeScreenshot(void);
 #ifdef __cplusplus
 }
 #endif
 
 // Tests
+void initalizeDisplay2(void);
 void setGamma(int aIndex);
 void testHY32D(int aLoopCount);
 void drawGrayscale(uint16_t aXPos, uint16_t tYPos, uint16_t aHeight);

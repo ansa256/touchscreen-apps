@@ -64,23 +64,32 @@ typedef struct {
 } CAL_MATRIX;
 
 #define ADS7846_CHANNEL_COUNT 8 // The number of ADS7846 channel
-extern char * ADS7846ChannelStrings[ADS7846_CHANNEL_COUNT];
-extern char ADS7846ChannelChars[ADS7846_CHANNEL_COUNT];
+extern const char * const ADS7846ChannelStrings[ADS7846_CHANNEL_COUNT];
+extern const char ADS7846ChannelChars[ADS7846_CHANNEL_COUNT];
 // Channel number to text mapping
 extern unsigned char ADS7846ChannelMapping[ADS7846_CHANNEL_COUNT];
 
 class ADS7846 {
 public:
+
 	TP_POINT mTouchActualPosition; // calibrated (screen) position
-	TP_POINT mTouchActualPositionRaw; // raw pos (touch panel)
-	TP_POINT mTouchLastCalibratedPosition; // last calibrated raw pos
-	CAL_MATRIX tp_matrix; // calibrate matrix
-	uint8_t mPressure; // touch panel pressure
 	TP_POINT mTouchFirstPosition;
 	TP_POINT mTouchLastPosition;
+	uint8_t mPressure; // touch panel pressure
 	uint32_t mLongTouchTimeoutMillis;
+	bool (*mPeriodicTouchCallback)(int const, int const); // if NULL then swipe recognition else call callback for slider and autorepeat buttons - return parameter not yet used
 	uint32_t mPeriodicCallbackPeriodMillis;
+	bool (*mEndTouchCallback)(uint32_t const, int const, int const);
+	bool mEndTouchCallbackEnabled;
+	volatile bool sTouchReleaseProcessed; // Flag for ISR and periodic timer callback to call mEndTouchCallback only once per touch
 
+	/**
+	 * This function is indirectly called by systick handler with 3. parameter true or
+	 * on end of touch with 3. parameter false if not called by systick before
+	 * so it is guaranteed that it is called once per touch
+	 * The return parameter of the callback function is not used yet
+	 */
+	bool (*mLongTouchCallback)(int const, int const);
 	volatile bool ADS7846TouchActive; // is true as long as touch lasts
 	volatile bool ADS7846TouchStart; // is true once for every touch - independent from calling mLongTouchCallback
 	volatile uint32_t ADS7846TouchStartMillis; // start of touch
@@ -104,17 +113,25 @@ public:
 	void rd_data(void);
 	void rd_data(int aOversampling);
 	uint16_t readChannel(uint8_t channel, bool use12Bit, bool useDiffMode, int numberOfReadingsToIntegrate);
-	void registerLongTouchCallback(bool (*aLongTouchCallback)(int const, int const, bool const),
-			const uint32_t aLongTouchTimeoutMillis);
+
+	void registerLongTouchCallback(bool (*aLongTouchCallback)(int const, int const), const uint32_t aLongTouchTimeoutMillis);
 	void registerPeriodicTouchCallback(bool (*aPeriodicTouchCallback)(int const, int const), const uint32_t aCallbackPeriodMillis);
 	void registerEndTouchCallback(bool (*aEndTouchCallback)(uint32_t const, int const, int const));
+	void setEndTouchCallbackEnabled(bool aEndTouchCallbackEnabled);
 	void setCallbackPeriod(const uint32_t aCallbackPeriod);
 	void printTPData(int x, int y, uint16_t aColor, uint16_t aBackColor);
 	float getSwipeAmount(void);
-private:
+
+	bool (* getEndTouchCallback(void))(uint32_t const, int const, int const);
+
+private	:
+	TP_POINT mTouchActualPositionRaw; // raw pos (touch panel)
+	TP_POINT mTouchLastCalibratedPositionRaw;// last calibrated raw pos - to avoid calibrating the same position twice
+	CAL_MATRIX tp_matrix;// calibrate matrix
+
 	bool setCalibration(CAL_POINT *lcd, CAL_POINT *tp);
-	bool writeCalibration(CAL_MATRIX aMatrix);
-	bool readCalibration(CAL_MATRIX *aMatrix);
+	void writeCalibration(CAL_MATRIX aMatrix);
+	void readCalibration(CAL_MATRIX *aMatrix);
 	void calibrate(void);
 };
 

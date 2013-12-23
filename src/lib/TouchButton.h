@@ -10,6 +10,8 @@
  * armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
+ *
+ * 	40 Bytes per button on 32Bit ARM
  */
 
 #ifndef TOUCHBUTTON_H_
@@ -24,11 +26,13 @@
  * @{
  */
 
-// 45 for AccuCap/settings/Numberpad
-#define NUMBER_OF_BUTTONS_IN_POOL 45
+// 45 needed for AccuCap/settings/Numberpad
+// 47 needed for DSO/settings/calibrate/Numberpad
+#define NUMBER_OF_BUTTONS_IN_POOL 47
 
 #define BUTTON_DEFAULT_SPACING 16
 #define BUTTON_DEFAULT_SPACING_HALF 8
+#define BUTTON_DEFAULT_SPACING_QUARTER 4
 
 #define BUTTON_WIDTH_2 152 // for 2 buttons horizontal - 19 characters
 #define BUTTON_WIDTH_2_POS_2 (BUTTON_WIDTH_2 + BUTTON_DEFAULT_SPACING)
@@ -56,6 +60,8 @@
 #define BUTTON_WIDTH_6_POS_6 (DISPLAY_WIDTH - BUTTON_WIDTH_6)
 
 #define BUTTON_WIDTH_8 33 // for 8 buttons horizontal
+#define BUTTON_WIDTH_10 28 // for 10 buttons horizontal
+
 #define BUTTON_HEIGHT_4 48 // for 4 buttons vertical
 #define BUTTON_HEIGHT_4_LINE_2 (BUTTON_HEIGHT_4 + BUTTON_DEFAULT_SPACING)
 #define BUTTON_HEIGHT_4_LINE_3 (2*(BUTTON_HEIGHT_4 + BUTTON_DEFAULT_SPACING))
@@ -94,6 +100,7 @@
 #define BUTTON_TOUCHED_AUTOREPEAT 2 // an autorepeat button was touched
 
 int CheckTouchGeneric(bool aCheckAlsoPlainButtons);
+
 /*
  * helper variables for swipe recognition with longTouchHandler and endTouchHandler
  */
@@ -107,7 +114,7 @@ extern volatile bool sCheckButtonsForEndTouch;
 
 #define GUI_NO_TOUCH 0			// No touch happened
 #define GUI_TOUCH_NO_MATCH 1	// Touch happened but no Gui element matched
-#define GUI_TOUCH_MATCH 2		// Touch happened and Gui element matched
+#define GUI_TOUCH_MATCH 2		// Touch happened and Gui element matched (was touched)
 class TouchButton {
 public:
 

@@ -5,7 +5,7 @@
  * @author Armin Joachimsmeyer
  *      Email:   armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
- * @version 1.0.0
+ * @version 1.5.0
  */
 
 #include "misc.h"
@@ -28,6 +28,8 @@ extern "C" {
 
 #include "Pages.h"
 
+int sLockCount = 0; // counts skipped drawChars because of display locks
+
 /*
  * buffers for any purpose...
  */
@@ -38,6 +40,7 @@ uint16_t FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER];
  * Strings for any purpose...
  */
 const char StringEmpty[] = "";
+const char StringSpace[] = " ";
 
 // Single character strings
 const char StringPlus[] = "+";
@@ -63,12 +66,16 @@ const char String7[] = "7";
 const char String8[] = "8";
 const char String9[] = "9";
 const char String10[] = "10";
+const char * const Number0To10Strings[11] = { String0, String1, String2, String3, String4, String5, String6, String7, String8,
+		String9, String10 };
+
 const char String20[] = "20";
 const char String50[] = "50";
 const char String100[] = "100";
 const char String200[] = "200";
 const char String500[] = "500";
 const char String1000[] = "1000";
+const char String1k[] = "1k";
 
 // miscellaneous strings
 const char StringOn[] = "on";
@@ -112,16 +119,16 @@ const char StringHour[] = "hour";
 const char StringMinute[] = "minute";
 const char StringMin[] = "min";
 const char StringSecond[] = "second";
-const char * DateStrings[] = { StringClock, StringSecond, StringMinute, StringHour, StringDay, StringMonth, StringYear };
+const char * const DateStrings[] = { StringClock, StringSecond, StringMinute, StringHour, StringDay, StringMonth, StringYear };
 
 /**
  * @brief  Reports the name of the source file and the source line number
  *         where the assert_param error has occurred.
  * @param  aFile: pointer to the source file name
  * @param  aLine: assert_param error line source number
- * @retval None
+ * @retval false
  */
-extern "C" void assert_failed(uint8_t* aFile, uint32_t aLine) {
+extern "C" bool assert_failed(uint8_t* aFile, uint32_t aLine) {
 	/* User can add his own implementation to report the file name and line number,
 	 ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
 	if (isInitializedHY32D) {
@@ -137,6 +144,7 @@ extern "C" void assert_failed(uint8_t* aFile, uint32_t aLine) {
 			delayMillis(500);
 		}
 	}
+	return false;
 }
 
 /**
@@ -148,15 +156,19 @@ extern "C" void assert_failed(uint8_t* aFile, uint32_t aLine) {
  * @param aLinkRegister
  * @param aMessage
  * @param aWrongParameter
+ * @retval false
+ *
  */
-extern "C" void assertFailedMessageParam(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, const char * aMessage,
-		int aWrongParameter) {
+extern "C" bool assertFailedParamMessage(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, int aWrongParameter,
+		const char * aMessage) {
 	/* User can add his own implementation to report the file name and line number,
 	 ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
 	if (isInitializedHY32D) {
 		char * tFile = (strrchr(const_cast<char*>((char*) aFile), '/') + 1);
 		snprintf(StringBuffer, sizeof StringBuffer, "%s on line: %lu\nfile: %s\nval: %#X %d LR=%#X", aMessage, aLine, tFile,
 				aWrongParameter, aWrongParameter, (unsigned int) aLinkRegister);
+		// reset lock (just in case...)
+		sDrawLock = 0;
 		drawMLText(0, ASSERT_START_Y, DISPLAY_WIDTH, ASSERT_START_Y + (4 * FONT_HEIGHT), StringBuffer, 1, COLOR_RED, COLOR_WHITE);
 		delayMillis(2000);
 	} else {
@@ -166,6 +178,12 @@ extern "C" void assertFailedMessageParam(uint8_t* aFile, uint32_t aLine, uint32_
 			/* Insert delay */
 			delayMillis(500);
 		}
+	}
+	return false;
+}
+extern "C" void errorMessage(const char * aMessage) {
+	if (isInitializedHY32D) {
+		drawMLText(0, ASSERT_START_Y, DISPLAY_WIDTH, ASSERT_START_Y + (4 * FONT_HEIGHT), aMessage, 1, COLOR_RED, COLOR_WHITE);
 	}
 }
 
@@ -251,6 +269,8 @@ extern "C" void FaultHandler(unsigned int * aFaultArgs) {
 		// makes only sense if != 0
 		tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, "AuxFSR=%lX\n", tAuxFaultStatusRegister);
 	}
+	// reset lock (just in case...)
+	sDrawLock = 0;
 	drawMLText(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
 	while (1) {
 	}

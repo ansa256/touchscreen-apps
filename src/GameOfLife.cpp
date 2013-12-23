@@ -82,7 +82,7 @@ void play_gol(void) {
 		}
 	}
 
-	//inc generation
+	//increment generation
 	if (++generation > GOL_MAX_GEN) {
 		init_gol();
 	}
@@ -200,7 +200,7 @@ void ClearScreenAndDrawGameOfLifeGrid(void) {
 }
 
 void drawGenerationText(void) {
-	uint16_t x;
+	int x;
 	//draw current generation
 	x = drawText(0, 0, (char*) "Gen.", 1, RGB(50,50,50), drawcolor[DEAD_COLOR]);
 	drawInteger(x, 0, (int) generation, 10, 1, RGB(50,50,50), drawcolor[DEAD_COLOR]);

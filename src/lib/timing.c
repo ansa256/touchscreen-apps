@@ -5,7 +5,7 @@
  * @author Armin Joachimsmeyer
  *      Email:   armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
- * @version 1.0.0
+ * @version 1.5.0
  *
  * Timing related functions like delays and systic handler
  */
@@ -45,7 +45,7 @@ volatile uint32_t MillisSinceBoot = 0;
 #define CALLBACK_ENTRIES_SIZE 11
 // array of pointer to timer-delay callback function
 void (*DelayCallbackPointer[CALLBACK_ENTRIES_SIZE])(void);
-volatile int32_t DelayCallbacMillis[CALLBACK_ENTRIES_SIZE] = { 0, 0, 0, 0, 0 };
+volatile int32_t DelayCallbackMillis[CALLBACK_ENTRIES_SIZE] = { 0, 0, 0, 0, 0 };
 
 /**
  * Sets timeout LED.
@@ -148,11 +148,11 @@ void delayMillis(int32_t aTimeMillis) {
 			TimingDelayForThread = aTimeMillis;
 			// wait for variable changed by systic handler
 			while (TimingDelayForThread != 0) {
-				// TODO future sleep here
+				// TODO FUTURE use sleep here
 				;
 			}
 		} else {
-			failParamMessage("delay in delay for thread mode", aTimeMillis);
+			failParamMessage(aTimeMillis, "delay in delay for thread mode");
 		}
 	} else {
 		int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
@@ -178,13 +178,13 @@ void delayMillis(int32_t aTimeMillis) {
 void registerDelayCallback(void (*aDelayCallback)(void), int32_t aTimeMillis) {
 	int i;
 	for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
-		if (DelayCallbacMillis[i] == 0) {
+		if (DelayCallbackMillis[i] == 0) {
 			DelayCallbackPointer[i] = aDelayCallback;
-			DelayCallbacMillis[i] = aTimeMillis;
+			DelayCallbackMillis[i] = aTimeMillis;
 			return;
 		}
 	}
-	failParamMessage("No more free callback entries", aDelayCallback);
+	failParamMessage(aDelayCallback,"No more free callback entries");
 }
 
 /**
@@ -194,7 +194,7 @@ void changeDelayCallback(void (*aDelayCallback)(void), int32_t aTimeMillis) {
 	int i;
 	for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
 		if (DelayCallbackPointer[i] == aDelayCallback) {
-			DelayCallbacMillis[i] = aTimeMillis;
+			DelayCallbackMillis[i] = aTimeMillis;
 			// entry found, job done
 			return;
 		}
@@ -258,7 +258,7 @@ bool isTimeoutSimple(void) {
 /**
  * Check if timeout period has expired. Displays a timeout message on screen if screen available.
  * @retval 1 if timeout period has expired, 0 else
- */bool isTimeoutVerbose(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, int32_t aDelayMillis) {
+ */bool isTimeoutVerbose(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, int32_t aMessageDisplayTimeMillis) {
 // get interrupt level
 	if (isTimeoutSimple()) {
 		if (isInitializedHY32D) {
@@ -267,7 +267,7 @@ bool isTimeoutSimple(void) {
 			tIndex += snprintf(StringBuffer, sizeof StringBuffer, "Timeout on line: %lu LR=%#X\nfile: %s", aLine,
 					(unsigned int) aLinkRegister, tFile);
 			drawMLText(0, 0, DISPLAY_WIDTH, 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
-			delayMillis(aDelayMillis);
+			delayMillis(aMessageDisplayTimeMillis);
 		}
 		return true;
 	}
@@ -296,9 +296,9 @@ void doOneSystic(void) {
 	 * delays with callback
 	 */
 	for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
-		if (DelayCallbacMillis[i] > 0) {
-			DelayCallbacMillis[i]--;
-			if (DelayCallbacMillis[i] == 0) {
+		if (DelayCallbackMillis[i] > 0) {
+			DelayCallbackMillis[i]--;
+			if (DelayCallbackMillis[i] == 0) {
 				DelayCallbackPointer[i]();
 			}
 		}
@@ -319,6 +319,7 @@ void doOneSystic(void) {
 }
 
 void SysTick_Handler(void) {
+	Toggle_DebugPin();
 	MillisSinceBoot++;
 	doOneSystic();
 }

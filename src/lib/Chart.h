@@ -12,6 +12,7 @@
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  *
+ * 	64 / 0x40 Bytes per button on 32Bit ARM
  */
 
 #ifndef CHART_H_
@@ -47,6 +48,9 @@ typedef union {
 	float FloatValue;
 } int_float_union;
 
+int adjustIntWithScaleFactor(int aValue, int aScaleFactor);
+float adjustFloatWithScaleFactor(float aValue, int aScaleFactor);
+
 class Chart {
 public:
 	Chart(void);
@@ -75,13 +79,14 @@ public:
 	bool drawChartData(const int16_t *aDataPointer, const int16_t * aDataEndPointer, const uint8_t aMode);
 	void drawGrid(void);
 
-	/***************
+	/*
 	 * X Axis
 	 */
 	void drawXAxis(const bool aClearLabelsBefore);
 
 	void setXGridSpacing(uint8_t aXGridSpacing);
-	void setXGridAndLabelInt(const uint8_t aGridXSpacing, const int aXLabelIncrementValue, const uint8_t aXMinStringWidth);
+	void iniXAxisInt(const uint8_t aGridXSpacing, const int aXLabelStartValue, const int aXLabelIncrementValue,
+			const uint8_t aXMinStringWidth);
 	uint8_t getXGridSpacing(void) const;
 
 	/*
@@ -109,11 +114,14 @@ public:
 	void setXScaleFactor(int aXScaleFactor, const bool doDraw);
 	int getXScaleFactor(void) const;
 
+	int adjustIntWithXScaleFactor(int Value);
+	float adjustFloatWithXScaleFactor(float Value);
+
 	// X Title
 	void setXTitleText(const char * aLabelText);
 	void drawXAxisTitle(void) const;
 
-	/*******************
+	/*
 	 *  Y Axis
 	 */
 	void drawYAxis(const bool aClearLabelsBefore);
@@ -163,14 +171,23 @@ private:
 	uint16_t mGridColor;
 	uint16_t mLabelColor;
 
-	// Scale value for data display
-	float mYDataFactor; // Factor for raw to chart value - e.g. (3.0 / 4096) for adc reading of 4096 for 3 Volt or 0.2 for 1000 display at 5000 raw value
-
-	// X axis
+	/*
+	 *  X axis
+	 */
 	uint8_t mGridXSpacing; // difference in pixel between 2 X grid lines
 	int_float_union mXLabelStartValue;
-	int_float_union mXLabelBaseIncrementValue; // Value difference between 2 grid labels - the effective IncrementValue is mXScaleFactor * mXLabelBaseIncrementValue
-	int8_t mXScaleFactor; // Factor for X Data expansion(>1) or compression(<-1). 2->display 1 value 2 times -2->display average of 2 values etc.
+	// Value difference between 2 grid labels - the effective IncrementValue is mXScaleFactor * mXLabelBaseIncrementValue
+	// This behavior is different to the Y axis because here we have only discrete (integer) scale factors.
+	int_float_union mXLabelBaseIncrementValue;
+
+	/**
+	 * aScaleFactor > 1 : expansion by factor aScaleFactor
+	 * aScaleFactor == 1 : expansion by 1.5
+	 * aScaleFactor == 0 : identity
+	 * aScaleFactor == -1 : compression by 1.5
+	 * aScaleFactor < -1 : compression by factor -aScaleFactor
+	 */
+	int8_t mXScaleFactor; // Factor for X Data expansion(>1) or compression(<1). 2->display 1 value 2 times -2->display average of 2 values etc.
 
 	// label formatting
 	uint8_t mXNumVarsAfterDecimal;
@@ -178,10 +195,13 @@ private:
 
 	const char* mXTitleText; // No title text if NULL
 
-	// Y label
+	/*
+	 * Y axis
+	 */
 	uint8_t mGridYSpacing; // difference in pixel between 2 Y grid lines
 	int_float_union mYLabelStartValue;
-	int_float_union mYLabelBaseIncrementValue; // Value difference between 2 grid labels
+	int_float_union mYLabeIncrementValue; // Value difference between 2 grid labels - serves as Y scale factor
+	float mYDataFactor; // Factor for raw to chart (not display!!!) value - e.g. (3.0 / 4096) for adc reading of 4096 for 3 Volt or 0.2 for 1000 display at 5000 raw value
 
 	// label formatting
 	uint8_t mYNumVarsAfterDecimal;
@@ -190,8 +210,7 @@ private:
 	const char* mYTitleText; // No title text if NULL
 
 	uint8_t checkParameterValues();
-	int adjustIntWithXScaleFactor(int Value);
-	float adjustFloatWithXScaleFactor(float Value);
+
 };
 
 #endif /* CHART_H_ */

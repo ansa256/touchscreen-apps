@@ -10,17 +10,7 @@
 
 #include "Pages.h"
 #include "misc.h"
-#include <stdio.h>
 #include <string.h>
-
-#ifdef __cplusplus
-extern "C" {
-
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
-
-}
-#endif
 
 /* Private define ------------------------------------------------------------*/
 #define DAC_DHR12R2_ADDRESS      0x40007414
@@ -34,7 +24,6 @@ extern "C" {
 #define VERTICAL_SLIDER_MAX_VALUE 180
 #define DAC_SLIDER_SIZE 5
 
-#define DAC_START_PERIOD 256
 #define DAC_START_AMPLITUDE 2048
 #define DAC_START_FREQ_SLIDER_VALUE (8 * 20) // 8 = log 2(256)
 /* Private variables ---------------------------------------------------------*/
@@ -61,6 +50,8 @@ static bool sDacIsStopped = true;
 #define WAVEFORM_NOISE 1
 #define WAVEFORM_SINE 2
 #define WAVEFORM_MAX WAVEFORM_NOISE
+#define MAX_SLIDER_VALUE 240
+
 static uint8_t sActualWaveform = WAVEFORM_TRIANGLE;
 
 // shifted to get better resolution
@@ -85,21 +76,14 @@ static void doChangeDACFrequency(TouchButton * const aTheTouchedButton, int16_t 
 	aTheTouchedButton->drawButton();
 }
 
-void initDACPage(void) {
-	DAC_init();
-	DAC_TriangleAmplitude(10); //log2(DAC_START_AMPLITUDE)
-	sAmplitude = DAC_START_AMPLITUDE;
-	DAC_Timer_initialize(DAC_START_PERIOD);
-	sFrequency = 72000000 / (2 * DAC_START_AMPLITUDE * DAC_START_PERIOD);
-	sPeriodMicros = (2 * DAC_START_AMPLITUDE * DAC_START_PERIOD) / 72;
-}
-
 /**
  * Computes Autoreload value for DAC timer, minimum is 4
  * @param aSliderValue
  * @param aSetTimer
  */
 static void ComputeFrequencyAndSetTimer(uint16_t aSliderValue, bool aSetTimer) {
+	// highest frequency right
+	aSliderValue = MAX_SLIDER_VALUE - aSliderValue;
 	// logarithmic scale starting with 4
 	unsigned int tValue = 1 << ((aSliderValue / 20) + 2);
 	// between two logarithmic values we have a linear scale ;-)
@@ -112,6 +96,15 @@ static void ComputeFrequencyAndSetTimer(uint16_t aSliderValue, bool aSetTimer) {
 	sPeriodMicros = (2 * sAmplitude * tValue) / 72;
 
 }
+
+void initDACPage(void) {
+	DAC_init();
+	DAC_TriangleAmplitude(10); //log2(DAC_START_AMPLITUDE)
+	sAmplitude = DAC_START_AMPLITUDE;
+	DAC_Timer_initialize(0xFF); // Don't really need value here
+	ComputeFrequencyAndSetTimer(DAC_START_FREQ_SLIDER_VALUE, false);
+}
+
 uint16_t doDACVolumeSlider(TouchSlider * const aTheTouchedSlider, uint16_t aAmplitude) {
 	DAC_TriangleAmplitude(aAmplitude / 16);
 	sLastAmplitudeSliderValue = (aAmplitude / 16) * 16;
@@ -174,11 +167,11 @@ void startDACPage(void) {
 	clearDisplay(COLOR_BACKGROUND_DEFAULT);
 
 	TouchButtonSetWaveform = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_2, BUTTON_WIDTH_3,
-			BUTTON_HEIGHT_4, COLOR_RED, StringTriangle, 1, 1, &doChangeDACFrequency);
+	BUTTON_HEIGHT_4, COLOR_RED, StringTriangle, 1, 1, &doChangeDACFrequency);
 	TouchButtonSetWaveform->drawButton();
 
 	TouchButtonStartStop = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_3, BUTTON_WIDTH_3,
-			BUTTON_HEIGHT_4, COLOR_RED, StringStop, 2, 0, &doDACStop);
+	BUTTON_HEIGHT_4, COLOR_RED, StringStop, 2, 0, &doDACStop);
 	TouchButtonStartStop->drawButton();
 
 	TouchSlider::setDefaultBarColor(TOUCHSLIDER_DEFAULT_BAR_COLOR);
@@ -190,12 +183,12 @@ void startDACPage(void) {
 
 	//Offset slider
 	TouchSliderVertical2.initSlider(DISPLAY_WIDTH - (TOUCHSLIDER_OVERALL_SIZE_FACTOR * DAC_SLIDER_SIZE) - 1, 20, DAC_SLIDER_SIZE,
-			VERTICAL_SLIDER_MAX_VALUE, VERTICAL_SLIDER_MAX_VALUE / 2, sLastOffsetSliderValue, "Offset",
-			TOUCHSLIDER_DEFAULT_TOUCH_BORDER, TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doDACOffsetSlider,
-			&mapDACOffsetValue);
+	VERTICAL_SLIDER_MAX_VALUE, VERTICAL_SLIDER_MAX_VALUE / 2, sLastOffsetSliderValue, "Offset",
+	TOUCHSLIDER_DEFAULT_TOUCH_BORDER, TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doDACOffsetSlider, &mapDACOffsetValue);
 
 	// Frequency slider
-	TouchSliderHorizontal.initSlider(37, 5, DAC_SLIDER_SIZE, 240, 240, sLastFrequencySliderValue, "Frequency",
+	TouchSliderHorizontal.initSlider(37, 5, DAC_SLIDER_SIZE, MAX_SLIDER_VALUE, MAX_SLIDER_VALUE, sLastFrequencySliderValue,
+			"Frequency",
 			TOUCHSLIDER_DEFAULT_TOUCH_BORDER,
 			TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE | TOUCHSLIDER_IS_HORIZONTAL | TOUCHSLIDER_HORIZONTAL_VALUE_LEFT,
 			&doDACFrequencySlider, &mapDACFrequencyValue);

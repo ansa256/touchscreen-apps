@@ -14,19 +14,16 @@
 
 #include "Pages.h"
 #include "misc.h"
-#include <stdio.h>
 #include <string.h>
 
-#ifdef __cplusplus
-extern "C" {
-
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
-
-}
-#endif
-
 #define THOUSANDS_SEPARATOR '.'
+
+/*
+ * Layout
+ */
+#define TRIGGER_LEVEL_INFO_LARGE_X INFO_LEFT_MARGIN + (11 * FONT_WIDTH)
+#define TRIGGER_LEVEL_INFO_SMALL_X (INFO_LEFT_MARGIN + (33 * FONT_WIDTH))
+#define TRIGGER_HIGH_DISPLAY_OFFSET 7 // for trigger state line
 /*
  * COLORS
  */
@@ -48,8 +45,8 @@ extern "C" {
 bool DisplayModeShowGuiWhileRunning = false;
 DisplayControlStruct DisplayControl;
 
-#define HORIZONTAL_LINES_CAPION_X (FONT_WIDTH * 36)
-#define PIXEL_AFTER_LABEL 2
+#define PIXEL_AFTER_LABEL 2 // Space between end of label and display border
+const char * const TriggerStatusStrings[] = { "slope", "level", "nothing" }; // waiting for slope, waiting for trigger level (slope condition is met)
 
 /**
  * scale Values for the horizontal scales
@@ -114,11 +111,13 @@ void clearTriggerLine(uint8_t aTriggerLevelDisplayValue) {
 	}
 }
 
+/**
+ * draws trigger line if it is visible - do not draw clipped value e.g. value was higher than display range
+ */
 void drawTriggerLine(void) {
-	// do not draw clipped value e.g. value was higher than display range
 	if (DisplayControl.TriggerLevelDisplayValue != 0 && MeasurementControl.TriggerMode != TRIGGER_MODE_OFF) {
 		drawLine(0, DisplayControl.TriggerLevelDisplayValue, DSO_DISPLAY_WIDTH - 1, DisplayControl.TriggerLevelDisplayValue,
-				COLOR_TRIGGER_LINE);
+		COLOR_TRIGGER_LINE);
 	}
 }
 
@@ -131,7 +130,8 @@ void drawGridLinesWithHorizLabelsAndTriggerLine(uint16_t aColor) {
 		drawLine(tXPos, 0, tXPos, DSO_DISPLAY_HEIGHT - 1, aColor);
 	}
 	// add 0.0001 to avoid display of -0.00
-	float tActualVoltage = (ScaleVoltagePerDiv[MeasurementControl.IndexDisplayRange] * (MeasurementControl.OffsetGridCount) + 0.0001);
+	float tActualVoltage =
+			(ScaleVoltagePerDiv[MeasurementControl.IndexDisplayRange] * (MeasurementControl.OffsetGridCount) + 0.0001);
 	int tCaptionOffset = FONT_HEIGHT;
 	int tLabelColor;
 	int tPosX;
@@ -187,7 +187,7 @@ void drawMinMaxLines(void) {
  * to avoid interfering with display refresh timing. DataBufferPointer must not be null then!
  * @note if aClearBeforeColor >0 then DataBufferPointer must not be NULL
  */
-void drawDataBuffer(uint16_t aColor, uint16_t *aDataBufferPointer, uint16_t aClearBeforeColor) {
+void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, uint16_t aClearBeforeColor) {
 	int i;
 	int j = 0;
 	int tValue;
@@ -199,25 +199,45 @@ void drawDataBuffer(uint16_t aColor, uint16_t *aDataBufferPointer, uint16_t aCle
 	int tXScale = DisplayControl.XScale;
 	int tXScaleCounter = tXScale;
 	int tTriggerValue = getDisplayFrowRawInputValue(MeasurementControl.RawTriggerLevel);
-	if (tXScale < 0) {
+	if (tXScale <= 0) {
 		tXScaleCounter = -tXScale;
 	}
 
-	for (i = 0; i < DSO_DISPLAY_WIDTH; ++i) {
+	for (i = 0; i < aLength; ++i) {
 		if (aDataBufferPointer == NULL) {
 			// get data from screen buffer in order to erase it
 			tValue = *ScreenBufferReadPointer++;
 		} else {
 			/*
-			 * get data from data buffer
+			 * get data from data buffer and perform X scaling
 			 */
-			if (tXScale == 1) {
+			if (tXScale == 0) {
 				tValue = getDisplayFrowRawInputValue(*aDataBufferPointer);
 				aDataBufferPointer++;
-			} else if (tXScale < 0) {
+			} else if (tXScale < -1) {
+				// compress - get average of multiple values
 				tValue = getDisplayFrowMultipleRawValues(aDataBufferPointer, tXScaleCounter);
 				aDataBufferPointer += tXScaleCounter;
+			} else if (tXScale == -1) {
+				// compress by factor 1.5 - every second value is the average of the next two values
+				tValue = getDisplayFrowRawInputValue(*aDataBufferPointer++);
+				tXScaleCounter--;
+				if (tXScaleCounter < 0) {
+					// get average of actual and next value
+					tValue += getDisplayFrowRawInputValue(*aDataBufferPointer++);
+					tValue /= 2;
+					tXScaleCounter = 1;
+				}
+			} else if (tXScale == 1) {
+				// expand by factor 1.5 - every second value will be shown 2 times
+				tValue = getDisplayFrowRawInputValue(*aDataBufferPointer++);
+				tXScaleCounter--; // starts with 1
+				if (tXScaleCounter < 0) {
+					aDataBufferPointer--;
+					tXScaleCounter = 2;
+				}
 			} else {
+				// expand - show value several times
 				tValue = getDisplayFrowRawInputValue(*aDataBufferPointer);
 				tXScaleCounter--;
 				if (tXScaleCounter == 0) {
@@ -356,9 +376,9 @@ void drawRemainingDataBufferValues(uint16_t aDrawColor) {
 /**
  * Gets period from content of display buffer, because data buffer may be overwritten by next acquisition
  */
-float computePeriodFrequency(void) {
+void computePeriodFrequency(void) {
 	/*
-	 * detect micros of period
+	 * detect micro seconds of period
 	 */
 	// start with trigger value and skip pre trigger shown.
 	uint8_t *DataPointer = &DisplayBuffer1[DATABUFFER_PRE_TRIGGER_DISPLAY_SIZE];
@@ -429,6 +449,7 @@ float computePeriodFrequency(void) {
 			tPeriodMicros = tPeriodMicros * TimebaseDivValues[MeasurementControl.IndexTimebase];
 		}
 		tPeriodMicros = tPeriodMicros / (tCount * TIMING_GRID_WIDTH);
+		// nanos are handled by TimebaseExactDivValues < 1
 		if (MeasurementControl.IndexTimebase >= TIMEBASE_INDEX_MILLIS) {
 			tPeriodMicros = tPeriodMicros * 1000;
 		}
@@ -437,20 +458,24 @@ float computePeriodFrequency(void) {
 	}
 	MeasurementControl.FrequencyHertz = tHertz;
 	MeasurementControl.PeriodMicros = tPeriodMicros;
-	return tPeriodMicros;
+	return;
 }
 
 void clearInfo(const uint8_t aInfoLineNumber) {
 	int tYPos = (aInfoLineNumber - 1) * FONT_HEIGHT;
-	fillRect(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + tYPos, INFO_LEFT_MARGIN + (39 * FONT_WIDTH)- 1,
+	fillRect(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + tYPos, INFO_LEFT_MARGIN + (39 * FONT_WIDTH) - 1,
 	INFO_UPPER_MARGIN + tYPos + FONT_HEIGHT - 1, COLOR_BACKGROUND_DSO);
 
+}
+
+/*
+ * Output info line
+ */
+void printInfo(void) {
+	if (DisplayControl.DisplayMode != DISPLAY_MODE_INFO_LINE) {
+		return;
 	}
 
-	/*
-	 * Output info line
-	 */
-void printInfo(void) {
 	char tSlopeChar;
 	char tTriggerAutoChar;
 	char tTimebaseUnitChar;
@@ -480,22 +505,25 @@ void printInfo(void) {
 	if (MeasurementControl.ACRange) {
 		tValueDiff += RawDSOReadingACZero;
 	}
-// get value early before display buffer is overwritten
-	float tMicrosPeriod = computePeriodFrequency();
+	if (MeasurementControl.IsRunning) {
+		// get value early before display buffer is overwritten
+		computePeriodFrequency();
+	}
+	float tMicrosPeriod = MeasurementControl.PeriodMicros;
 	char tPeriodUnitChar = 0xE6; // micro
 	if (tMicrosPeriod >= 50000) {
 		tMicrosPeriod = tMicrosPeriod / 1000;
 		tPeriodUnitChar = 'm'; // milli
 	}
-
 	int tUnitsPerGrid;
 	if (MeasurementControl.IndexTimebase >= TIMEBASE_INDEX_MILLIS) {
 		tTimebaseUnitChar = 'm';
-	} else {
+	} else if (MeasurementControl.IndexTimebase >= TIMEBASE_INDEX_MICROS) {
 		tTimebaseUnitChar = 0xE6; // micro
+	} else {
+		tTimebaseUnitChar = 'n'; // nano
 	}
 	tUnitsPerGrid = TimebaseDivValues[MeasurementControl.IndexTimebase];
-
 	// number of digits to be printed after the decimal point
 	int tPrecision = 3;
 	if ((MeasurementControl.ACRange && MeasurementControl.IndexInputRange >= 8) || MeasurementControl.IndexInputRange >= 10) {
@@ -503,6 +531,49 @@ void printInfo(void) {
 	}
 	if (MeasurementControl.ACRange && MeasurementControl.IndexInputRange >= 11) {
 		tPrecision = 1;
+	}
+
+	// render period + frequency
+	char tBuffer[20];
+
+	int tPeriodStringLength = 7;
+	int tFreqStringSize = 6;
+	int tPeriodStringPrecision = 1;
+
+	if (tMicrosPeriod < 100) {
+		// move period value 1 character left and increase precision
+		tPeriodStringLength = 6;
+		tPeriodStringPrecision = 2;
+		tFreqStringSize = 7;
+	}
+	if (tMicrosPeriod > 10000) {
+		// move period value 1 character right and decrease precision
+		tPeriodStringLength = 8;
+		tPeriodStringPrecision = 0;
+		tFreqStringSize = 5;
+	}
+
+	snprintf(tBuffer, sizeof tBuffer, "%*.*f%cs  %*luHz", tPeriodStringLength, tPeriodStringPrecision, tMicrosPeriod,
+			tPeriodUnitChar, tFreqStringSize, MeasurementControl.FrequencyHertz);
+	// set separator for thousands
+	char * tBufferDestPtr = &tBuffer[0];
+	char * tBufferSrcPtr = tBufferDestPtr + 1;
+	if (tMicrosPeriod > 10000) {
+		*tBufferDestPtr++ = *tBufferSrcPtr++;
+		*tBufferDestPtr++ = *tBufferSrcPtr++;
+		*tBufferDestPtr++ = *tBufferSrcPtr++;
+	}
+	if (tMicrosPeriod >= 1000) {
+		*tBufferDestPtr++ = *tBufferSrcPtr++;
+		*tBufferDestPtr = THOUSANDS_SEPARATOR;
+	}
+
+	if (MeasurementControl.FrequencyHertz >= 1000) {
+		// set separator for thousands
+		tBuffer[10] = tBuffer[11];
+		tBuffer[11] = tBuffer[12];
+		tBuffer[12] = tBuffer[13];
+		tBuffer[13] = THOUSANDS_SEPARATOR;
 	}
 
 	if (MeasurementControl.InfoSizeSmall) {
@@ -522,38 +593,23 @@ void printInfo(void) {
 		drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
 		// second line first part
-		snprintf(StringBuffer, sizeof StringBuffer, " %7.1f%cs  %5uHz", tMicrosPeriod, tPeriodUnitChar,
-				MeasurementControl.FrequencyHertz);
-		if (tMicrosPeriod >= 1000) {
-			// set separator for thousands
-			StringBuffer[1] = StringBuffer[2];
-			StringBuffer[2] = THOUSANDS_SEPARATOR;
-		}
-		if (MeasurementControl.FrequencyHertz >= 1000) {
-			// set separator for thousands
-			StringBuffer[10] = StringBuffer[11];
-			StringBuffer[11] = StringBuffer[12];
-			StringBuffer[12] = StringBuffer[13];
-			StringBuffer[13] = THOUSANDS_SEPARATOR;
-		}
-
-		drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+		drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + FONT_HEIGHT, tBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
 		// second line second part
 		snprintf(StringBuffer, sizeof StringBuffer, "%c%c %5.*fV", tSlopeChar, tTriggerAutoChar, tPrecision - 1,
 				getFloatFromRawValue(MeasurementControl.RawTriggerLevel));
-		drawText(
-				TRIGGER_LEVEL_INFO_SMALL_X
-						- (3 * FONT_WIDTH), INFO_UPPER_MARGIN + FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+		drawText(TRIGGER_LEVEL_INFO_SMALL_X - (3 * FONT_WIDTH), INFO_UPPER_MARGIN + FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK,
+		COLOR_INFO_BACKGROUND);
 
 	} else {
 		/**
 		 * Large mode
 		 */
-		if (MeasurementControl.SingleShotMode) {
+		if (MeasurementControl.isSingleShotMode) {
 			// current value
-			snprintf(StringBuffer, sizeof StringBuffer, "Current=%4.3fV Status=%d",
-					getFloatFromRawValue(MeasurementControl.RawValueBeforeTrigger), MeasurementControl.TriggerStatus);
+			snprintf(StringBuffer, sizeof StringBuffer, "Current=%4.3fV waiting for %s",
+					getFloatFromRawValue(MeasurementControl.RawValueBeforeTrigger),
+					TriggerStatusStrings[MeasurementControl.TriggerStatus]);
 		} else {
 
 			// First line
@@ -565,29 +621,15 @@ void printInfo(void) {
 		}
 		drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
-		char * tChannelString = ADCInputMUXChannelStrings[MeasurementControl.IndexADCInputMUXChannel];
+		const char * tChannelString = ADCInputMUXChannelStrings[MeasurementControl.IndexADCInputMUXChannel];
 		if (MeasurementControl.ADS7846ChannelsActive) {
 			tChannelString = ADS7846ChannelStrings[MeasurementControl.IndexADCInputMUXChannel];
 		}
 
 		// Second line
 		// XScale + Timebase + MicrosPerPeriod + Hertz + Channel
-		snprintf(StringBuffer, sizeof StringBuffer, "%2d %4u%cs  %7.1f%cs  %5uHz %s", DisplayControl.XScale, tUnitsPerGrid,
-				tTimebaseUnitChar, tMicrosPeriod, tPeriodUnitChar, (uint16_t) MeasurementControl.FrequencyHertz, tChannelString);
-
-		if (tMicrosPeriod >= 1000) {
-			// set separator for thousands
-			StringBuffer[10] = StringBuffer[11];
-			StringBuffer[11] = StringBuffer[12];
-			StringBuffer[12] = THOUSANDS_SEPARATOR;
-		}
-		if (MeasurementControl.FrequencyHertz >= 1000) {
-			// set separator for thousands
-			StringBuffer[21] = StringBuffer[22];
-			StringBuffer[22] = StringBuffer[23];
-			StringBuffer[23] = THOUSANDS_SEPARATOR;
-		}
-
+		snprintf(StringBuffer, sizeof StringBuffer, "%2d %4u%cs %s %s", DisplayControl.XScale, tUnitsPerGrid, tTimebaseUnitChar,
+				tBuffer, tChannelString);
 		drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
 		// Third line
@@ -629,10 +671,11 @@ void printTriggerInfo(void) {
 		}
 		snprintf(StringBuffer, sizeof StringBuffer, "%5.*fV", tPrecision, getFloatFromRawValue(MeasurementControl.RawTriggerLevel));
 		if (MeasurementControl.InfoSizeSmall) {
-			drawText(TRIGGER_LEVEL_INFO_SMALL_X, INFO_UPPER_MARGIN + 1 * FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+			drawText(TRIGGER_LEVEL_INFO_SMALL_X, INFO_UPPER_MARGIN + 1 * FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK,
+			COLOR_INFO_BACKGROUND);
 		} else {
 			drawText(TRIGGER_LEVEL_INFO_LARGE_X, INFO_UPPER_MARGIN + 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK,
-					COLOR_INFO_BACKGROUND);
+			COLOR_INFO_BACKGROUND);
 		}
 	}
 }

@@ -146,9 +146,9 @@ void ADS7846_IO_initalize(void) {
 
 	/* Enable and set EXTI Interrupt to the lowest priority */
 	NVIC_InitStructure.NVIC_IRQChannel = ADS7846_EXTI_IRQn;
-	// lowest possible priority
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+	// priority 2/3
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x08;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0C;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 }
@@ -549,13 +549,13 @@ inline uint16_t SPI1_getPrescaler(void) {
 	return actualPrescaler;
 }
 
+#define SPI_TIMEOUT   0x4
 /**
  * @brief  Sends a Byte through the SPI interface and return the Byte received
  *         from the SPI bus.
  * @param  Byte : Byte send.
  * @retval The received byte value
  */
-#define SPI_TIMEOUT             0x04 // 4 ms
 uint8_t SPI1_sendReceiveOriginal(uint8_t byte) {
 	uint32_t tLR14 = getLR14();
 
@@ -570,37 +570,6 @@ uint8_t SPI1_sendReceiveOriginal(uint8_t byte) {
 			return 0;
 		}
 	}
-	/* Send a Byte through the SPI peripheral */
-	SPI_SendData8(SPI1, byte);
-
-	setTimeoutMillis(SPI_TIMEOUT);
-	/* Wait to receive a Byte */
-	setTimeoutMillis(SPI_TIMEOUT);
-	while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET) {
-		if (isTimeout(tLR14)) {
-			return 0;
-		}
-	}
-	/* Return the Byte read from the SPI bus */
-	return (uint8_t) SPI_ReceiveData8(SPI1);
-}
-uint8_t SPI1_sendReceive(uint8_t byte) {
-	uint32_t tLR14 = getLR14();
-	uint32_t spixbase = (uint32_t) SPI1;
-	spixbase += 0x0C;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-	uint8_t dummy;
-#pragma GCC diagnostic pop
-// wait for ongoing transfer to end
-	while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) != RESET) {
-		;
-	}
-	while ((SPI1->SR & SPI_I2S_FLAG_RXNE) != RESET) {
-		/* fetch the Byte read from the SPI bus in order to empty RX fifo */
-		dummy = *(__IO uint8_t *) spixbase;
-	}
-
 	/* Send a Byte through the SPI peripheral */
 	SPI_SendData8(SPI1, byte);
 
@@ -643,7 +612,7 @@ uint8_t SPI1_sendReceiveFast(uint8_t byte) {
 	/* Wait to receive a Byte */
 	setTimeoutMillis(SPI_TIMEOUT);
 	while ((SPI1->SR & SPI_I2S_FLAG_RXNE) == RESET) {
-		if (isTimeout(tLR14)) {
+		if (isTimeoutVerbose((uint8_t *) __FILE__, __LINE__, tLR14, 2000)) {
 			break;
 		}
 	}
@@ -671,10 +640,6 @@ void RTC_initialize_LSE(void) {
 
 	/* Allow access to Backup */
 	PWR_BackupAccessCmd(ENABLE);
-//
-//	/* Reset RTC Domain */
-//	RCC_BackupResetCmd(ENABLE);
-//	RCC_BackupResetCmd(DISABLE);
 
 // Enable the LSE OSC
 	RCC_LSEConfig(RCC_LSE_ON);
@@ -685,7 +650,8 @@ void RTC_initialize_LSE(void) {
 	// Wait till LSE is ready - it gives timeout if no hardware is attached
 	setTimeoutMillis(10);
 	while (RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET) {
-		if (isTimeout(RCC->CSR)) {
+		// use counter directly to avoid setting of timeout led
+		if (TimeoutCounterForThread == 0) {
 			break;
 		}
 	}
@@ -710,6 +676,10 @@ void RTC_initialize_LSE(void) {
 	PWR_BackupAccessCmd(DISABLE);
 }
 
+/**
+ * year since 1980
+ * @return time since 1980 in 10 seconds resolution
+ */
 DWORD get_fattime(void) {
 	RTC_DateTypeDef RTC_DateStructure;
 	RTC_TimeTypeDef RTC_TimeStructure;
@@ -741,12 +711,42 @@ void fillTimeStructure(struct tm *aTimeStructurePtr) {
 	aTimeStructurePtr->tm_sec = RTC_TimeStructure.RTC_Seconds;
 }
 
+#define CALIBRATION_MAGIC_NUMBER 0x5A5A5A5A
+void RTC_setMagicNumber(void) {
+	PWR_BackupAccessCmd(ENABLE);
+	// Write magic number
+	RTC_WriteBackupRegister(RTC_BKP_DR0, CALIBRATION_MAGIC_NUMBER);
+	PWR_BackupAccessCmd(DISABLE);
+}
+
+/**
+ *
+ * @return true if magic number valid
+ */bool RTC_checkMagicNumber(void) {
+	PWR_BackupAccessCmd(ENABLE);
+	// Read magic number
+	uint32_t tMagic = RTC_ReadBackupRegister(RTC_BKP_DR0);
+	PWR_BackupAccessCmd(DISABLE);
+	if (tMagic == CALIBRATION_MAGIC_NUMBER) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * not used yet
+ */
 long RTC_getTimeAsLong(void) {
 	struct tm tTm;
 	fillTimeStructure(&tTm);
 	return mktime(&tTm);
 }
 
+/**
+ * not used yet
+ * @param aStringBuffer
+ * @return
+ */
 int RTC_getTimeStringForFile(char * aStringBuffer) {
 	RTC_TimeTypeDef RTC_TimeStructure;
 
@@ -758,6 +758,12 @@ int RTC_getTimeStringForFile(char * aStringBuffer) {
 			RTC_TimeStructure.RTC_Seconds);
 }
 
+/**
+ * gets time/date string or seconds since boot if RTC not available
+ * Format : yyyy-mm-dd hh-mm-ss
+ * @param aStringBuffer
+ * @return value of sprintf()
+ */
 int RTC_getDateStringForFile(char * aStringBuffer) {
 	RTC_DateTypeDef RTC_DateStructure;
 	RTC_TimeTypeDef RTC_TimeStructure;
@@ -766,12 +772,33 @@ int RTC_getDateStringForFile(char * aStringBuffer) {
 	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
 	/* Get the RTC current Date */
 	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
+	if (RTC_DateStructure.RTC_Year != 0) {
+		RTC_DateIsValid = true;
+	} else {
+		// fallback - set time to seconds since boot
+		uint32_t tTime = getMillisSinceBoot() / 1000;
+		RTC_TimeStructure.RTC_Seconds = tTime % 60;
+		tTime = tTime / 60;
+		RTC_TimeStructure.RTC_Minutes = tTime % 60;
+		tTime = tTime / 60;
+		RTC_TimeStructure.RTC_Hours = tTime % 24;
+		RTC_DateStructure.RTC_Date = (tTime / 24) + 1;
+	}
 	/* Display  Format : yyyy-mm-dd hh-mm-ss */
 // do not have a buffer size :-(
 	return sprintf(aStringBuffer, "%04i-%02i-%02i %02i-%02i-%02i", 2000 + RTC_DateStructure.RTC_Year, RTC_DateStructure.RTC_Month,
 			RTC_DateStructure.RTC_Date, RTC_TimeStructure.RTC_Hours, RTC_TimeStructure.RTC_Minutes, RTC_TimeStructure.RTC_Seconds);
 }
 
+bool RTC_DateIsValid = false; // true if year != 0
+
+/**
+ * Get time/date string for display (European format)
+ * Format : dd.mm.yyyy hh:mm:ss
+ * sets RTC_DateIsValid to false if RTC not available
+ * @param aStringBuffer
+ * @return value of sprintf()
+ */
 int RTC_getTimeString(char * aStringBuffer) {
 	RTC_DateTypeDef RTC_DateStructure;
 	RTC_TimeTypeDef RTC_TimeStructure;
@@ -780,6 +807,9 @@ int RTC_getTimeString(char * aStringBuffer) {
 	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
 	/* Get the RTC current Date */
 	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
+	if (RTC_DateStructure.RTC_Year != 0) {
+		RTC_DateIsValid = true;
+	}
 	/* Display  Format : dd.mm.yyyy hh:mm:ss */
 // do not have a buffer size :-(
 	return sprintf(aStringBuffer, "%02i.%02i.%04i %02i:%02i:%02i", RTC_DateStructure.RTC_Date, RTC_DateStructure.RTC_Month,
@@ -992,7 +1022,7 @@ void PWM_setOnRatio(uint32_t power) {
 void ADC_setRawToVoltFactor(void) {
 	uint32_t tRefActualValue;
 
-// TODO test if need oversampling
+// TODO test if oversampling really needed
 // use conservative sample time
 	ADC_RegularChannelConfig(ADC2, ADC_Channel_Vrefint, 1, ADC_SampleTime_61Cycles5);
 
@@ -1133,7 +1163,7 @@ void ADC_init(void) {
 // highest prio
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 // lower2 bits of priority are discarded by library
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x04;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
@@ -1153,6 +1183,7 @@ void ADC_enableAndWait(ADC_TypeDef* aADCId) {
 }
 
 void ADC_disableAndWait(ADC_TypeDef* aADCId) {
+// assert that ADC conversion is stopped
 	assert_param(ADC_GetStartConversionStatus(aADCId) == RESET);
 // first disable ADC otherwise sometimes interrupts just stops after the first reading
 	ADC_DisableCmd(aADCId);
@@ -1215,6 +1246,10 @@ void DSO_setACRange(bool aValue) {
 	GPIO_WriteBit(ADC1_ATTENUATOR_GPIO_PORT, ADC1_AC_RANGE_PIN, aValue);
 }
 
+bool DSO_getACRange(void) {
+	return GPIO_ReadOutputDataBit(ADC1_ATTENUATOR_GPIO_PORT, ADC1_AC_RANGE_PIN);
+}
+
 /**
  * ADC must be ready and continuous mode disabled
  * returns 2 * ADC_MAX_CONVERSION_VALUE on timeout
@@ -1240,7 +1275,7 @@ uint16_t ADC1_getChannelValue(uint8_t aChannel) {
 	/* Test EOC flag */
 	setTimeoutMillis(ADC_DEFAULT_TIMEOUT);
 	while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET) {
-		if (isTimeoutShowDelay(ADC1->CR,300)) {
+		if (isTimeoutShowDelay(ADC1->CR, 600)) {
 			return 2 * ADC_MAX_CONVERSION_VALUE;
 		}
 	}
@@ -1343,8 +1378,8 @@ void ADC_Timer6EnableInterrupt(void) {
 	NVIC_InitTypeDef NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = TIM6_DAC_IRQn;
 // lowest possible priority
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0C;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0C;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
@@ -1411,10 +1446,10 @@ void ADC_DMA_initialize(void) {
 	NVIC_InitTypeDef NVIC_InitStructure;
 	/* Enable DMA1 channel1 IRQ Channel */
 	NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel1_IRQn;
-// highest prio
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+//  prio 3/0 because it takes so much CPU that touch events do not really work
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0C;
 // lower2 bits of priority are discarded by library
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 4;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
@@ -1434,7 +1469,8 @@ void ADC_DMA_start(uint32_t aMemoryBaseAddr, uint16_t aBufferSize) {
 	DSO_DMA_CHANNEL->CNDTR = aBufferSize;
 
 //	DMA_Cmd(DSO_DMA_CHANNEL, ENABLE);
-	DSO_DMA_CHANNEL->CCR |= DMA_CCR_EN;
+// enable channel and all interrupts too
+	DSO_DMA_CHANNEL->CCR |= (DMA_CCR_EN | DMA_CCR_TCIE | DMA_CCR_HTIE | DMA_CCR_TEIE);
 // starts conversion at next timer edge - is definitely needed to start dma transfer!
 	DSO_ADC_ID->CR |= ADC_CR_ADSTART;
 
@@ -1466,6 +1502,7 @@ void ADC_DMA_stop(void) {
 #define MICROSD_CARD_DETECT_EXTI_PIN_SOURCE    EXTI_PinSource4
 #define MICROSD_CARD_DETECT_EXTI_LINE          EXTI_Line4
 #define MICROSD_CARD_DETECT_EXTI_IRQn          EXTI4_IRQn
+
 /**
  * Init the MicroSD card pins CS + CardDetect
  */
@@ -1508,8 +1545,15 @@ void MICROSD_IO_initalize(void) {
 	/* Enable and set EXTI Interrupt to the lowest priority */
 	NVIC_InitStructure.NVIC_IRQChannel = MICROSD_CARD_DETECT_EXTI_IRQn;
 // lowest possible priority
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0C;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0C;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+
+// Enable and set User button EXTI Interrupt to  priority 0/3
+	NVIC_InitStructure.NVIC_IRQChannel = USER_BUTTON_EXTI_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0C;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
 }
@@ -1574,13 +1618,13 @@ void DAC_Timer_initialize(uint32_t aAutoreload) {
 
 	/* Time base configuration */
 	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-	TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
+//	TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Down; // to easily change reload value
 	TIM_TimeBaseStructure.TIM_Period = aAutoreload;
-	TIM_TimeBaseStructure.TIM_ClockDivision = 0x0;
+//	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseInit(TIM7, &TIM_TimeBaseStructure);
 
-	// TIM7 TRGO selection - trigger on each update
+// TIM7 TRGO selection - trigger on each update
 	TIM_SelectOutputTrigger(TIM7, TIM_TRGOSource_Update);
 
 	/* TIM7 enable counter */
@@ -1593,11 +1637,11 @@ void DAC_Timer_initialize(uint32_t aAutoreload) {
  */
 inline void DAC_Timer_SetReloadValue(uint32_t aReloadValue) {
 	if (aReloadValue < 4) {
-		assertFailedMessageParam((uint8_t *) __FILE__, __LINE__, getLR14(), "DAC reload value < 4", aReloadValue);
+		assertFailedParamMessage((uint8_t *) __FILE__, __LINE__, getLR14(), aReloadValue, "DAC reload value < 4");
 	}
 	uint32_t tReloadValue = aReloadValue;
 	uint16_t tPrescalerValue = 1;
-	// convert 32 bit to 16 bit prescaler and 16 bit counter
+// convert 32 bit to 16 bit prescaler and 16 bit counter
 	if (tReloadValue > 0xFFFF) {
 		//Count Leading Zeros
 		int tShiftCount = 16 - __CLZ(aReloadValue);
@@ -1675,6 +1719,40 @@ void DAC_TriangleAmplitude(unsigned int aAmplitude) {
 	DAC->CR = tTemp;
 }
 
+/*
+ * Timer 15 for IR handling
+ */
+void IR_Timer_initialize(uint16_t aAutoreload) {
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM15, ENABLE);
+	/* Time base configuration */
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+
+	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+//TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
+//TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up; // to easily change reload value
+	TIM_TimeBaseStructure.TIM_Period = aAutoreload;
+//TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+	TIM_TimeBaseInit(TIM15, &TIM_TimeBaseStructure);
+
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannel = TIM1_BRK_TIM15_IRQn;
+// lowest possible priority
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0C;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0C;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+
+	TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
+}
+
+void IR_Timer_Start(void) {
+	TIM_Cmd(TIM15, ENABLE);
+}
+
+void IR_Timer_Stop(void) {
+	TIM_Cmd(TIM15, DISABLE);
+}
+
 #define FREQ_SYNTH_OUTPUT_PIN                       GPIO_Pin_10
 #define FREQ_SYNTH_OUTPUT_GPIO_PORT                 GPIOA
 #define FREQ_SYNTH_OUTPUT_GPIO_CLK                  RCC_AHBPeriph_GPIOA
@@ -1690,15 +1768,15 @@ void HIRES_Timer_initialize(uint32_t aAutoreload) {
 
 	/* Time base configuration */
 	TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-	TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
+//	TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
 	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Down; // to easily change reload value
 	TIM_TimeBaseStructure.TIM_Period = aAutoreload;
-	TIM_TimeBaseStructure.TIM_ClockDivision = 0x0;
+//	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
 
 	TIM_OCInitTypeDef TIM_OCInitStructure;
 
-	// Channel 4
+// Channel 4
 	/* Toggle Mode configuration */
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Toggle;
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
@@ -1706,7 +1784,7 @@ void HIRES_Timer_initialize(uint32_t aAutoreload) {
 	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
 	TIM_OC4Init(TIM2, &TIM_OCInitStructure);
 
-	// init output pin
+// init output pin
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 	/* Enable the GPIO Clocks */
@@ -1730,10 +1808,10 @@ void HIRES_Timer_initialize(uint32_t aAutoreload) {
  * @param reload value
  */
 inline void HIRES_Timer_SetReloadValue(uint32_t aReloadValue) {
-	// this causes the compiler to crash here
-	//assertParamMessage((aReloadValue > 1), "HIRES reload value < 2", aReloadValue);
+// this causes the compiler to crash here
+//assertParamMessage((aReloadValue > 1), aReloadValue, "HIRES reload value < 2");
 	if (aReloadValue < 2) {
-		assertFailedMessageParam((uint8_t *) __FILE__, __LINE__, getLR14(), "HIRES reload value < 2", aReloadValue);
+		assertFailedParamMessage((uint8_t *) __FILE__, __LINE__, getLR14(), aReloadValue, "HIRES reload value < 2");
 	}
 	TIM_SetAutoreload(TIM2, aReloadValue - 1);
 }
@@ -1755,7 +1833,6 @@ uint32_t HIRES_Timer_Stop(void) {
 uint32_t HIRES_Timer_GetCounter(void) {
 	return TIM_GetCounter(TIM2);
 }
-
 
 /**
  * Init the Debug pin E7

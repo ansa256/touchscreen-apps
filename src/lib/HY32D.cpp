@@ -5,7 +5,7 @@
  * @author Armin Joachimsmeyer
  *      Email:   armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
- * @version 1.0.0
+ * @version 1.5.0
  *
  *      based on MI0283QT2.cpp with license
  *      https://github.com/watterott/mSD-Shield/blob/master/src/license.txt
@@ -38,7 +38,7 @@ extern "C" {
 uint8_t DisplayBuffer1[DISPLAY_WIDTH];
 uint8_t DisplayBuffer2[DISPLAY_WIDTH];
 bool isInitializedHY32D = false;
-
+volatile uint32_t sDrawLock = 0;
 /*
  * For automatic LCD dimming
  */
@@ -51,14 +51,13 @@ void drawStart(void);
 inline void draw(uint16_t color);
 inline void drawStop(void);
 void writeCommand(int aRegisterAddress, int aRegisterValue);
-void initalizeDisplay(void);
+bool initalizeDisplay(void);
 uint16_t * fillDisplayLineBuffer(uint16_t * aBufferPtr, uint16_t yLineNumber);
 void setBrightness(int power); //0-100
 
 //-------------------- Public --------------------
 
 void initHY32D(void) {
-
 	//init pins
 	HY32D_IO_initalize();
 	// init PWM for background LED
@@ -66,16 +65,16 @@ void initHY32D(void) {
 	setBrightness(BACKLIGHT_START_VALUE);
 
 	// deactivate read output control
-	HY32D_RD_GPIO_PORT ->BSRR = HY32D_RD_PIN;
+	HY32D_RD_GPIO_PORT->BSRR = HY32D_RD_PIN;
 	//initalize display
-	initalizeDisplay();
-	isInitializedHY32D = true;
-	return;
+	if (initalizeDisplay()) {
+		isInitializedHY32D = true;
+	}
 }
 
 void setArea(uint16_t aXStart, uint16_t aYStart, uint16_t aXEnd, uint16_t aYEnd) {
 	if ((aXEnd >= DISPLAY_WIDTH) || (aYEnd >= DISPLAY_HEIGHT)) {
-		assert_failed((uint8_t *) __FILE__, __LINE__);
+		assertFailedParamMessage((uint8_t *) __FILE__, __LINE__, aXEnd, aYEnd, StringEmpty);
 	}
 
 	writeCommand(0x44, aYStart + (aYEnd << 8)); //set ystart, yend
@@ -84,13 +83,11 @@ void setArea(uint16_t aXStart, uint16_t aYStart, uint16_t aXEnd, uint16_t aYEnd)
 	// also set cursor to right start position
 	writeCommand(0x4E, aYStart);
 	writeCommand(0x4F, aXStart);
-	return;
 }
 
 void setCursor(uint16_t aXStart, uint16_t aYStart) {
 	writeCommand(0x4E, aYStart);
 	writeCommand(0x4F, aXStart);
-	return;
 }
 
 void clearDisplay(uint16_t color) {
@@ -99,13 +96,13 @@ void clearDisplay(uint16_t color) {
 
 	drawStart();
 	for (size = (DISPLAY_HEIGHT * DISPLAY_WIDTH); size != 0; size--) {
-		HY32D_DATA_GPIO_PORT ->ODR = color;
+		HY32D_DATA_GPIO_PORT->ODR = color;
 		// Latch data write
-		HY32D_WR_GPIO_PORT ->BRR = HY32D_WR_PIN;
-		HY32D_WR_GPIO_PORT ->BSRR = HY32D_WR_PIN;
+		HY32D_WR_GPIO_PORT->BRR = HY32D_WR_PIN;
+		HY32D_WR_GPIO_PORT->BSRR = HY32D_WR_PIN;
 
 	}
-	HY32D_CS_GPIO_PORT ->BSRR = HY32D_CS_PIN;
+	HY32D_CS_GPIO_PORT->BSRR = HY32D_CS_PIN;
 }
 
 /**
@@ -113,30 +110,28 @@ void clearDisplay(uint16_t color) {
  */
 void drawStart(void) {
 	// CS enable (low)
-	HY32D_CS_GPIO_PORT ->BRR = HY32D_CS_PIN;
+	HY32D_CS_GPIO_PORT->BRR = HY32D_CS_PIN;
 	// Control enable (low)
-	HY32D_DATA_CONTROL_GPIO_PORT ->BRR = HY32D_DATA_CONTROL_PIN;
+	HY32D_DATA_CONTROL_GPIO_PORT->BRR = HY32D_DATA_CONTROL_PIN;
 	// set value
-	HY32D_DATA_GPIO_PORT ->ODR = LCD_GRAM_WRITE_REGISTER;
+	HY32D_DATA_GPIO_PORT->ODR = LCD_GRAM_WRITE_REGISTER;
 	// Latch data write
-	HY32D_WR_GPIO_PORT ->BRR = HY32D_WR_PIN;
-	HY32D_WR_GPIO_PORT ->BSRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_WR_PIN;
 	// Data enable (high)
-	HY32D_DATA_CONTROL_GPIO_PORT ->BSRR = HY32D_DATA_CONTROL_PIN;
+	HY32D_DATA_CONTROL_GPIO_PORT->BSRR = HY32D_DATA_CONTROL_PIN;
 }
 
 inline void draw(uint16_t color) {
 	// set value
-	HY32D_DATA_GPIO_PORT ->ODR = color;
+	HY32D_DATA_GPIO_PORT->ODR = color;
 	// Latch data write
-	HY32D_WR_GPIO_PORT ->BRR = HY32D_WR_PIN;
-	HY32D_WR_GPIO_PORT ->BSRR = HY32D_WR_PIN;
-	return;
+	HY32D_WR_GPIO_PORT->BRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_WR_PIN;
 }
 
 void drawStop(void) {
-	HY32D_CS_GPIO_PORT ->BSRR = HY32D_CS_PIN;
-	return;
+	HY32D_CS_GPIO_PORT->BSRR = HY32D_CS_PIN;
 }
 
 void fillRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color) {
@@ -186,8 +181,6 @@ void fillRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color
 		}
 	}
 	drawStop();
-
-	return;
 }
 
 void drawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color) {
@@ -216,8 +209,6 @@ void drawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color) {
 			err -= x;
 		}
 	}
-
-	return;
 }
 
 void fillCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color) {
@@ -242,8 +233,6 @@ void fillCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color) {
 			err -= x;
 		}
 	}
-
-	return;
 }
 
 void drawPixel(uint16_t aXPos, uint16_t aYPos, uint16_t color) {
@@ -258,8 +247,6 @@ void drawPixel(uint16_t aXPos, uint16_t aYPos, uint16_t color) {
 	drawStart();
 	draw(color);
 	drawStop();
-
-	return;
 }
 
 uint16_t readPixel(uint16_t aXPos, uint16_t aYPos) {
@@ -274,17 +261,17 @@ uint16_t readPixel(uint16_t aXPos, uint16_t aYPos) {
 	drawStart();
 	uint16_t tValue = 0;
 // set port pins to input
-	HY32D_DATA_GPIO_PORT ->MODER = 0x00000000;
+	HY32D_DATA_GPIO_PORT->MODER = 0x00000000;
 	// Latch data read
-	HY32D_WR_GPIO_PORT ->BRR = HY32D_RD_PIN;
+	HY32D_WR_GPIO_PORT->BRR = HY32D_RD_PIN;
 	// wait >250ns
 	delayNanos(300);
 
-	tValue = HY32D_DATA_GPIO_PORT ->IDR;
-	HY32D_WR_GPIO_PORT ->BSRR = HY32D_RD_PIN;
+	tValue = HY32D_DATA_GPIO_PORT->IDR;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_RD_PIN;
 // set port pins to output
-	HY32D_DATA_GPIO_PORT ->MODER = 0x55555555;
-	HY32D_CS_GPIO_PORT ->BSRR = HY32D_CS_PIN;
+	HY32D_DATA_GPIO_PORT->MODER = 0x55555555;
+	HY32D_CS_GPIO_PORT->BSRR = HY32D_CS_PIN;
 
 	return tValue;
 }
@@ -356,8 +343,23 @@ void drawLineFastOneX(uint16_t x0, uint16_t y0, uint16_t y1, uint16_t color) {
 	}
 }
 
-uint16_t drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color) {
-	uint16_t ret;
+int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color) {
+	/*
+	 * check if a draw in routine which uses setArea() is already executed
+	 */
+	uint32_t tLock;
+	do {
+		tLock = __LDREXW(&sDrawLock);
+		tLock++;
+	} while (__STREXW(tLock, &sDrawLock));
+
+	if (tLock != 1) {
+		// here in ISR, but interrupted process was still in drawText()
+		sLockCount++;
+		// first approach skip drawing and return -1
+		return -1;
+	}
+	int tRetValue;
 #if FONT_WIDTH <= 8
 	uint8_t data, mask;
 #elif FONT_WIDTH <= 16
@@ -383,71 +385,74 @@ uint16_t drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, 
 	height = FONT_HEIGHT;
 
 	if (size <= 1) {
-		ret = x + width;
-		if ((ret - 1) >= DISPLAY_WIDTH) {
-			return DISPLAY_WIDTH + 1;
+		tRetValue = x + width;
+		if ((tRetValue - 1) >= DISPLAY_WIDTH) {
+			tRetValue = DISPLAY_WIDTH + 1;
 		} else if ((y + height - 1) >= DISPLAY_HEIGHT) {
-			return DISPLAY_WIDTH + 1;
-		}
+			tRetValue = DISPLAY_WIDTH + 1;
+		} else {
 
-		setArea(x, y, (x + width - 1), (y + height - 1));
+			setArea(x, y, (x + width - 1), (y + height - 1));
 
-		drawStart();
-		for (; height != 0; height--) {
+			drawStart();
+			for (; height != 0; height--) {
 #if FONT_WIDTH <= 8
-			data = *ptr;
-			ptr += 1;
+				data = *ptr;
+				ptr += 1;
 #elif FONT_WIDTH <= 16
-			data = read_word(ptr); ptr+=2;
+				data = read_word(ptr); ptr+=2;
 #elif FONT_WIDTH <= 32
-			data = read_dword(ptr); ptr+=4;
+				data = read_dword(ptr); ptr+=4;
 #endif
-			for (mask = (1 << (width - 1)); mask != 0; mask >>= 1) {
-				if (data & mask) {
-					draw(color);
-				} else {
-					draw(bg_color);
-				}
-			}
-		}
-		drawStop();
-	} else {
-		ret = x + (width * size);
-		if ((ret - 1) >= DISPLAY_WIDTH) {
-			return DISPLAY_WIDTH + 1;
-		} else if ((y + (height * size) - 1) >= DISPLAY_HEIGHT) {
-			return DISPLAY_WIDTH + 1;
-		}
-
-		setArea(x, y, (x + (width * size) - 1), (y + (height * size) - 1));
-
-		drawStart();
-		for (; height != 0; height--) {
-#if FONT_WIDTH <= 8
-			data = *ptr;
-			ptr += 1;
-#elif FONT_WIDTH <= 16
-			data = pgm_read_word(ptr); ptr+=2;
-#elif FONT_WIDTH <= 32
-			data = pgm_read_dword(ptr); ptr+=4;
-#endif
-			for (i = size; i != 0; i--) {
 				for (mask = (1 << (width - 1)); mask != 0; mask >>= 1) {
 					if (data & mask) {
-						for (j = size; j != 0; j--) {
-							draw(color);
-						}
+						draw(color);
 					} else {
-						for (j = size; j != 0; j--) {
-							draw(bg_color);
+						draw(bg_color);
+					}
+				}
+			}
+			drawStop();
+		}
+	} else {
+		tRetValue = x + (width * size);
+		if ((tRetValue - 1) >= DISPLAY_WIDTH) {
+			tRetValue = DISPLAY_WIDTH + 1;
+		} else if ((y + (height * size) - 1) >= DISPLAY_HEIGHT) {
+			tRetValue = DISPLAY_WIDTH + 1;
+		} else {
+
+			setArea(x, y, (x + (width * size) - 1), (y + (height * size) - 1));
+
+			drawStart();
+			for (; height != 0; height--) {
+#if FONT_WIDTH <= 8
+				data = *ptr;
+				ptr += 1;
+#elif FONT_WIDTH <= 16
+				data = pgm_read_word(ptr); ptr+=2;
+#elif FONT_WIDTH <= 32
+				data = pgm_read_dword(ptr); ptr+=4;
+#endif
+				for (i = size; i != 0; i--) {
+					for (mask = (1 << (width - 1)); mask != 0; mask >>= 1) {
+						if (data & mask) {
+							for (j = size; j != 0; j--) {
+								draw(color);
+							}
+						} else {
+							for (j = size; j != 0; j--) {
+								draw(bg_color);
+							}
 						}
 					}
 				}
 			}
+			drawStop();
 		}
-		drawStop();
 	}
-	return ret;
+	sDrawLock = 0;
+	return tRetValue;
 }
 
 /**
@@ -460,14 +465,13 @@ uint16_t drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, 
  * @param bg_color
  * @return
  */
-uint16_t drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color) {
+int drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color) {
 	while (*s != 0) {
 		x = drawChar(x, y, (char) *s++, size, color, bg_color);
 		if (x > DISPLAY_WIDTH) {
 			break;
 		}
 	}
-
 	return x;
 }
 
@@ -496,11 +500,11 @@ int drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer,
  * @param bg_color
  * @return
  */
-extern "C" uint16_t drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, char *s, uint8_t size, uint16_t color,
+extern "C" int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const char *s, uint8_t size, uint16_t color,
 		uint16_t bg_color) {
 	uint16_t x = x0, y = y0, wlen, llen;
 	char c;
-	char *wstart;
+	const char *wstart;
 
 	fillRect(x0, y0, x1, y1, bg_color);
 
@@ -559,7 +563,7 @@ extern "C" uint16_t drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y
 	return x;
 }
 
-uint16_t drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color) {
+int drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color) {
 	char tmp[16 + 1];
 	switch (base) {
 	case 8:
@@ -631,52 +635,78 @@ int clipBrightnessValue(int aBrightnessValue) {
 
 void writeCommand(int aRegisterAddress, int aRegisterValue) {
 // CS enable (low)
-	HY32D_CS_GPIO_PORT ->BRR = HY32D_CS_PIN;
+	HY32D_CS_GPIO_PORT->BRR = HY32D_CS_PIN;
 // Control enable (low)
-	HY32D_DATA_CONTROL_GPIO_PORT ->BRR = HY32D_DATA_CONTROL_PIN;
+	HY32D_DATA_CONTROL_GPIO_PORT->BRR = HY32D_DATA_CONTROL_PIN;
 // set value
-	HY32D_DATA_GPIO_PORT ->ODR = aRegisterAddress;
+	HY32D_DATA_GPIO_PORT->ODR = aRegisterAddress;
 // Latch data write
-	HY32D_WR_GPIO_PORT ->BRR = HY32D_WR_PIN;
-	HY32D_WR_GPIO_PORT ->BSRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_WR_PIN;
 
 // Data enable (high)
-	HY32D_DATA_CONTROL_GPIO_PORT ->BSRR = HY32D_DATA_CONTROL_PIN;
+	HY32D_DATA_CONTROL_GPIO_PORT->BSRR = HY32D_DATA_CONTROL_PIN;
 // set value
-	HY32D_DATA_GPIO_PORT ->ODR = aRegisterValue;
+	HY32D_DATA_GPIO_PORT->ODR = aRegisterValue;
 // Latch data write
-	HY32D_WR_GPIO_PORT ->BRR = HY32D_WR_PIN;
-	HY32D_WR_GPIO_PORT ->BSRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_WR_PIN;
 
 // CS disable (high)
-	HY32D_CS_GPIO_PORT ->BSRR = HY32D_CS_PIN;
+	HY32D_CS_GPIO_PORT->BSRR = HY32D_CS_PIN;
 	return;
 }
 
-void initalizeDisplay(void) {
+uint16_t readCommand(int aRegisterAddress) {
+// CS enable (low)
+	HY32D_CS_GPIO_PORT->BRR = HY32D_CS_PIN;
+// Control enable (low)
+	HY32D_DATA_CONTROL_GPIO_PORT->BRR = HY32D_DATA_CONTROL_PIN;
+// set value
+	HY32D_DATA_GPIO_PORT->ODR = aRegisterAddress;
+// Latch data write
+	HY32D_WR_GPIO_PORT->BRR = HY32D_WR_PIN;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_WR_PIN;
+
+// Data enable (high)
+	HY32D_DATA_CONTROL_GPIO_PORT->BSRR = HY32D_DATA_CONTROL_PIN;
+	// set port pins to input
+	HY32D_DATA_GPIO_PORT->MODER = 0x00000000;
+	// Latch data read
+	HY32D_WR_GPIO_PORT->BRR = HY32D_RD_PIN;
+	// wait >250ns
+	delayNanos(300);
+	uint16_t tValue = HY32D_DATA_GPIO_PORT->IDR;
+	HY32D_WR_GPIO_PORT->BSRR = HY32D_RD_PIN;
+// set port pins to output
+	HY32D_DATA_GPIO_PORT->MODER = 0x55555555;
+// CS disable (high)
+	HY32D_CS_GPIO_PORT->BSRR = HY32D_CS_PIN;
+	return tValue;
+}
+
+bool initalizeDisplay(void) {
 // Reset is done by hardware reset button
 // Original Code
 	writeCommand(0x0000, 0x0001); // Enable LCD Oscillator
 	delayMillis(10);
-	writeCommand(0x0003, 0xA8A4); //Power control A=fosc/4 - 4= Small to medium
-	writeCommand(0x000C, 0x0000);
-	writeCommand(0x000D, 0x080C);
-	writeCommand(0x000E, 0x2B00);
-	writeCommand(0x001E, 0x00B0);
-	writeCommand(0x0001, 0x293F); // reverse 320
-//	writeCommand(0x0001, 0x293F);// 320 reverse
-//	writeCommand(0x0001, 0x6B3F);// 240 reverse ???
+	// Check Device Code - 0x8989
+	if (readCommand(0x0000) != 0x8989) {
+		return false;
+	}
 
-	writeCommand(0x0002, 0x0600);
+	writeCommand(0x0003, 0xA8A4); // Power control A=fosc/4 - 4= Small to medium
+	writeCommand(0x000C, 0x0000); // VCIX2 only bit [2:0]
+	writeCommand(0x000D, 0x080C); // VLCD63 only bit [3:0]
+	writeCommand(0x000E, 0x2B00);
+	writeCommand(0x001E, 0x00B0); // Bit7 + VcomH bit [5:0]
+	writeCommand(0x0001, 0x293F); // reverse 320
+
+	writeCommand(0x0002, 0x0600); // LCD driver AC setting
 	writeCommand(0x0010, 0x0000); // Exit sleep mode
 	delayMillis(50);
 
-// 65k Color
-// Horizontal: increment
-// Vertical: increment
-	writeCommand(0x0011, 0x6038);
-//	writeCommand(0x0005, 0x0000); // compare register
-//	writeCommand(0x0006, 0x0000);
+	writeCommand(0x0011, 0x6038); // 6=65k Color, 38=draw direction -> 3=horizontal increment, 8=vertical increment
 //	writeCommand(0x0016, 0xEF1C); // 240 pixel
 	writeCommand(0x0017, 0x0003);
 	writeCommand(0x0007, 0x0133); // 1=the 2-division LCD drive is performed, 8 Color mode, grayscale
@@ -684,16 +714,10 @@ void initalizeDisplay(void) {
 	writeCommand(0x000F, 0x0000); // Gate Scan Position start (0-319)
 	writeCommand(0x0041, 0x0000); // Vertical Scroll Control
 	writeCommand(0x0042, 0x0000);
-	writeCommand(0x0048, 0x0000); // 1st Screen driving position
-	writeCommand(0x0049, 0x013F);
-	writeCommand(0x004A, 0x0000); // 2nd Screen driving position
-	writeCommand(0x004B, 0x0000);
-// set window and cursor - can be omitted
-	writeCommand(0x0044, 0xEF00); // Y window start + stop
-	writeCommand(0x0045, 0x0000); // X window start
-	writeCommand(0x0046, 0x013F); // X window Stop
-	writeCommand(0x004e, 0); // Y cursor 0-240
-	writeCommand(0x004f, 0); // X cursor 0-320
+//	writeCommand(0x0048, 0x0000); // 0 is default 1st Screen driving position
+//	writeCommand(0x0049, 0x013F); // 13F is default
+//	writeCommand(0x004A, 0x0000); // 0 is default 2nd Screen driving position
+//	writeCommand(0x004B, 0x0000);  // 13F is default
 
 	delayMillis(10);
 //gamma control
@@ -708,27 +732,29 @@ void initalizeDisplay(void) {
 	writeCommand(0x003A, 0x0302);
 	writeCommand(0x003B, 0x0302);
 
-// write data mask
-	writeCommand(0x0023, 0x0000);
-	writeCommand(0x0024, 0x0000);
-
 	writeCommand(0x0025, 0x8000); // Frequency Control 8=65Hz 0=50HZ E=80Hz
-	return;
+	return true;
 }
+// TODO check
+/*
+ * does not work 100%
+ */
 void initalizeDisplay2(void) {
 // Reset is done by hardware reset button
 	delayMillis(1);
-	writeCommand(0x0011, 0x6830); // 6=65k Color, 8 = OE defines the display window 0 =the display window is defined by R4Eh and R4Fh.
+	writeCommand(0x0011, 0x6838); // 6=65k Color, 8 = OE defines the display window 0 =the display window is defined by R4Eh and R4Fh.
+	//writeCommand(0x0011, 0x6038); // 6=65k Color, 8 = OE defines the display window 0 =the display window is defined by R4Eh and R4Fh.
 //Entry Mode setting
 	writeCommand(0x0002, 0x0600); // LCD driver AC setting
 	writeCommand(0x0012, 0x6CEB); // RAM data write
 	// power control
 	writeCommand(0x0003, 0xA8A4);
 	writeCommand(0x000C, 0x0000); //VCIX2 only bit [2:0]
-//	writeCommand(0x000D, 0x080C); // VLCD63 only bit [3:0]
-	writeCommand(0x000D, 0x000C); // VLCD63 only bit [3:0]
-	writeCommand(0x000E, 0x2B00);
-	writeCommand(0x001E, 0x00B0); // Bit7 + VcomH bit [5:0]
+	writeCommand(0x000D, 0x080C); // VLCD63 only bit [3:0] ==
+//	writeCommand(0x000D, 0x000C); // VLCD63 only bit [3:0]
+	writeCommand(0x000E, 0x2B00); // ==
+	writeCommand(0x001E, 0x00B0); // Bit7 + VcomH bit [5:0] ==
+	writeCommand(0x0001, 0x293F); // reverse 320
 
 	// compare register
 	//writeCommand(0x0005, 0x0000);
@@ -766,15 +792,15 @@ void drawGrayscale(uint16_t aXPos, uint16_t tYPos, uint16_t aHeight) {
 	uint16_t tY;
 	for (int i = 0; i < 256; ++i) {
 		tY = tYPos;
-		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(i,i,i));
+		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(i, i, i));
 		tY += aHeight + 1;
-		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB((0xFF -i),(0xFF -i),(0xFF -i)));
+		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB((0xFF - i), (0xFF - i), (0xFF - i)));
 		tY += aHeight + 1;
-		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(i,0,0));
+		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(i, 0, 0));
 		tY += aHeight + 1;
-		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(0,i,0));
+		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(0, i, 0));
 		tY += aHeight + 1;
-		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(0,0,i));
+		fillRect(aXPos, tY, aXPos, tY + aHeight, RGB(0, 0, i));
 		aXPos++;
 	}
 }
@@ -943,10 +969,10 @@ uint16_t * fillDisplayLineBuffer(uint16_t * aBufferPtr, uint16_t yLineNumber) {
 	drawStart();
 	uint16_t tValue = 0;
 // set port pins to input
-	HY32D_DATA_GPIO_PORT ->MODER = 0x00000000;
+	HY32D_DATA_GPIO_PORT->MODER = 0x00000000;
 	for (int i = 0; i <= DISPLAY_WIDTH; ++i) {
 		// Latch data read
-		HY32D_WR_GPIO_PORT ->BRR = HY32D_RD_PIN;
+		HY32D_WR_GPIO_PORT->BRR = HY32D_RD_PIN;
 		// wait >250ns (and process former value)
 		if (i > 1) {
 			// skip inital value (=0) and first reading from display (is from last read => scrap)
@@ -954,15 +980,15 @@ uint16_t * fillDisplayLineBuffer(uint16_t * aBufferPtr, uint16_t yLineNumber) {
 			tValue = (tValue & BLUEMASK) | ((tValue >> 1) & ~BLUEMASK);
 			*aBufferPtr++ = tValue;
 		}
-		tValue = HY32D_DATA_GPIO_PORT ->IDR;
-		HY32D_WR_GPIO_PORT ->BSRR = HY32D_RD_PIN;
+		tValue = HY32D_DATA_GPIO_PORT->IDR;
+		HY32D_WR_GPIO_PORT->BSRR = HY32D_RD_PIN;
 	}
 // last value
 	tValue = (tValue & BLUEMASK) | ((tValue >> 1) & ~BLUEMASK);
 	*aBufferPtr++ = tValue;
 // set port pins to output
-	HY32D_DATA_GPIO_PORT ->MODER = 0x55555555;
-	HY32D_CS_GPIO_PORT ->BSRR = HY32D_CS_PIN;
+	HY32D_DATA_GPIO_PORT->MODER = 0x55555555;
+	HY32D_CS_GPIO_PORT->BSRR = HY32D_CS_PIN;
 	return aBufferPtr;
 }
 

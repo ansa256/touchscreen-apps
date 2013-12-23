@@ -44,7 +44,7 @@ Chart::Chart(void) {
 	mGridColor = CHART_DEFAULT_GRID_COLOR;
 	mLabelColor = CHART_DEFAULT_LABEL_COLOR;
 	mFlags = 0;
-	mXScaleFactor = 1;
+	mXScaleFactor = 0;
 }
 
 void Chart::initChartColors(const uint16_t aDataColor, const uint16_t aAxesColor, const uint16_t aGridColor,
@@ -132,8 +132,10 @@ void Chart::initXLabelInt(const int aXLabelStartValue, const int aXLabelIncremen
  * @param aXLabelIncrementValue
  * @param aXMinStringWidth
  */
-void Chart::setXGridAndLabelInt(const uint8_t aGridXSpacing, const int aXLabelIncrementValue, const uint8_t aXMinStringWidth) {
+void Chart::iniXAxisInt(const uint8_t aGridXSpacing, const int aXLabelStartValue, const int aXLabelIncrementValue,
+		const uint8_t aXMinStringWidth) {
 	mGridXSpacing = aGridXSpacing;
+	mXLabelStartValue.IntValue = aXLabelStartValue;
 	mXLabelBaseIncrementValue.IntValue = aXLabelIncrementValue;
 	mXMinStringWidth = aXMinStringWidth;
 	mFlags |= CHART_X_LABEL_INT;
@@ -173,7 +175,7 @@ void Chart::initXLabelFloat(const float aXLabelStartValue, const float aXLabelIn
 void Chart::initYLabelInt(const int aYLabelStartValue, const int aYLabelIncrementValue, const float aYFactor,
 		const uint8_t aYMinStringWidth) {
 	mYLabelStartValue.IntValue = aYLabelStartValue;
-	mYLabelBaseIncrementValue.IntValue = aYLabelIncrementValue;
+	mYLabeIncrementValue.IntValue = aYLabelIncrementValue;
 	mYMinStringWidth = aYMinStringWidth;
 	mFlags |= CHART_Y_LABEL_INT | CHART_Y_LABEL_USED;
 	mYDataFactor = aYFactor;
@@ -191,7 +193,7 @@ void Chart::initYLabelInt(const int aYLabelStartValue, const int aYLabelIncremen
 void Chart::initYLabelFloat(const float aYLabelStartValue, const float aYLabelIncrementValue, const float aYFactor,
 		const uint8_t aYMinStringWidthIncDecimalPoint, const uint8_t aYNumVarsAfterDecimal) {
 	mYLabelStartValue.FloatValue = aYLabelStartValue;
-	mYLabelBaseIncrementValue.FloatValue = aYLabelIncrementValue;
+	mYLabeIncrementValue.FloatValue = aYLabelIncrementValue;
 	mYNumVarsAfterDecimal = aYNumVarsAfterDecimal;
 	mYMinStringWidth = aYMinStringWidthIncDecimalPoint;
 	mFlags &= ~CHART_Y_LABEL_INT;
@@ -248,30 +250,12 @@ void Chart::drawXAxisTitle(void) const {
 	}
 }
 
-/**
- * multiplies value with XScaleFactor if XScaleFactor is < -1 or divide if XScaleFactor is > 1
- * Used only by drawAxis()
- */
-int Chart::adjustIntWithXScaleFactor(int Value) {
-	if (mXScaleFactor < -1) {
-		return Value * -mXScaleFactor;
-	}
-	if (mXScaleFactor > 1) {
-		return Value / mXScaleFactor;
-	}
-	return Value;
+int Chart::adjustIntWithXScaleFactor(int aValue) {
+	return adjustIntWithScaleFactor(aValue, mXScaleFactor);
 }
-/**
- * multiplies value with XScaleFactor if XScaleFactor is < -1 or divide if XScaleFactor is > 1
- */
-float Chart::adjustFloatWithXScaleFactor(float Value) {
-	if (mXScaleFactor < -1) {
-		return Value * -mXScaleFactor;
-	}
-	if (mXScaleFactor > 1) {
-		return Value / mXScaleFactor;
-	}
-	return Value;
+
+float Chart::adjustFloatWithXScaleFactor(float aValue) {
+	return adjustFloatWithScaleFactor(aValue, mXScaleFactor);
 }
 
 /**
@@ -301,7 +285,7 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
 		 * draw labels (numbers)
 		 */
 		uint16_t tNumberYTop = mPositionY + 2 * mAxesSize;
-		assertParamMessage((tNumberYTop <= (DISPLAY_HEIGHT - FONT_HEIGHT)), "no space for x labels", tNumberYTop);
+		assertParamMessage((tNumberYTop <= (DISPLAY_HEIGHT - FONT_HEIGHT)), tNumberYTop, "no space for x labels");
 
 		// first offset is negative
 		tOffset = 1 - ((FONT_WIDTH * mXMinStringWidth) / 2);
@@ -315,7 +299,7 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
 		int tValue = mXLabelStartValue.IntValue;
 		int tIncrementValue = adjustIntWithXScaleFactor(mXLabelBaseIncrementValue.IntValue);
 		float tValueFloat = mXLabelStartValue.FloatValue;
-		float tIncrementValueFloat = adjustIntWithXScaleFactor(mXLabelBaseIncrementValue.FloatValue);
+		float tIncrementValueFloat = adjustFloatWithXScaleFactor(mXLabelBaseIncrementValue.FloatValue);
 
 		/*
 		 * draw loop
@@ -337,7 +321,7 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
 }
 
 /**
- * Set x label start to index.th value / start not with first but with startIndex label
+ * Set x label start to index.th value - start not with first but with startIndex label
  * redraw Axis
  */
 void Chart::setXLabelIntStartValueByIndex(const int aNewXStartIndex, const bool doDraw) {
@@ -426,7 +410,7 @@ void Chart::drawYAxis(const bool aClearLabelsBefore) {
 		 * draw labels (numbers)
 		 */
 		int16_t tNumberXLeft = mPositionX - 2 * mAxesSize - 1 - (mYMinStringWidth * FONT_WIDTH);
-		assertParamMessage((tNumberXLeft >= 0), "no space for y labels", tNumberXLeft);
+		assertParamMessage((tNumberXLeft >= 0), tNumberXLeft, "no space for y labels");
 
 		// first offset is negative
 		tOffset = FONT_HEIGHT / 2;
@@ -446,11 +430,11 @@ void Chart::drawYAxis(const bool aClearLabelsBefore) {
 		do {
 			if (mFlags & CHART_Y_LABEL_INT) {
 				snprintf(tLabelStringBuffer, sizeof tLabelStringBuffer, "%ld", tValue);
-				tValue += mYLabelBaseIncrementValue.IntValue;
+				tValue += mYLabeIncrementValue.IntValue;
 			} else {
 				snprintf(tLabelStringBuffer, sizeof tLabelStringBuffer, "%*.*f", mYMinStringWidth, mYNumVarsAfterDecimal,
 						tValueFloat);
-				tValueFloat += mYLabelBaseIncrementValue.FloatValue;
+				tValueFloat += mYLabeIncrementValue.FloatValue;
 			}
 			drawText(tNumberXLeft, mPositionY - tOffset, tLabelStringBuffer, 1, mLabelColor, mChartBackgroundColor);
 			tOffset += mGridYSpacing;
@@ -461,13 +445,13 @@ void Chart::drawYAxis(const bool aClearLabelsBefore) {
 bool Chart::stepYLabelStartValueInt(const bool aDoIncrement, const int aMinValue, const int aMaxValue) {
 	bool tRetval = true;
 	if (aDoIncrement) {
-		mYLabelStartValue.IntValue += mYLabelBaseIncrementValue.IntValue;
+		mYLabelStartValue.IntValue += mYLabeIncrementValue.IntValue;
 		if (mYLabelStartValue.IntValue > aMaxValue) {
 			mYLabelStartValue.IntValue = aMaxValue;
 			tRetval = false;
 		}
 	} else {
-		mYLabelStartValue.IntValue -= mYLabelBaseIncrementValue.IntValue;
+		mYLabelStartValue.IntValue -= mYLabeIncrementValue.IntValue;
 		if (mYLabelStartValue.IntValue < aMinValue) {
 			mYLabelStartValue.IntValue = aMinValue;
 			tRetval = false;
@@ -478,12 +462,12 @@ bool Chart::stepYLabelStartValueInt(const bool aDoIncrement, const int aMinValue
 }
 
 /**
- * increments or decrements the start value by one increment value (one grid line)
+ * increments or decrements the start value by value (one grid line)
  * and redraws Axis
  * does not decrement below 0
  */
 float Chart::stepYLabelStartValueFloat(const int aSteps) {
-	mYLabelStartValue.FloatValue += mYLabelBaseIncrementValue.FloatValue * aSteps;
+	mYLabelStartValue.FloatValue += mYLabeIncrementValue.FloatValue * aSteps;
 	if (mYLabelStartValue.FloatValue < 0) {
 		mYLabelStartValue.FloatValue = 0;
 	}
@@ -522,31 +506,54 @@ void Chart::clear(void) {
 
 	if (mFlags & CHART_Y_LABEL_INT) {
 		// mGridYSpacing / mYLabelIncrementValue.IntValue is factor raw -> pixel e.g. 40 pixel for 200 value
-		tYDisplayFactor = (mYDataFactor * mGridYSpacing) / mYLabelBaseIncrementValue.IntValue;
+		tYDisplayFactor = (mYDataFactor * mGridYSpacing) / mYLabeIncrementValue.IntValue;
 		tYOffset = mYLabelStartValue.IntValue / mYDataFactor;
 	} else {
-		tYDisplayFactor = (mYDataFactor * mGridYSpacing) / mYLabelBaseIncrementValue.FloatValue;
+		tYDisplayFactor = (mYDataFactor * mGridYSpacing) / mYLabeIncrementValue.FloatValue;
 		tYOffset = mYLabelStartValue.FloatValue / mYDataFactor;
 	}
 
 	uint16_t tXpos = mPositionX;
 	bool tFirstValue = true;
 
-	uint8_t tXScaleCounter = mXScaleFactor;
-	if (mXScaleFactor < 0) {
+	int tXScaleCounter = mXScaleFactor;
+	if (mXScaleFactor < -1) {
 		tXScaleCounter = -mXScaleFactor;
 	}
 
 	for (int i = mWidthX; i > 0; i--) {
-		if (mXScaleFactor == 1) {
+		/*
+		 *  get data and perform X scaling
+		 */
+		if (mXScaleFactor == 0) {
 			tDisplayValue = *aDataPointer++;
-		} else if (mXScaleFactor < 0) {
+		} else if (mXScaleFactor == -1) {
+			// compress by factor 1.5 - every second value is the average of the next two values
+			tDisplayValue = *aDataPointer++;
+			tXScaleCounter--; // starts with 1
+			if (tXScaleCounter < 0) {
+				// get average of actual and next value
+				tDisplayValue += *aDataPointer++;
+				tDisplayValue /= 2;
+				tXScaleCounter = 1;
+			}
+		} else if (mXScaleFactor <= -1) {
+			// compress - get average of multiple values
 			tDisplayValue = 0;
 			for (int i = 0; i < tXScaleCounter; ++i) {
 				tDisplayValue += *aDataPointer++;
 			}
 			tDisplayValue /= tXScaleCounter;
+		} else if (mXScaleFactor == 1) {
+			// expand by factor 1.5 - every second value will be shown 2 times
+			tDisplayValue = *aDataPointer++;
+			tXScaleCounter--; // starts with 1
+			if (tXScaleCounter < 0) {
+				aDataPointer--;
+				tXScaleCounter = 2;
+			}
 		} else {
+			// expand - show value several times
 			tDisplayValue = *aDataPointer;
 			tXScaleCounter--;
 			if (tXScaleCounter == 0) {
@@ -554,7 +561,7 @@ void Chart::clear(void) {
 				tXScaleCounter = mXScaleFactor;
 			}
 		}
-		// check for data still in data buffer
+		// check for data pointer still in data buffer
 		if (aDataPointer >= aDataEndPointer) {
 			break;
 		}
@@ -724,7 +731,7 @@ uint16_t Chart::getYLabelStartValueRawFromFloat(void) {
  * @retval (YEndValue = YStartValue + (scale * (mHeightY / GridYSpacing))  / mYFactor
  */
 uint16_t Chart::getYLabelEndValueRawFromFloat(void) {
-	return ((mYLabelStartValue.FloatValue + mYLabelBaseIncrementValue.FloatValue * (mHeightY / mGridYSpacing)) / mYDataFactor);
+	return ((mYLabelStartValue.FloatValue + mYLabeIncrementValue.FloatValue * (mHeightY / mGridYSpacing)) / mYDataFactor);
 }
 
 void Chart::setXLabelBaseIncrementValue(int xLabelBaseIncrementValue) {
@@ -736,11 +743,11 @@ void Chart::setXLabelBaseIncrementValueFloat(float xLabelBaseIncrementValueFloat
 }
 
 void Chart::setYLabelBaseIncrementValue(int yLabelBaseIncrementValue) {
-	mYLabelBaseIncrementValue.IntValue = yLabelBaseIncrementValue;
+	mYLabeIncrementValue.IntValue = yLabelBaseIncrementValue;
 }
 
 void Chart::setYLabelBaseIncrementValueFloat(float yLabelBaseIncrementValueFloat) {
-	mYLabelBaseIncrementValue.FloatValue = yLabelBaseIncrementValueFloat;
+	mYLabeIncrementValue.FloatValue = yLabelBaseIncrementValueFloat;
 }
 
 int_float_union Chart::getXLabelStartValue(void) const {
@@ -765,6 +772,47 @@ void Chart::setXTitleText(const char * aTitleText) {
 
 void Chart::setYTitleText(const char * aTitleText) {
 	mYTitleText = aTitleText;
+}
+
+/**
+ * aScaleFactor > 1 : expansion by factor aScaleFactor
+ * aScaleFactor == 1 : expansion by 1.5
+ * aScaleFactor == 0 : identity
+ * aScaleFactor == -1 : compression by 1.5
+ * aScaleFactor < -1 : compression by factor -aScaleFactor
+ * multiplies value with factor if aScaleFactor is < 0 (compression) or divide if aScaleFactor is > 0 (expansion)
+ */
+int adjustIntWithScaleFactor(int aValue, int aScaleFactor) {
+	if (aScaleFactor == 0) {
+		return aValue;
+	}
+	int tRetValue = aValue;
+	if (aScaleFactor > 1) {
+		tRetValue = aValue / aScaleFactor;
+	} else if (aScaleFactor == 1) {
+		// value * 2/3
+		tRetValue = (aValue * 2) / 3;
+	} else if (aScaleFactor == -1) {
+		// value * 3/2
+		tRetValue = (aValue * 3) / 2;
+	} else if (aScaleFactor < -1) {
+		tRetValue = aValue * -aScaleFactor;
+	}
+	return tRetValue;
+}
+
+// TODO add factor 1.5 as in adjustIntWithScaleFactor - and check referencing functions()
+/**
+ * multiplies value with aScaleFactor if aScaleFactor is < -1 or divide if aScaleFactor is > 1
+ */
+float adjustFloatWithScaleFactor(float aValue, int aScaleFactor) {
+	if (aScaleFactor <= 0) {
+		return aValue * -(aScaleFactor - 2);
+	}
+	if (aScaleFactor > 1) {
+		return aValue / aScaleFactor;
+	}
+	return aValue;
 }
 /** @} */
 /** @} */

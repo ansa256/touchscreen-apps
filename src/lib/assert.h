@@ -1,7 +1,7 @@
 /*
  * assert.h
  *
-* @date 19.02.2013
+ * @date 19.02.2013
  * @author Armin Joachimsmeyer
  *      Email:   armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
@@ -9,7 +9,6 @@
  */
 #include <stddef.h>
 #include "misc.h"
-
 
 #ifndef ASSERT_H_
 #define ASSERT_H_
@@ -26,11 +25,13 @@
  *         that failed. If expr is true, it returns no value.
  * @retval None
  */
-#define assert_param(expr) ((expr) ? (void)0 : assert_failed((uint8_t *)__FILE__, __LINE__))
+#define assert_param(expr) ((expr) ? 0 : assert_failed((uint8_t *)__FILE__, __LINE__))
 
-#define failParamMessage(message,wrongParam) (assertFailedMessageParam((uint8_t *)__FILE__, __LINE__,getLR14(),message,(int)wrongParam))
+#define failParamMessage(wrongParam,message) (assertFailedParamMessage((uint8_t *)__FILE__, __LINE__,getLR14(),(int)wrongParam ,message))
 
-#define assertParamMessage(expr,message,wrongParam) ((expr) ? (void)0 : assertFailedMessageParam((uint8_t *)__FILE__, __LINE__,getLR14(),message,(int)wrongParam))
+#define assertParamMessage(expr,wrongParam,message) ((expr) ? 0 : assertFailedParamMessage((uint8_t *)__FILE__, __LINE__, getLR14(), (int)wrongParam, message))
+
+#define assertParam(expr,wrongParam) ((expr) ? 0 : assertFailedParamMessage((uint8_t *)__FILE__, __LINE__, getLR14(), (int)wrongParam, StringEmpty))
 
 /* Exported functions ------------------------------------------------------- */
 
@@ -38,8 +39,9 @@
 extern "C" {
 #endif
 // from misc.cpp
-void assert_failed(uint8_t* file, uint32_t line);
-void assertFailedMessageParam(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, const char * aMessage, int aWrongParameter);
+bool assert_failed(uint8_t* file, uint32_t line);
+bool assertFailedParamMessage(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, int aWrongParameter, const char * aMessage);
+void errorMessage( const char * aMessage);
 #ifdef __cplusplus
 }
 #endif

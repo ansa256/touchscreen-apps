@@ -10,14 +10,11 @@
 
 #include "Pages.h"
 #include "misc.h"
-#include <stdio.h>
 #include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
 #include "stm32f30x_it.h"
 #include "stm32f30x_rtc.h"
 
@@ -75,7 +72,7 @@ void startSettingsPage(void) {
 	initClockSettingElements();
 	initTestSettingElements();
 	TouchButtonTPCalibration = TouchButton::allocAndInitSimpleButton(2 * (BUTTON_WIDTH_3_POS_2), BUTTON_HEIGHT_4_LINE_3,
-			BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, StringTPCal, 1, 0, &doTPCalibration);
+	BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, StringTPCal, 1, 0, &doTPCalibration);
 
 	ADC_setRawToVoltFactor();
 	showSettingsPage();
@@ -110,15 +107,18 @@ void initClockSettingElements(void) {
 	strncpy(&StringSetDateCaption[SET_DATE_STRING_INDEX], DateStrings[0], sizeof StringSecond);
 
 	TouchButtonSetDate = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_3, BUTTON_WIDTH_3,
-			BUTTON_HEIGHT_4, COLOR_RED, StringSetDateCaption, 1, 1, &doSetDateMode);
+	BUTTON_HEIGHT_4, COLOR_RED, StringSetDateCaption, 1, 1, &doSetDateMode);
 	// for RTC setting
 	TouchButtonAutorepeatDate_Plus = TouchButtonAutorepeat::allocButton();
 	TouchButtonAutorepeatDate_Plus->initSimpleButton(BUTTON_WIDTH_6_POS_4, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6, BUTTON_HEIGHT_5,
-			COLOR_RED, StringPlus, 2, 1, &doSetDate);
+	COLOR_RED, StringPlus, 2, 1, &doSetDate);
 
 	TouchButtonAutorepeatDate_Minus = TouchButtonAutorepeat::allocButton();
 	TouchButtonAutorepeatDate_Minus->initSimpleButton(BUTTON_WIDTH_6_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6, BUTTON_HEIGHT_5,
-			COLOR_RED, StringMinus, 2, -1, &doSetDate);
+	COLOR_RED, StringMinus, 2, -1, &doSetDate);
+
+	TouchButtonAutorepeatDate_Plus->setButtonAutorepeatTiming(500, 300, 5, 100);
+	TouchButtonAutorepeatDate_Minus->setButtonAutorepeatTiming(500, 300, 5, 100);
 	sSetDateMode = 0;
 }
 
@@ -130,12 +130,6 @@ void deinitClockSettingElements(void) {
 
 void drawClockSettingElements(void) {
 	TouchButtonSetDate->drawButton();
-	RTC_DateTypeDef RTC_DateStructure;
-	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
-	if (RTC_DateStructure.RTC_Year == 0) {
-		RTC_DateStructure.RTC_Year = 13;
-		RTC_SetDate(RTC_Format_BIN, &RTC_DateStructure);
-	}
 	sSetDateMode = 0;
 }
 
@@ -156,53 +150,67 @@ void doSetDateMode(TouchButton * const aTheTouchedButton, int16_t aValue) {
 	aTheTouchedButton->drawButton();
 }
 
+uint8_t sDateTimeMaxValues[] = { 59, 59, 23, 31, 12, 99 };
+void checkAndSetDateTimeElement(uint8_t * aElementPointer, uint8_t SetDateMode, int16_t aValue) {
+	SetDateMode--;
+	uint8_t tNewValue = *aElementPointer + aValue;
+	uint8_t tMaxValue = sDateTimeMaxValues[SetDateMode];
+	if (tNewValue == __UINT8_MAX__) {
+		// underflow
+		tNewValue = tMaxValue;
+	} else if (tNewValue > tMaxValue) {
+		//overflow
+		tNewValue = 0;
+	}
+	if ((SetDateMode == 3 || SetDateMode == 4)) {
+		if (tNewValue == 0) {
+			// no 0th day and month
+			if (aValue > 0) {
+				// increment
+				tNewValue++;
+			} else {
+				// decrement from 1 to zero -> set to max
+				tNewValue = tMaxValue;
+			}
+		}
+
+	}
+	*aElementPointer = tNewValue;
+}
+
 void doSetDate(TouchButton * const aTheTouchedButton, int16_t aValue) {
-	assertParamMessage((sSetDateMode != 0), "Impossible mode", sSetDateMode);
+	assertParamMessage((sSetDateMode != 0), sSetDateMode, "Impossible mode");
 	PWR_BackupAccessCmd(ENABLE);
+	uint8_t * tElementPointer;
 	if (sSetDateMode < 4) {
 		//set time
 		RTC_TimeTypeDef RTC_TimeStructure;
 		RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
 		if (sSetDateMode == 1) {
-			RTC_TimeStructure.RTC_Seconds += aValue;
+			tElementPointer = &RTC_TimeStructure.RTC_Seconds;
 		} else if (sSetDateMode == 2) {
-			RTC_TimeStructure.RTC_Minutes += aValue;
+			tElementPointer = &RTC_TimeStructure.RTC_Minutes;
 		} else if (sSetDateMode == 3) {
-			RTC_TimeStructure.RTC_Hours += aValue;
+			tElementPointer = &RTC_TimeStructure.RTC_Hours;
 		}
+		checkAndSetDateTimeElement(tElementPointer, sSetDateMode, aValue);
 		RTC_SetTime(RTC_Format_BIN, &RTC_TimeStructure);
 	} else {
 		RTC_DateTypeDef RTC_DateStructure;
 		RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
 		if (sSetDateMode == 4) {
-			RTC_DateStructure.RTC_Date += aValue;
+			tElementPointer = &RTC_DateStructure.RTC_Date;
 		} else if (sSetDateMode == 5) {
-			RTC_DateStructure.RTC_Month += aValue;
+			tElementPointer = &RTC_DateStructure.RTC_Month;
 		} else if (sSetDateMode == 6) {
-			RTC_DateStructure.RTC_Year += aValue;
+			tElementPointer = &RTC_DateStructure.RTC_Year;
 		}
+		checkAndSetDateTimeElement(tElementPointer, sSetDateMode, aValue);
 		RTC_SetDate(RTC_Format_BIN, &RTC_DateStructure);
 	}
 	PWR_BackupAccessCmd(DISABLE);
 	FeedbackToneOK();
-	showRTCTime(RTC_DEFAULT_X, RTC_DEFAULT_Y, RTC_DEFAULT_COLOR, COLOR_BACKGROUND_DEFAULT);
-}
-
-static uint32_t MillisOfLastDrawRTCTime;
-void showRTCTimeEverySecond(uint16_t x, uint16_t y, uint16_t aColor, uint16_t aBackColor) {
-// count milliseconds for loop control
-	uint32_t tMillis = getMillisSinceBoot() - MillisOfLastDrawRTCTime;
-	if (tMillis > 1000) {
-		MillisOfLastDrawRTCTime = getMillisSinceBoot();
-		//RTC
-		RTC_getTimeString(StringBuffer);
-		drawText(x, y, StringBuffer, 1, aColor, aBackColor);
-	}
-}
-
-void showRTCTime(uint16_t x, uint16_t y, uint16_t aColor, uint16_t aBackColor) {
-	RTC_getTimeString(StringBuffer);
-	drawText(x, y, StringBuffer, 1, aColor, aBackColor);
+	showRTCTime(RTC_DEFAULT_X, RTC_DEFAULT_Y, RTC_DEFAULT_COLOR, COLOR_BACKGROUND_DEFAULT, true);
 }
 
 /*************************************************************
@@ -221,14 +229,13 @@ void initBacklightElements(void) {
 	TouchSlider::resetDefaults();
 
 	TouchButtonAutorepeatBacklight_Plus = TouchButtonAutorepeat::allocAndInitSimpleButton(BACKLIGHT_CONTROL_X, BACKLIGHT_CONTROL_Y,
-			TOUCHSLIDER_DEFAULT_SIZE * TOUCHSLIDER_OVERALL_SIZE_FACTOR, 2 * FONT_HEIGHT, COLOR_RED, StringPlus, 1, 1,
-			&doChangeBacklight);
+	TOUCHSLIDER_DEFAULT_SIZE * TOUCHSLIDER_OVERALL_SIZE_FACTOR, 2 * FONT_HEIGHT, COLOR_RED, StringPlus, 1, 1, &doChangeBacklight);
 	/*
 	 * Backlight slider
 	 */
 	TouchSliderBacklight.initSlider(BACKLIGHT_CONTROL_X, TouchButtonAutorepeatBacklight_Plus->getPositionYBottom() + 4,
-			TOUCHSLIDER_DEFAULT_SIZE, BACKLIGHT_MAX_VALUE, BACKLIGHT_MAX_VALUE, getBacklightValue(), "Backlight",
-			TOUCHSLIDER_DEFAULT_TOUCH_BORDER, TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doBacklightSlider,
+	TOUCHSLIDER_DEFAULT_SIZE, BACKLIGHT_MAX_VALUE, BACKLIGHT_MAX_VALUE, getBacklightValue(), "Backlight",
+	TOUCHSLIDER_DEFAULT_TOUCH_BORDER, TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doBacklightSlider,
 			&mapBacklightPowerValue);
 
 	TouchButtonAutorepeatBacklight_Minus = TouchButtonAutorepeat::allocAndInitSimpleButton(BACKLIGHT_CONTROL_X,
@@ -281,7 +288,7 @@ void doChangeBacklight(TouchButton * const aTheTouchedButton, int16_t aValue) {
  * Test stuff
  *********************************************/
 static int testValueIntern = 0;
-extern "C" int testValueForExtern = 0x0000;
+int testValueForExtern = 0x0000;
 #define MAX_TEST_VALUE 7
 void drawTestvalue(void) {
 	snprintf(StringBuffer, sizeof StringBuffer, "MMC SPI_BaudRatePrescaler=%3d", 0x01 << (testValueIntern + 1));
@@ -305,14 +312,14 @@ void doSetTestvalue(TouchButton * const aTheTouchedButton, int16_t aValue) {
 }
 
 void initTestSettingElements(void) {
-	// for misc  settings
+// for misc  settings
 	TouchButtonAutorepeatTest_Plus = TouchButtonAutorepeat::allocButton();
 	TouchButtonAutorepeatTest_Plus->initSimpleButton(BUTTON_WIDTH_6_POS_3, BUTTON_HEIGHT_4_LINE_2, BUTTON_WIDTH_6, BUTTON_HEIGHT_4,
-			COLOR_BLUE, StringPlus, 2, 1, &doSetTestvalue);
+	COLOR_BLUE, StringPlus, 2, 1, &doSetTestvalue);
 
 	TouchButtonAutorepeatTest_Minus = TouchButtonAutorepeat::allocButton();
 	TouchButtonAutorepeatTest_Minus->initSimpleButton(BUTTON_WIDTH_6_POS_4, BUTTON_HEIGHT_4_LINE_2, BUTTON_WIDTH_6, BUTTON_HEIGHT_4,
-			COLOR_BLUE, StringMinus, 2, -1, &doSetTestvalue);
+	COLOR_BLUE, StringMinus, 2, -1, &doSetTestvalue);
 	sSetDateMode = 0;
 	drawTestvalue();
 }

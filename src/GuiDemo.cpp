@@ -28,17 +28,7 @@
 #include "Chart.h"
 #include "misc.h"
 
-#include <stdio.h>
 #include <stdlib.h>
-
-#ifdef __cplusplus
-extern "C" {
-
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
-
-}
-#endif
 
 /** @addtogroup Gui_Demo
  * @{

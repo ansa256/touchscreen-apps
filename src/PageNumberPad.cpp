@@ -10,17 +10,10 @@
 
 #include "Pages.h"
 #include "misc.h"
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>  //strtod
 #include <locale.h>
-#ifdef __cplusplus
-extern "C" {
 
-#include "stm32f30xPeripherals.h"
-
-}
-#endif
 
 static TouchButton * TouchButtonNumberPad0;
 static TouchButton * TouchButtonNumberPad1;
@@ -55,7 +48,7 @@ void doNumberPad(TouchButton * const aTheTouchedButton, int16_t aValue);
 #define NUMBERPADBUFFER_INDEX_LAST_CHAR (SIZEOF_NUMBERPADBUFFER - 2)
 extern char NumberPadBuffer[SIZEOF_NUMBERPADBUFFER];
 char NumberPadBuffer[SIZEOF_NUMBERPADBUFFER];
-int sNumberPadBufferSignIndex;
+int sNumberPadBufferSignIndex;  // Main pointer to NumberPadBuffer
 
 static volatile bool numberpadInputHasFinished;
 static volatile bool numberpadInputHasCanceled;
@@ -166,12 +159,13 @@ void doNumberPad(TouchButton * const aTheTouchedButton, int16_t aValue) {
 		// plain numbers and decimal separator
 		if (sNumberPadBufferSignIndex > 0) {
 			if (sNumberPadBufferSignIndex < NUMBERPADBUFFER_INDEX_LAST_CHAR) {
-				// copy all chars one left except for first char which simply overwrites the "0"
+				// copy all chars one left
 				for (int i = 0; i < NUMBERPADBUFFER_INDEX_LAST_CHAR; ++i) {
 					NumberPadBuffer[i] = NumberPadBuffer[i + 1];
 				}
 			}
 			sNumberPadBufferSignIndex--;
+			// set number at last (rightmost) position
 			NumberPadBuffer[NUMBERPADBUFFER_INDEX_LAST_CHAR] = aValue;
 		} else {
 			tFeedbackType = FEEDBACK_TONE_SHORT_ERROR;
@@ -180,12 +174,15 @@ void doNumberPad(TouchButton * const aTheTouchedButton, int16_t aValue) {
 	FeedbackTone(tFeedbackType);
 	drawNumberPadValue(NumberPadBuffer);
 }
+
 /**
  * clears display, shows numberpad and returns with a float
  */
 float getNumberFromNumberPad(uint16_t aXStart, uint16_t aYStart, uint16_t aButtonColor) {
 	clearDisplay(COLOR_BACKGROUND_DEFAULT);
 	TouchButton::deactivateAllButtons();
+	// disable temporarily the end callback function
+	TouchPanel.setEndTouchCallbackEnabled(false);
 	drawNumberPad(aXStart, aYStart, aButtonColor);
 	clearNumberPadBuffer();
 	numberpadInputHasFinished = false;
@@ -197,6 +194,7 @@ float getNumberFromNumberPad(uint16_t aXStart, uint16_t aYStart, uint16_t aButto
 	for (unsigned int i = 0; i < sizeof(TouchButtonsNumberPad) / sizeof(TouchButtonsNumberPad[0]); ++i) {
 		(*TouchButtonsNumberPad[i])->setFree();
 	}
+	TouchPanel.setEndTouchCallbackEnabled(true);
 	if (numberpadInputHasCanceled) {
 		return NAN;
 	} else {

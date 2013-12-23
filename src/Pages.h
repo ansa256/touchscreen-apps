@@ -12,13 +12,24 @@
 #define PAGES_H_
 
 #include "HY32D.h"
+
+#include <stdio.h> /* for sprintf */
+
 #ifdef __cplusplus
+
+#include "utils.h"
 #include "ADS7846.h"
 #include "TouchSlider.h"
 #include "TouchButton.h"
 #include "TouchButtonAutorepeat.h"
 // for NAN in numberpad
 #include <math.h>
+
+extern "C" {
+#include "timing.h"
+#include "stm32f30xPeripherals.h"
+}
+
 #endif
 
 /**
@@ -37,9 +48,7 @@ extern TouchSlider TouchSliderVertical2;
 extern TouchSlider TouchSliderHorizontal;
 extern TouchSlider TouchSliderHorizontal2;
 
-/*
- * for loop timings
- */
+// for loop timings
 extern uint32_t MillisLastLoop;
 extern uint32_t MillisSinceLastAction;
 
@@ -57,10 +66,6 @@ void initMainHomeButton(bool doDraw);
  * from SettingsPage
  */
 extern TouchSlider TouchSliderBacklight;
-// Default screen position for time string
-#define RTC_DEFAULT_X 2
-#define RTC_DEFAULT_Y (DISPLAY_HEIGHT - FONT_HEIGHT - 1)
-#define RTC_DEFAULT_COLOR COLOR_RED
 
 #define BACKLIGHT_CONTROL_X 30
 #define BACKLIGHT_CONTROL_Y 4
@@ -82,9 +87,6 @@ void startSettingsPage(void);
 void loopSettingsPage(void);
 void stopSettingsPage(void);
 
-void showRTCTime(uint16_t x, uint16_t y, uint16_t aColor, uint16_t aBackColor);
-void showRTCTimeEverySecond(uint16_t x, uint16_t y, uint16_t aColor, uint16_t aBackColor);
-
 void setActualBacklightValue(uint8_t aBacklightValue, bool aDoDraw);
 extern "C" uint8_t getActualBacklightValue(void);
 
@@ -93,6 +95,7 @@ extern "C" uint8_t getActualBacklightValue(void);
  */
 #define NUMBERPAD_DEFAULT_X 60
 float getNumberFromNumberPad(uint16_t aXStart, uint16_t aYStart, uint16_t aButtonColor);
+
 /**
  * From DAC page
  */
@@ -107,6 +110,14 @@ void initFreqGenPage(void);
 void startFreqGenPage(void);
 void loopFreqGenPage(void);
 void stopFreqGenPage(void);
+
+/**
+ * From IR page
+ */
+void startIRPage(void);
+void loopIRPage(void);
+void stopIRPage(void);
+
 /**
  * From PageAcceleratorCompassDemo
  */
@@ -133,7 +144,6 @@ void stopBobsDemo(void);
  */
 void initTestsPage(void);
 void startTestsPage(void);
-void loopTestsPage(int aGuiToucheState);
 void stopTestsPage(void);
 
 extern int DebugValue1;

@@ -18,7 +18,7 @@
  * 		- FONT_HEIGHT
  *
  */
- 
+
 #include "TouchSlider.h"
 
 #include "ADS7846.h"
@@ -209,7 +209,7 @@ int TouchSlider::initSlider(const uint16_t aPositionX, const uint16_t aPositionY
 			mSize = 1;
 			mPositionX = 0;
 			mPositionXRight = mPositionX + mMaxValue + 1;
-			failParamMessage("XRight wrong", mPositionXRight);
+			failParamMessage(mPositionXRight, "XRight wrong");
 			tRetValue = TOUCHSLIDER_ERROR_X_RIGHT;
 		}
 		mPositionYBottom = mPositionY + ((tSizeOfBorders + mSize) * TOUCHSLIDER_SIZE_FACTOR) - 1;
@@ -218,7 +218,7 @@ int TouchSlider::initSlider(const uint16_t aPositionX, const uint16_t aPositionY
 			mSize = 1;
 			mPositionY = 0;
 			mPositionYBottom = mPositionY + ((tSizeOfBorders + mSize) * TOUCHSLIDER_SIZE_FACTOR) - 1;
-			failParamMessage("YBottom wrong", mPositionYBottom);
+			failParamMessage(mPositionYBottom, "YBottom wrong");
 			tRetValue = TOUCHSLIDER_ERROR_Y_BOTTOM;
 		}
 
@@ -229,7 +229,7 @@ int TouchSlider::initSlider(const uint16_t aPositionX, const uint16_t aPositionY
 			mSize = 1;
 			mPositionX = 0;
 			mPositionXRight = mPositionX + ((tSizeOfBorders + mSize) * TOUCHSLIDER_SIZE_FACTOR) - 1;
-			failParamMessage("XRight wrong", mPositionXRight);
+			failParamMessage(mPositionXRight, "XRight wrong");
 			tRetValue = TOUCHSLIDER_ERROR_X_RIGHT;
 		}
 		mPositionYBottom = mPositionY + mMaxValue + tSizeOfBorders - 1;
@@ -238,7 +238,7 @@ int TouchSlider::initSlider(const uint16_t aPositionX, const uint16_t aPositionY
 			mSize = 1;
 			mPositionY = 0;
 			mPositionYBottom = mPositionY + mMaxValue + 1;
-			failParamMessage("YBottom wrong", mPositionYBottom);
+			failParamMessage(mPositionYBottom, "YBottom wrong");
 			tRetValue = TOUCHSLIDER_ERROR_Y_BOTTOM;
 		}
 	}
@@ -254,7 +254,6 @@ void TouchSlider::drawSlider(void) {
 
 	// Fill middle bar with initial value
 	drawBar();
-
 	printCaption();
 	// Print value as string
 	printValue();
@@ -373,9 +372,9 @@ void TouchSlider::printCaption(void) {
 
 // space for caption?
 	int tCaptionPositionY = mPositionYBottom + mSize;
-	if ((tCaptionPositionY + FONT_HEIGHT)> TOUCH_LCD_HEIGHT) {
+	if ((tCaptionPositionY + FONT_HEIGHT) > TOUCH_LCD_HEIGHT) {
 		// no space for caption
-		failParamMessage("Caption Bottom wrong", tCaptionPositionY + FONT_HEIGHT);
+		failParamMessage(tCaptionPositionY + FONT_HEIGHT, "Caption Bottom wrong");
 	}
 
 	drawText(tCaptionPositionX, tCaptionPositionY, (char *) mCaption, 1, mCaptionColor, mValueCaptionBackgroundColor);
@@ -384,7 +383,7 @@ void TouchSlider::printCaption(void) {
 /**
  * Print value left aligned to slider below caption or beneath if TOUCHSLIDER_HORIZONTAL_VALUE_LEFT
  */
-uint16_t TouchSlider::printValue(void) {
+int TouchSlider::printValue(void) {
 	if (!(mOptions & TOUCHSLIDER_SHOW_VALUE)) {
 		return 0;
 	}
@@ -396,10 +395,10 @@ uint16_t TouchSlider::printValue(void) {
 		tValuePositionY = mPositionYBottom + mSize;
 	}
 
-	if ((tValuePositionY + FONT_HEIGHT)> TOUCH_LCD_HEIGHT) {
+	if ((tValuePositionY + FONT_HEIGHT) > TOUCH_LCD_HEIGHT) {
 		// no space for caption
 		mOptions &= ~TOUCHSLIDER_SHOW_VALUE;
-		failParamMessage("Value Bottom wrong", tValuePositionY + FONT_HEIGHT);
+		failParamMessage(tValuePositionY + FONT_HEIGHT, "Value Bottom wrong");
 		return 0;
 	}
 	pValueAsString = StringBuffer;

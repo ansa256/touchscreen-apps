@@ -10,11 +10,11 @@
 
 // file:///E:/WORKSPACE_STM32/TouchScreenApps/html/index.html
 /* Includes ------------------------------------------------------------------*/
+#include "Pages.h"
+
 #ifdef __cplusplus
 extern "C" {
 
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
 #include "stm32f3_discovery_leds_buttons.h"
 #include "stm32f30x.h"
 #include "stm32f3_discovery.h"
@@ -27,8 +27,6 @@ extern "C" {
 
 }
 #endif
-
-#include "Pages.h"
 
 #include "TouchDSO.h"
 #include "AccuCapacity.h"
@@ -60,7 +58,7 @@ int main(void) {
 
 	/**
 	 * User Button
-	 * redefine of USER_BUTTON_EXTI_IRQn to lowest possible prio 3 of 0-3 / subprio 3 of 0-3
+	 * set USER_BUTTON_EXTI_IRQn to lowest possible prio 3 of 0-3 / subprio 3 of 0-3
 	 */
 	STM_EVAL_PBInit(BUTTON_USER, BUTTON_MODE_EXTI);
 
@@ -74,68 +72,77 @@ int main(void) {
 
 	Debug_IO_initalize();
 
-	// sets EXTI4 to 3 3
+	// sets EXTI4 to 3 3  - redefine user button prio to 0/3
 	MICROSD_IO_initalize();
 
 	// Setup ADC
 	ADC12_init();
 	tone(2000, 100);
 
-	//init touch controller
-	TouchPanel.init();
+	if (isInitializedHY32D) {
 
-	/**
-	 * Touch-panel calibration
-	 */
-	TouchPanel.rd_data();
-	// check if panel connected
-	if (TouchPanel.getPressure() < MAX_REASONABLE_PRESSURE && TouchPanel.getPressure() > MIN_REASONABLE_PRESSURE) {
-		TouchPanel.doCalibration(false); //don't check EEPROM for calibration data
-	} else {
-		TouchPanel.doCalibration(true); //check EEPROM for calibration data
-	}
+		//init touch controller
+		TouchPanel.init();
 
-	initMainMenuPage();
-
-	/**
-	 * ADC1_2_IRQn 0 (highest) of 0-3 /subprio 1 of 0-3
-	 */
-	initDSO();
-	initGuiDemo();
-	initAcceleratorCompass();
-	initAccuCapacity();
-	initTestsPage();
-	initDACPage();
-	initFreqGenPage();
-	//setZeroAcceleratorGyroValue();
-
-	/* Just to be sure... */
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-	RCC_GetClocksFreq(&RCC_Clocks);
-
-	if (MICROSD_isCardInserted()) {
-		// delayed execution of MMC test
-		registerDelayCallback(&testAttachMMC, 200);
-	}
-
-	// init button pools
-	TouchButton * tTouchButton = TouchButton::allocButton(false);
-	tTouchButton->setFree();
-	TouchButtonAutorepeat * tTouchButtonAutorepeat = TouchButtonAutorepeat::allocButton();
-	tTouchButtonAutorepeat->setFree();
-
-	struct lconv * tLconfPtr = localeconv();
-	//*tLconfPtr->decimal_point = ','; does not work because string is constant and in flash rom
-	tLconfPtr->decimal_point = (char*) StringComma;
-	//tLconfPtr->thousands_sep = (char*) StringDot; // does not affect sprintf()
-
-	/* Infinite loop */
-	while (1) {
-		startMainMenuPage();
-		while (1) {
-			loopMainMenuPage();
+		/**
+		 * Touch-panel calibration
+		 */
+		TouchPanel.rd_data();
+		// check if panel connected
+		if (TouchPanel.getPressure() > MIN_REASONABLE_PRESSURE && TouchPanel.getPressure() < MAX_REASONABLE_PRESSURE) {
+			// panel pressed
+			TouchPanel.doCalibration(false); //don't check EEPROM for calibration data
+		} else {
+			TouchPanel.doCalibration(true); //check EEPROM for calibration data
 		}
-		stopMainMenuPage();
+
+		initMainMenuPage();
+
+		/**
+		 * ADC1_2_IRQn 0 (highest) of 0-3 /subprio 1 of 0-3
+		 */
+		initDSO();
+		initGuiDemo();
+		initAcceleratorCompass();
+		initAccuCapacity();
+		initTestsPage();
+		initDACPage();
+		initFreqGenPage();
+		//setZeroAcceleratorGyroValue();
+
+		/* Just to be sure... */
+		NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+		RCC_GetClocksFreq(&RCC_Clocks);
+
+		if (MICROSD_isCardInserted()) {
+			// delayed execution of MMC test
+			registerDelayCallback(&testAttachMMC, 200);
+		}
+
+		// init button pools
+		TouchButton * tTouchButton = TouchButton::allocButton(false);
+		tTouchButton->setFree();
+		TouchButtonAutorepeat * tTouchButtonAutorepeat = TouchButtonAutorepeat::allocButton();
+		tTouchButtonAutorepeat->setFree();
+
+		struct lconv * tLconfPtr = localeconv();
+		//*tLconfPtr->decimal_point = ','; does not work because string is constant and in flash rom
+		tLconfPtr->decimal_point = (char*) StringComma;
+		//tLconfPtr->thousands_sep = (char*) StringDot; // does not affect sprintf()
+
+		/* Infinite loop */
+		while (1) {
+			startMainMenuPage();
+			while (1) {
+				loopMainMenuPage();
+			}
+			stopMainMenuPage();
+		}
+	} else {
+		while (1) {
+			// no display attached
+			CycleLEDs();
+		}
 	}
 }
 

@@ -5,7 +5,7 @@
  * @author Armin Joachimsmeyer
  *      Email:   armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
- * @version 1.0.0
+ * @version 1.5.0
  */
 
 #ifndef TIMING_H_
@@ -38,14 +38,16 @@
 #define PREEMPTIVE_PRIO_SHIFT 2 // shift preemptive prio bits
 #define NUMBER_OF_PREEMPTIVE_PRIOS 4
 
+extern volatile uint32_t TimeoutCounterForThread;
+
 uint32_t LSM303DLHC_TIMEOUT_UserCallback(void);
 uint32_t L3GD20_TIMEOUT_UserCallback(void);
 
 void setTimeoutMillis(int32_t aTimeMillis);
 #define isTimeout(aLinkRegister) (isTimeoutVerbose((uint8_t *)__FILE__, __LINE__,aLinkRegister,2000))
-#define isTimeoutShowDelay(aLinkRegister, aDelayMillis) (isTimeoutVerbose((uint8_t *)__FILE__, __LINE__,aLinkRegister,aDelayMillis))
+#define isTimeoutShowDelay(aLinkRegister, aMessageDisplayTimeMillis) (isTimeoutVerbose((uint8_t *)__FILE__, __LINE__,aLinkRegister,aMessageDisplayTimeMillis))
 bool isTimeoutSimple(void);
-bool isTimeoutVerbose(uint8_t* file, uint32_t line, uint32_t aLinkRegister, int32_t aDelayMillis);
+bool isTimeoutVerbose(uint8_t* file, uint32_t line, uint32_t aLinkRegister, int32_t aMessageDisplayTimeMillis);
 
 void delayNanos(int32_t aTimeNanos);
 
@@ -56,6 +58,7 @@ void changeDelayCallback(void (*aGenericCallback)(void), int32_t aTimeMillis);
 void doOneSystic(void);
 
 uint32_t getMillisSinceBoot(void);
+
 
 #define NANOS_ONE_LOOP 139
 void displayTimings(uint16_t aYDisplayPos);

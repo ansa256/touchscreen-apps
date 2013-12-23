@@ -19,7 +19,6 @@
  * 		FONT_WIDTH
  * 		FONT_HEIGHT
  *
- * 		40 Byte per button on 32Bit ARM
  *
  */
 
@@ -170,12 +169,12 @@ int8_t TouchButton::setPosition(const uint16_t aPositionX, const uint16_t aPosit
 	// check values
 	if (mPositionXRight > DISPLAY_WIDTH) {
 		mPositionXRight = DISPLAY_WIDTH - 1;
-		failParamMessage("XRight wrong", mPositionXRight);
+		failParamMessage(mPositionXRight, "XRight wrong");
 		tRetValue = TOUCHBUTTON_ERROR_X_RIGHT;
 	}
 	if (mPositionYBottom >= DISPLAY_HEIGHT) {
 		mPositionYBottom = DISPLAY_HEIGHT - 1;
-		failParamMessage("YBottom wrong", mPositionYBottom);
+		failParamMessage(mPositionYBottom, "YBottom wrong");
 		tRetValue = TOUCHBUTTON_ERROR_Y_BOTTOM;
 	}
 	return tRetValue;
@@ -334,7 +333,6 @@ const char * TouchButton::getCaption() const {
 	return mCaption;
 }
 
-
 uint16_t TouchButton::getValue() const {
 	return mValue;
 }
@@ -433,9 +431,9 @@ TouchButton * TouchButton::allocButton(bool aOnlyAutorepeatButtons) {
 	}
 	if (tButtonPointer == NULL) {
 		if (aOnlyAutorepeatButtons) {
-			failParamMessage("No autorepeat button available", sButtonCombinedPoolSize);
+			failParamMessage(sButtonCombinedPoolSize, "No autorepeat button available");
 		} else {
-			failParamMessage("No button available", sButtonCombinedPoolSize);
+			failParamMessage(sButtonCombinedPoolSize, "No button available");
 		}
 		// to avoid NULL pointer
 		tButtonPointer = sListStart;
@@ -455,7 +453,7 @@ TouchButton * TouchButton::allocButton(bool aOnlyAutorepeatButtons) {
  * Deallocates / free a button and put it back to button bool
  */
 void TouchButton::setFree(void) {
-	assertParamMessage((this != NULL), "Button handle is null", sButtonCombinedPoolSize);
+	assertParamMessage((this != NULL), sButtonCombinedPoolSize, "Button handle is null");
 	sButtonCombinedPoolSize++;
 	mFlags &= ~FLAG_IS_ALLOCATED;
 	mFlags &= ~FLAG_IS_ACTIVE;
@@ -471,7 +469,7 @@ void TouchButton::freeButton(TouchButton * aTouchButton) {
 		tObjectPointer = tObjectPointer->mNextObject;
 	}
 	if (tObjectPointer == NULL) {
-		failParamMessage("Button not found in list", aTouchButton);
+		failParamMessage(aTouchButton, "Button not found in list");
 	} else {
 		sButtonCombinedPoolSize++;
 		tObjectPointer->mFlags &= ~FLAG_IS_ALLOCATED;
@@ -532,11 +530,11 @@ int CheckTouchGeneric(bool aCheckAlsoPlainButtons) {
 	int tGuiTouched = BUTTON_NOT_TOUCHED;
 
 	if (sCheckButtonsForEndTouch) {
+		sCheckButtonsForEndTouch = false;
 		tGuiTouched = TouchButton::checkAllButtons(TouchPanel.getXActual(), TouchPanel.getYActual(), true);
 		if (tGuiTouched == BUTTON_TOUCHED_AUTOREPEAT) {
 			sAutorepeatButtonTouched = true;
 		}
-		sCheckButtonsForEndTouch = false;
 		sEndTouchProcessed = true;
 	} else {
 		if (TouchPanel.wasTouched()) {

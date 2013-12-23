@@ -10,17 +10,7 @@
 
 #include "Pages.h"
 #include "misc.h"
-#include <stdio.h>
 #include <string.h>
-
-#ifdef __cplusplus
-extern "C" {
-
-#include "stm32f30xPeripherals.h"
-#include "timing.h"
-
-}
-#endif
 
 /* Private define ------------------------------------------------------------*/
 

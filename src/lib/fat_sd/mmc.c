@@ -74,12 +74,12 @@ static BYTE stm32_spi_rw(BYTE out) {
 	SPI_SendData8(SPI1, out);
 
 	/* Wait to receive a byte */
-	while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE ) == RESET) {
+	while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET) {
 		;
 	}
 
 	/* Return the byte read from the SPI bus */
-	return SPI_ReceiveData8(SPI1 );
+	return SPI_ReceiveData8(SPI1);
 }
 /*-----------------------------------------------------------------------*/
 /* Transmit a byte to MMC via SPI  (Platform dependent)                  */
@@ -108,7 +108,7 @@ UINT wt /* Timeout [ms] */
 	uint32_t tTimestamp = getMillisSinceBoot() + wt;
 	while (rcvr_spi() != 0xFF) {
 		if (getMillisSinceBoot() > tTimestamp) {
-			failParamMessage("Timeout in wait_ready()", tLR14);
+			failParamMessage(tLR14, "Timeout in wait_ready()");
 			break;
 		}
 	}
@@ -650,14 +650,14 @@ void EXTI4_IRQHandler(void) {
 		if (tDiskStatus != 0x00) {
 			if (tDiskStatus != 0x01) {
 				// disk status 01 gives timeout message - no need to add another message here
-				assertFailedMessageParam((uint8_t *) __FILE__, __LINE__, getLR14(), "Disk_initialize failed", tDiskStatus);
+				assertFailedParamMessage((uint8_t *) __FILE__, __LINE__, getLR14(), tDiskStatus, "Disk_initialize failed");
 			}
 		} else {
 			FRESULT tMountStatus = f_mount(0, &Fatfs[0]);
 			if (tMountStatus == FR_OK) {
 				STM_EVAL_LEDOn(LED10); // RED Front
 			} else {
-				assertFailedMessageParam((uint8_t *) __FILE__, __LINE__, getLR14(), "f_mount", tMountStatus);
+				assertFailedParamMessage((uint8_t *) __FILE__, __LINE__, getLR14(), tMountStatus, "f_mount");
 			}
 		}
 	} else {

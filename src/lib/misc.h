@@ -5,7 +5,7 @@
  * @author Armin Joachimsmeyer
  *      Email:   armin.joachimsmeyer@gmx.de
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
- * @version 1.0.0
+ * @version 1.5.0
  */
 
 #ifndef MISC_H_
@@ -22,6 +22,8 @@ void FaultHandler(unsigned int * aFaultArgs);
 }
 #endif
 
+extern int sLockCount; // counts skipped drawChars because of display locks
+
 /**
  * Miscellaneous buffers
  */
@@ -34,6 +36,7 @@ extern char StringBuffer[SIZEOF_STRINGBUFFER];
 extern uint16_t FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER];
 
 extern const char StringEmpty[1];
+extern const char StringSpace[2];
 extern const char StringPlus[2];
 extern const char StringMinus[2];
 extern const char StringGreaterThan[2];
@@ -56,12 +59,15 @@ extern const char String7[2];
 extern const char String8[2];
 extern const char String9[2];
 extern const char String10[3];
+extern const char * const Number0To10Strings[11];
+
 extern const char String20[3];
 extern const char String50[3];
 extern const char String100[4];
 extern const char String200[4];
 extern const char String500[4];
 extern const char String1000[5];
+extern const char String1k[3];
 
 extern const char StringOn[3];
 extern const char StringOff[4];
@@ -103,7 +109,7 @@ extern const char StringHour[5];
 extern const char StringMin[4];
 extern const char StringMinute[7];
 extern const char StringSecond[7];
-extern const char * DateStrings[7];
+extern const char * const DateStrings[7];
 
 #define IN_INTERRUPT_SERVICE_ROUTINE ((__get_IPSR() & 0xFF) != 0)
 

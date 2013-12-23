@@ -21,15 +21,12 @@ extern "C" {
 #include "hw_config.h" // for USB
 #include "usb_lib.h"
 
-#include "timing.h"
-#include "stm32f30xPeripherals.h"
 #include "stm32f30x.h"
 #include "stm32f3_discovery.h"
 #include "stm32f3_discovery_lsm303dlhc.h"
 #include "stm32f3_discovery_l3gd20.h"
 #include "stm32f3_discovery_leds_buttons.h"
 #include "math.h"
-#include <stdio.h>
 
 }
 #endif
@@ -149,6 +146,7 @@ void initAcceleratorCompass(void) {
 	GyroYawLine.BackgroundColor = COLOR_ACC_GYRO_BACKGROUND;
 
 }
+
 void doClearAcceleratorCompassScreen(TouchButton * const aTheTouchedButton, int16_t aValue) {
 	FeedbackToneOK();
 	clearDisplay(aValue);
@@ -206,19 +204,19 @@ void loopAcceleratorGyroCompassDemo(void) {
 			HID_Buffer[2] = 0;
 			/* LEFT Direction */
 			if ((RawDataBuffer[0] / AcceleratorScale) < -2) {
-				HID_Buffer[1] += CURSOR_STEP;
+				HID_Buffer[1] -= CURSOR_STEP;
 			}
 			/* RIGHT Direction */
 			if ((RawDataBuffer[0] / AcceleratorScale) > 2) {
-				HID_Buffer[1] -= CURSOR_STEP;
+				HID_Buffer[1] += CURSOR_STEP;
 			}
 			/* UP Direction */
 			if ((RawDataBuffer[1] / AcceleratorScale) < -2) {
-				HID_Buffer[2] -= CURSOR_STEP;
+				HID_Buffer[2] += CURSOR_STEP;
 			}
 			/* DOWN Direction */
 			if ((RawDataBuffer[1] / AcceleratorScale) > 2) {
-				HID_Buffer[2] += CURSOR_STEP;
+				HID_Buffer[2] -= CURSOR_STEP;
 			}
 			/* Update the cursor position */
 			if ((HID_Buffer[1] != 0) || (HID_Buffer[2] != 0)) {

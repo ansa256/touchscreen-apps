@@ -13,24 +13,22 @@
 
 #include "misc.h"
 #include "main.h"
-#include <stdio.h>
 #include <string.h>
 #include <locale.h>
 
 #ifdef __cplusplus
 extern "C" {
-
-#include "timing.h"
+#include "stm32f3_discovery.h"
 #include "usb_misc.h"
 #include "diskio.h"
 #include "ff.h"
-#include "stm32f30xPeripherals.h"
 
 }
 #endif
 
 /* Private variables ---------------------------------------------------------*/
 static TouchButton * TouchButtonBack;
+static bool sBackButtonPressed;
 static TouchButton * TouchButtonTestFont1;
 static TouchButton * TouchButtonTestFont2;
 static TouchButton * TouchButtonTestHY32D;
@@ -38,13 +36,19 @@ static TouchButton * TouchButtonTestGraphics;
 static TouchButton * TouchButtonTestMMC;
 static TouchButton * TouchButtonTestUSB;
 static TouchButton * TouchButtonTestMisc;
+
 static TouchButton * TouchButtonTestSystemInfo;
 static TouchButton * TouchButtonTestExceptions;
 static TouchButton * TouchButtonSettingsGamma1;
 static TouchButton * TouchButtonSettingsGamma2;
-static TouchButton ** TouchButtonsTestPage[] = { &TouchButtonBack, &TouchButtonTestFont1, &TouchButtonTestFont2,
-		&TouchButtonTestHY32D, &TouchButtonTestGraphics, &TouchButtonTestMMC, &TouchButtonTestUSB, &TouchButtonTestMisc,
-		&TouchButtonTestSystemInfo, &TouchButtonTestExceptions, &TouchButtonSettingsGamma1, &TouchButtonSettingsGamma2 };
+// to call test functions
+static TouchButton * TouchButtonTestFunction1;
+static TouchButton * TouchButtonTestFunction2;
+#define TEST_BUTTONS_NUMBER_TO_DISPLAY 11
+static TouchButton ** TouchButtonsTestPage[] = { &TouchButtonTestFont1, &TouchButtonTestFont2, &TouchButtonTestHY32D,
+		&TouchButtonTestMMC, &TouchButtonTestUSB, &TouchButtonTestSystemInfo, &TouchButtonTestExceptions, &TouchButtonTestMisc,
+		&TouchButtonTestGraphics, &TouchButtonTestFunction1, &TouchButtonTestFunction2, &TouchButtonBack,
+		&TouchButtonSettingsGamma1, &TouchButtonSettingsGamma2 };
 
 int DebugValue1;
 int DebugValue2;
@@ -60,6 +64,11 @@ void displayTestsPage(void);
 
 /* Private functions ---------------------------------------------------------*/
 
+/**
+ * for gamma tests in display test
+ * @param aTheTouchedButton
+ * @param aValue
+ */
 void doSetGamma(TouchButton * const aTheTouchedButton, int16_t aValue) {
 	FeedbackToneOK();
 	setGamma(aValue);
@@ -70,6 +79,7 @@ void doTestsButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
 	clearDisplay(COLOR_BACKGROUND_DEFAULT);
 	TouchButton::deactivateAllButtons();
 	TouchButtonBack->drawButton();
+	sBackButtonPressed = false;
 	if (aTheTouchedButton == TouchButtonTestFont1) {
 		uint16_t tXPos;
 		uint16_t tYPos = 0;
@@ -102,11 +112,8 @@ void doTestsButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
 		generateColorSpectrum();
 		TouchButtonSettingsGamma1->activate();
 		TouchButtonSettingsGamma2->activate();
-		while (true) {
-			int tState = CheckTouchGeneric(true);
-			if (tState == GUI_TOUCH_MATCH) {
-				break;
-			} else if (CheckTouchGeneric(true) == GUI_TOUCH_NO_MATCH) {
+		while (!sBackButtonPressed) {
+			if (CheckTouchGeneric(true) == GUI_TOUCH_NO_MATCH) {
 				TouchPanel.registerPeriodicTouchCallback(&pickColorPeriodicCallbackHandler, 10);
 			}
 		}
@@ -180,6 +187,11 @@ void doTestsButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
 		TouchButton::infoButtonPool(StringBuffer);
 		drawText(2, tYPos, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
 
+// Lock info
+		tYPos += FONT_HEIGHT;
+		snprintf(StringBuffer, sizeof StringBuffer, "LOCK count=%d", sLockCount);
+		drawText(2, tYPos, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
+
 // Debug Info - just in case
 		tYPos += FONT_HEIGHT;
 		snprintf(StringBuffer, sizeof StringBuffer, "Dbg: 1=%#X, 1=%d 2=%#X", DebugValue1, DebugValue1, DebugValue2);
@@ -189,9 +201,14 @@ void doTestsButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
 		drawText(2, tYPos, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
 
 	} else if (aTheTouchedButton == TouchButtonTestExceptions) {
-		assertParamMessage((false), "Error Message", 0x12345678);
+		assertParamMessage((false), 0x12345678, "Error Message");
 		delayMillis(2000);
 		snprintf(StringBuffer, sizeof StringBuffer, "Dummy %#lx", *((volatile uint32_t *) (0xFFFFFFFF)));
+	} else if (aTheTouchedButton == TouchButtonTestFunction1) {
+		// Call Function 1
+		initalizeDisplay2();
+	} else if (aTheTouchedButton == TouchButtonTestFunction2) {
+		STM_EVAL_LEDToggle(LED3); // RED BACK
 	}
 
 	else if (aTheTouchedButton == TouchButtonTestMisc) {
@@ -263,6 +280,7 @@ bool pickColorPeriodicCallbackHandler(const int aTouchPositionX, const int aTouc
 void doTestsBackButton(TouchButton * const aTheTouchedButton, int16_t aValue) {
 	FeedbackToneOK();
 	displayTestsPage();
+	sBackButtonPressed = true;
 }
 
 void initTestsPage(void) {
@@ -270,19 +288,10 @@ void initTestsPage(void) {
 
 void displayTestsPage(void) {
 	clearDisplay(COLOR_BACKGROUND_DEFAULT);
-
-//	TouchButtonBack->drawButton();
-	TouchButtonTestFont1->drawButton();
-	TouchButtonTestFont2->drawButton();
-	TouchButtonTestHY32D->drawButton();
-	TouchButtonTestMMC->drawButton();
-	TouchButtonTestUSB->drawButton();
-	TouchButtonTestMisc->drawButton();
-	TouchButtonTestSystemInfo->drawButton();
-	TouchButtonTestExceptions->drawButton();
-	TouchButtonTestGraphics->drawButton();
+	for (unsigned int i = 0; i < TEST_BUTTONS_NUMBER_TO_DISPLAY; ++i) {
+		(*TouchButtonsTestPage[i])->drawButton();
+	}
 	TouchButtonMainHome->drawButton();
-
 }
 
 /**
@@ -293,9 +302,6 @@ void startTestsPage(void) {
 	TouchButton::setDefaultButtonColor(COLOR_GREEN);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wwrite-strings"
-
-	TouchButtonBack = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
-	BUTTON_HEIGHT_4, COLOR_RED, StringBack, 2, -1, &doTestsBackButton);
 
 	TouchButtonTestFont1 = TouchButton::allocAndInitSimpleButton(0, 0, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Font 1", 2, 0,
 			&doTestsButtons);
@@ -325,10 +331,20 @@ void startTestsPage(void) {
 	TouchButtonTestGraphics = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_3, BUTTON_WIDTH_3,
 	BUTTON_HEIGHT_4, 0, "Graph. Test", 1, 0, &doTestsButtons);
 
+	// 4. row
+	TouchButtonTestFunction1 = TouchButton::allocAndInitSimpleButton(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
+			"Function 1", 1, 0, &doTestsButtons);
+
+	TouchButtonTestFunction2 = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
+	BUTTON_HEIGHT_4, 0, "Function 2", 1, 0, &doTestsButtons);
+
+	// button for sub pages
 	TouchButtonSettingsGamma1 = TouchButton::allocAndInitSimpleButton(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
 	NULL, 0, 0, &doSetGamma);
 	TouchButtonSettingsGamma2 = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
 	BUTTON_HEIGHT_4, 0, NULL, 0, 1, &doSetGamma);
+	TouchButtonBack = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
+	BUTTON_HEIGHT_4, COLOR_RED, StringBack, 2, -1, &doTestsBackButton);
 
 #pragma GCC diagnostic pop
 
