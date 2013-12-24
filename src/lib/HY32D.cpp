@@ -735,9 +735,9 @@ bool initalizeDisplay(void) {
 	writeCommand(0x0025, 0x8000); // Frequency Control 8=65Hz 0=50HZ E=80Hz
 	return true;
 }
-// TODO check
+
 /*
- * does not work 100%
+ * not checked after reset, only after first calling initalizeDisplay() above
  */
 void initalizeDisplay2(void) {
 // Reset is done by hardware reset button
