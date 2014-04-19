@@ -8,13 +8,10 @@
 #include "GameOfLife.h"
 
 #include "stdlib.h"
-#ifdef __cplusplus
+
 extern "C" {
-
 #include "timing.h"
-
 }
-#endif
 
 uint16_t generation = 0;
 uint16_t drawcolor[5];
@@ -147,18 +144,11 @@ void init_gol(void) {
 		drawcolor[DIE2_COLOR] = RGB( 0,180, 0);
 		break;
 
-	case RGB(255,255, 0) : //RGB(  0,  0,255)
+	default: //RGB(  0,  0,255)
 		drawcolor[BG_COLOR] = RGB(180, 180, 0);
 		drawcolor[ALIVE_COLOR] = RGB( 0, 0,255);
 		drawcolor[DIE1_COLOR] = RGB( 0, 0, 130);
 		drawcolor[DIE2_COLOR] = RGB( 0, 0,180);
-		break;
-
-	default: //RGB(255,255,  0)
-		drawcolor[BG_COLOR] = RGB( 0, 0, 180);
-		drawcolor[ALIVE_COLOR] = RGB(255,255, 0);
-		drawcolor[DIE1_COLOR] = RGB( 130, 130, 0);
-		drawcolor[DIE2_COLOR] = RGB(180,180, 0);
 		break;
 	}
 	if (!GolShowDying) {
@@ -202,7 +192,7 @@ void ClearScreenAndDrawGameOfLifeGrid(void) {
 void drawGenerationText(void) {
 	int x;
 	//draw current generation
-	x = drawText(0, 0, (char*) "Gen.", 1, RGB(50,50,50), drawcolor[DEAD_COLOR]);
+	x = drawText(0, 0, "Gen.", 1, RGB(50,50,50), drawcolor[DEAD_COLOR]);
 	drawInteger(x, 0, (int) generation, 10, 1, RGB(50,50,50), drawcolor[DEAD_COLOR]);
 }
 

@@ -184,7 +184,7 @@ void registerDelayCallback(void (*aDelayCallback)(void), int32_t aTimeMillis) {
 			return;
 		}
 	}
-	failParamMessage(aDelayCallback,"No more free callback entries");
+	failParamMessage(aDelayCallback, "No more free callback entries");
 }
 
 /**
@@ -263,10 +263,10 @@ bool isTimeoutSimple(void) {
 	if (isTimeoutSimple()) {
 		if (isInitializedHY32D) {
 			char * tFile = (strrchr(((char*) aFile), '/') + 1);
-			uint tIndex = 0;
+			int tIndex = 0;
 			tIndex += snprintf(StringBuffer, sizeof StringBuffer, "Timeout on line: %lu LR=%#X\nfile: %s", aLine,
 					(unsigned int) aLinkRegister, tFile);
-			drawMLText(0, 0, DISPLAY_WIDTH, 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
+			drawMLText(0, 0, DISPLAY_WIDTH, 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE, true);
 			delayMillis(aMessageDisplayTimeMillis);
 		}
 		return true;
@@ -319,7 +319,7 @@ void doOneSystic(void) {
 }
 
 void SysTick_Handler(void) {
-	Toggle_DebugPin();
+//	Toggle_DebugPin(); // to measure crystal by external counter
 	MillisSinceBoot++;
 	doOneSystic();
 }
@@ -362,7 +362,7 @@ void displayTimings(uint16_t aYDisplayPos) {
 	Reset_DebugPin();
 	Set_DebugPin();
 	Reset_DebugPin();
-	uint32_t tDuration = getSysticValue(); // 1 tick
+	uint32_t tDuration = getSysticValue(); // needs 1 tick
 	snprintf(StringBuffer, sizeof StringBuffer, "SYSTICS: reload+1=%ld 16*set+res=%ld", tSysticReloadValue,
 			tSysticReloadValue - tDuration);
 	drawText(10, aYDisplayPos, StringBuffer, 1, COLOR_RED, COLOR_BACKGROUND_DEFAULT);

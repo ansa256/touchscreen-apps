@@ -12,9 +12,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "Pages.h"
 
-#ifdef __cplusplus
 extern "C" {
-
 #include "stm32f3_discovery_leds_buttons.h"
 #include "stm32f30x.h"
 #include "stm32f3_discovery.h"
@@ -24,9 +22,7 @@ extern "C" {
 #include "ff.h"
 #include "diskio.h"
 #include "usb_misc.h"
-
 }
-#endif
 
 #include "TouchDSO.h"
 #include "AccuCapacity.h"
@@ -36,113 +32,119 @@ FATFS Fatfs[1];
 RCC_ClocksTypeDef RCC_Clocks;
 int main(void) {
 
-	/* 2 bit for pre-emption priority, 2 bits for subpriority */
-	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+    /* 2 bit for pre-emption priority, 2 bits for subpriority */
+    NVIC_SetPriorityGrouping(NVIC_PriorityGroup_2 >> 8);
 
-	RCC_GetClocksFreq(&RCC_Clocks);
+    RCC_GetClocksFreq(&RCC_Clocks);
 
-	/* SysTick end of count event each ms */
-	// sets Prio to 0x0F => Group=3 Sub=3 which is lowest possible prio for Systick Interrupt
-	SysTick_Config(RCC_Clocks.HCLK_Frequency / 1000);
+    /* SysTick end of count event each ms */
+    // sets Prio to 0x0F => Group=3 Sub=3 which is lowest possible prio for Systick Interrupt
+    SysTick_Config(RCC_Clocks.HCLK_Frequency / 1000);
 
-	NVIC_SetPriority(SysTick_IRQn, SYS_TICK_INTERRUPT_PRIO);
+    // sets systic prio to 1 / 0
+    NVIC_SetPriority(SysTick_IRQn, SYS_TICK_INTERRUPT_PRIO);
 
-	initializeLEDs();
+    initializeLEDs();
 
-	/**
-	 * sets USB_LP_CAN1_RX0_IRQn Prio 2 of 0-3
-	 * USBWakeUp_IRQn Prio 1 of 0-3
-	 * USER_BUTTON_EXTI_IRQn 0 of 0-3
-	 */
-	initUSB();
+    /**
+     * sets USB_LP_CAN1_RX0_IRQn Prio 2 of 0-3
+     * USBWakeUp_IRQn Prio 1 of 0-3
+     * USER_BUTTON_EXTI_IRQn 0 of 0-3
+     */
+    initUSB_CDC();
 
-	/**
-	 * User Button
-	 * set USER_BUTTON_EXTI_IRQn to lowest possible prio 3 of 0-3 / subprio 3 of 0-3
-	 */
-	STM_EVAL_PBInit(BUTTON_USER, BUTTON_MODE_EXTI);
+    /**
+     * User Button
+     * set USER_BUTTON_EXTI_IRQn to lowest possible prio 3 of 0-3 / subprio 3 of 0-3
+     */
+    STM_EVAL_PBInit(BUTTON_USER, BUTTON_MODE_EXTI);
 
-	RTC_initialize_LSE();
-	initalizeTone();
-	//init display early because assertions and timeouts want to be displayed :-)
-	initHY32D();
-	setDimDelayMillis(BACKLIGHT_DIM_DEFAULT_DELAY);
-	// initialize SPI for peripherals
-	SPI1_initialize();
+    RTC_initialize_LSE();
+    initalizeTone();
+    //init display early because assertions and timeouts want to be displayed :-)
+    initHY32D();
+    setDimDelayMillis(BACKLIGHT_DIM_DEFAULT_DELAY);
+    // initialize SPI for peripherals
+    SPI1_initialize();
 
-	Debug_IO_initalize();
+    Debug_IO_initalize();
 
-	// sets EXTI4 to 3 3  - redefine user button prio to 0/3
-	MICROSD_IO_initalize();
+    // sets EXTI4 to 3 3  - redefine user button prio to 0/3
+    MICROSD_IO_initalize();
 
-	// Setup ADC
-	ADC12_init();
-	tone(2000, 100);
+    // Setup ADC
+    ADC12_init();
+    tone(2000, 100);
 
-	if (isInitializedHY32D) {
+    // Setup peripherals
+    initAcceleratorCompassChip();
+    GyroscopeAndSPIInitialize();
+    Gyroscope_IO_initialize();
 
-		//init touch controller
-		TouchPanel.init();
+    if (isInitializedHY32D) {
 
-		/**
-		 * Touch-panel calibration
-		 */
-		TouchPanel.rd_data();
-		// check if panel connected
-		if (TouchPanel.getPressure() > MIN_REASONABLE_PRESSURE && TouchPanel.getPressure() < MAX_REASONABLE_PRESSURE) {
-			// panel pressed
-			TouchPanel.doCalibration(false); //don't check EEPROM for calibration data
-		} else {
-			TouchPanel.doCalibration(true); //check EEPROM for calibration data
-		}
+        //init touch controller
+        TouchPanel.init();
 
-		initMainMenuPage();
+        /**
+         * Touch-panel calibration
+         */
+        TouchPanel.rd_data();
+        // check if panel connected
+        if (TouchPanel.getPressure() > MIN_REASONABLE_PRESSURE && TouchPanel.getPressure() < MAX_REASONABLE_PRESSURE) {
+            // panel pressed
+            TouchPanel.doCalibration(false); //don't check EEPROM for calibration data
+        } else {
+            TouchPanel.doCalibration(true); //check EEPROM for calibration data
+        }
 
-		/**
-		 * ADC1_2_IRQn 0 (highest) of 0-3 /subprio 1 of 0-3
-		 */
-		initDSO();
-		initGuiDemo();
-		initAcceleratorCompass();
-		initAccuCapacity();
-		initTestsPage();
-		initDACPage();
-		initFreqGenPage();
-		//setZeroAcceleratorGyroValue();
+        initMainMenuPage();
 
-		/* Just to be sure... */
-		NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-		RCC_GetClocksFreq(&RCC_Clocks);
+        /**
+         * ADC1_2_IRQn 0 (highest) of 0-3 /subprio 1 of 0-3
+         */
+        initDSO();
+        initGuiDemo();
+        initAcceleratorCompass();
+        initAccuCapacity();
+        initInfoPage();
+        initDACPage();
+        initFreqGenPage();
+        //setZeroAcceleratorGyroValue();
 
-		if (MICROSD_isCardInserted()) {
-			// delayed execution of MMC test
-			registerDelayCallback(&testAttachMMC, 200);
-		}
+        /* Just to be sure... */
+        NVIC_SetPriorityGrouping(NVIC_PriorityGroup_2 >> 8);
+        RCC_GetClocksFreq(&RCC_Clocks);
 
-		// init button pools
-		TouchButton * tTouchButton = TouchButton::allocButton(false);
-		tTouchButton->setFree();
-		TouchButtonAutorepeat * tTouchButtonAutorepeat = TouchButtonAutorepeat::allocButton();
-		tTouchButtonAutorepeat->setFree();
+        if (MICROSD_isCardInserted()) {
+            // delayed execution of MMC test
+            registerDelayCallback(&testAttachMMC, 200);
+        }
 
-		struct lconv * tLconfPtr = localeconv();
-		//*tLconfPtr->decimal_point = ','; does not work because string is constant and in flash rom
-		tLconfPtr->decimal_point = (char*) StringComma;
-		//tLconfPtr->thousands_sep = (char*) StringDot; // does not affect sprintf()
+        // init button pools
+        TouchButton * tTouchButton = TouchButton::allocButton(false);
+        tTouchButton->setFree();
+        TouchButtonAutorepeat * tTouchButtonAutorepeat = TouchButtonAutorepeat::allocButton();
+        tTouchButtonAutorepeat->setFree();
 
-		/* Infinite loop */
-		while (1) {
-			startMainMenuPage();
-			while (1) {
-				loopMainMenuPage();
-			}
-			stopMainMenuPage();
-		}
-	} else {
-		while (1) {
-			// no display attached
-			CycleLEDs();
-		}
-	}
+        struct lconv * tLconfPtr = localeconv();
+        //*tLconfPtr->decimal_point = ','; does not work because string is constant and in flash rom
+        tLconfPtr->decimal_point = (char*) StringComma;
+        //tLconfPtr->thousands_sep = (char*) StringDot; // does not affect sprintf()
+
+        /* Infinite loop */
+        while (1) {
+            startMainMenuPage();
+            while (1) {
+                loopMainMenuPage();
+            }
+            stopMainMenuPage();
+        }
+    } else {
+        while (1) {
+            // no display attached
+            CycleLEDs();
+        }
+    }
 }
 

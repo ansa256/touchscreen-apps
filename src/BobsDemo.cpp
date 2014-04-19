@@ -10,6 +10,10 @@
 
 #include "Pages.h"
 
+extern "C" {
+#include "l3gdc20_lsm303dlhc_utils.h"
+}
+
 /**
  *
  */
@@ -148,7 +152,7 @@ void loopBobsDemo(void) {
 
 			// Prüfe ob HomeKnopf berührt und gelöscht wird
 			if (LastX + RADIUS_BALL >= TouchButtonMainHome->getPositionX()
-					&& LastY + RADIUS_BALL >= TouchButtonMainHome->getPositionY()) {
+					&& LastY - RADIUS_BALL <= TouchButtonMainHome->getPositionYBottom()) {
 				// male Knopf neu
 				TouchButtonMainHome->drawButton();
 			}

@@ -16,17 +16,27 @@
 #include "irmp.h"
 
 #if IRMP_EXT_LOGGING == 1
-
+#if defined(ARM_STM32F30X)
+#include "HY32D.h"
+void initextlog(void) {
+	printEnable();
+}
+static char tCharbuf[] = " "; // to convert chars to string
+void sendextlog(unsigned char data) {
+	tCharbuf[0] = data;
+	print((const char*)&tCharbuf, false);
+}
+#else
 #include "irmpextlog.h"
 #include "system/usb/usb.h"
 
 #define bit_set(var,bitnr)      ((var) |= 1 << (bitnr))         // set single bit in byte
 #define loglen                  50                              // byte length for saving the data from irmp.c
-                                                                // check your USB settings for max length of USB interface used for this FW!
-static unsigned char            logdata[loglen];                // array for saveing the data from irmp.c
-static unsigned char            logindex = 3;                   // start index of logdata
-static char                     bitindex = 7;                   // bit position in current byte
-static unsigned int             bitcount;
+// check your USB settings for max length of USB interface used for this FW!
+static unsigned char logdata[loglen];// array for saveing the data from irmp.c
+static unsigned char logindex = 3;// start index of logdata
+static char bitindex = 7;// bit position in current byte
+static unsigned int bitcount;
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * Initialize external logging
@@ -35,16 +45,16 @@ static unsigned int             bitcount;
 void
 initextlog (void)                                               // reset all data to default, only during init
 {
-    unsigned char i;
- 
-    for (i = 0; i < loglen; i++)
-    {
-        logdata[i] = 0;
-    }
+	unsigned char i;
 
-    bitcount = 0;
-    logindex = 3;
-    bitindex = 7;
+	for (i = 0; i < loglen; i++)
+	{
+		logdata[i] = 0;
+	}
+
+	bitcount = 0;
+	logindex = 3;
+	bitindex = 7;
 }
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -54,54 +64,52 @@ initextlog (void)                                               // reset all dat
 void
 sendextlog (unsigned char data)
 {
-    if (logindex == loglen || data == '\n')                     // buffer full or \n  -->  send to application
-    {
-        if (mUSBUSARTIsTxTrfReady())                            // check USB, if ready send
-        {
-            logdata[0] = 0x01;                                  // indicator for logging, depends on your application
-            logdata[1] = logindex;                              // save how much bytes are send from irmp.c
-            logdata[2] = 0;                                     // set \n Index to 0;  0=buffer full;  0xA=\n received
+	if (logindex == loglen || data == '\n')                     // buffer full or \n  -->  send to application
+	{
+		if (mUSBUSARTIsTxTrfReady())                            // check USB, if ready send
+		{
+			logdata[0] = 0x01;                                  // indicator for logging, depends on your application
+			logdata[1] = logindex;// save how much bytes are send from irmp.c
+			logdata[2] = 0;// set \n Index to 0;  0=buffer full;  0xA=\n received
 
-            if (data == '\n')
-            {
-                logdata[2] = data;                              // \n --> save \n=0xA in to check in app that \n was received
-            }
+			if (data == '\n')
+			{
+				logdata[2] = data;                              // \n --> save \n=0xA in to check in app that \n was received
+			}
 
-            mUSBUSARTTxRam((unsigned char *) &logdata, loglen); // send all Data to main Seoftware
-      
-            logindex = 3;                                       // reset index
-            bitindex = 7;                                       // reset bit position
-            logdata[logindex] = 0;                              // reset value of new logindex to 0
-        }
-    }
-    else
-    {
-        bitcount++;
+			mUSBUSARTTxRam((unsigned char *) &logdata, loglen); // send all Data to main Seoftware
 
-        if (data == '1')
-        {
-            bit_set(logdata[logindex], bitindex);               // all logdata[logindex] on start = 0 --> only 1 must be set
-        }
+			logindex = 3;// reset index
+			bitindex = 7;// reset bit position
+			logdata[logindex] = 0;// reset value of new logindex to 0
+		}
+	}
+	else
+	{
+		bitcount++;
 
-        bitindex--;                                             // decrease bitposition, wirte from left to right
+		if (data == '1')
+		{
+			bit_set(logdata[logindex], bitindex);               // all logdata[logindex] on start = 0 --> only 1 must be set
+		}
 
-        if (bitindex == -1)                                     // byte complete Bit 7->0 --> next one
-        {
-            bitindex = 7;
-            logindex++;
+		bitindex--;                                             // decrease bitposition, wirte from left to right
 
-            if (logindex < loglen)
-            {
-                logdata[logindex] = 0;                          // set next byte to 0
-            }
-        }
-    }
+		if (bitindex == -1)// byte complete Bit 7->0 --> next one
+		{
+			bitindex = 7;
+			logindex++;
+
+			if (logindex < loglen)
+			{
+				logdata[logindex] = 0;                          // set next byte to 0
+			}
+		}
+	}
 }
-
+#endif //defined(ARM_STM32F30X)
 #endif //IRMP_EXT_LOGGING
 
-static void
-dummy (void)
-{
-  // Only to avoid C18 compiler error
-}
+//static void dummy(void) {
+//	// Only to avoid C18 compiler error
+//}

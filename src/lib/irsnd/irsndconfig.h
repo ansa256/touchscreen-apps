@@ -40,12 +40,12 @@
  */
 
 // typical protocols, disable here!             Enable  Remarks                 F_INTERRUPTS            Program Space
-#define IRSND_SUPPORT_SIRCS_PROTOCOL            1       // Sony SIRCS           >= 10000                 ~200 bytes
+#define IRSND_SUPPORT_SIRCS_PROTOCOL            0       // Sony SIRCS           >= 10000                 ~200 bytes
 #define IRSND_SUPPORT_NEC_PROTOCOL              1       // NEC + APPLE          >= 10000                 ~100 bytes
-#define IRSND_SUPPORT_SAMSUNG_PROTOCOL          1       // Samsung + Samsung32  >= 10000                 ~300 bytes
-#define IRSND_SUPPORT_MATSUSHITA_PROTOCOL       1       // Matsushita           >= 10000                 ~200 bytes
-#define IRSND_SUPPORT_KASEIKYO_PROTOCOL         1       // Kaseikyo             >= 10000                 ~300 bytes
-#define IRSND_SUPPORT_DENON_PROTOCOL            1       // DENON, Sharp         >= 10000                 ~200 bytes
+#define IRSND_SUPPORT_SAMSUNG_PROTOCOL          0       // Samsung + Samsung32  >= 10000                 ~300 bytes
+#define IRSND_SUPPORT_MATSUSHITA_PROTOCOL       0       // Matsushita           >= 10000                 ~200 bytes
+#define IRSND_SUPPORT_KASEIKYO_PROTOCOL         0       // Kaseikyo             >= 10000                 ~300 bytes
+#define IRSND_SUPPORT_DENON_PROTOCOL            0       // DENON, Sharp         >= 10000                 ~200 bytes
 
 // more protocols, enable here!                 Enable  Remarks                 F_INTERRUPTS            Program Space
 #define IRSND_SUPPORT_RC5_PROTOCOL              0       // RC5                  >= 10000                 ~150 bytes
@@ -73,6 +73,7 @@
 #define IRSND_SUPPORT_RUWIDO_PROTOCOL           0       // RUWIDO, T-Home       >= 15000                 DON'T CHANGE, NOT SUPPORTED YET!
 #define IRSND_SUPPORT_A1TVBOX_PROTOCOL          0       // A1 TV BOX            >= 15000 (better 20000)  ~200 bytes
 #define IRSND_SUPPORT_LEGO_PROTOCOL             0       // LEGO Power RC        >= 20000                 ~150 bytes
+#define IRSND_SUPPORT_IHELICOPTER_PROTOCOL      1       // iHelicopter          >= 15000                 ~? bytes
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * AVR section:
@@ -107,7 +108,7 @@
  * ARM STM32 section:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
  */
-#elif defined (STM32F30X)                                               // use B9 (high sink) as IR output on STM32F03 Discovery Board
+#elif defined (ARM_STM32F30X)                                               // use B9 (high sink) as IR output on STM32F03 Discovery Board
 #  define IRSND_PORT_LETTER                     B
 #  define IRSND_BIT_NUMBER                      9
 #  define IRSND_TIMER_NUMBER                    17                      // on STM32F03 Discovery Board use timer 17 connected to B9

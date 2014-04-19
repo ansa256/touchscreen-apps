@@ -14,6 +14,19 @@
 #include <stdlib.h>  //strtod
 #include <locale.h>
 
+const char String0[] = "0";
+const char String1[] = "1";
+const char String2[] = "2";
+const char String3[] = "3";
+const char String4[] = "4";
+const char String5[] = "5";
+const char String6[] = "6";
+const char String7[] = "7";
+const char String8[] = "8";
+const char String9[] = "9";
+const char StringEnterChar[] = "\xD6";
+const char StringCancel[] = "Cancel";
+const char StringSign[] = "\xF1";
 
 static TouchButton * TouchButtonNumberPad0;
 static TouchButton * TouchButtonNumberPad1;
@@ -194,6 +207,8 @@ float getNumberFromNumberPad(uint16_t aXStart, uint16_t aYStart, uint16_t aButto
 	for (unsigned int i = 0; i < sizeof(TouchButtonsNumberPad) / sizeof(TouchButtonsNumberPad[0]); ++i) {
 		(*TouchButtonsNumberPad[i])->setFree();
 	}
+	// to avoid end touch handling of releasing OK or Cancel button of numberpad
+	sDisableEndTouchOnce = true;
 	TouchPanel.setEndTouchCallbackEnabled(true);
 	if (numberpadInputHasCanceled) {
 		return NAN;

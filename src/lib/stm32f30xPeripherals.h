@@ -10,24 +10,24 @@
  * Port pin assignment
  * -------------------
  *
- * Port	|Pin|Device|Function
- * -----|---|------|--------
+ * Port	|Pin|Device |Function
+ * -----|---|-------|--------
  * A	|0	|Button	|INT input
  * A	|1	|ADC1	|Channel 2 / DSO-Input 1
  * A	|2	|ADC1	|Channel 3 / DSO-Input 2
  * A	|3	|ADC1	|Channel 4 / DSO-Input 3
- * A	|4	|DAC	|Output 1
+ * A	|4	|DAC1	|Output 1
  * A	|5	|SPI1	|CLK
  * A	|6	|SPI1	|MISO
  * A	|7	|SPI1	|CLK
- * A	|8	|	|
- * A	|9	|	|
- * A	|10	|Freq Synth	|TIM2_CH4
+ * A	|8	|	    |
+ * A	|9	|Freq Synth	|TIM2_CH3
+ * A	|10	|USB	|Disconnect
  * A	|11	|USB	|DM
  * A	|12 |USB	|DP
  * A	|13 |SWD	|IO
  * A	|14 |SWD	|CLK
- * A	|15	|	|
+ * A	|15	|	    |
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
  * B	|0	|HY32D		|CS
  * B	|1	|ADS7846	|INT input
@@ -39,18 +39,20 @@
  * B	|8	|IR			|IR input (CAN RX)
  * B	|9	|IR			|IR LED (CAN TX)
  * B	|10	|HY32D		|RD
- * B	|13-15|SPI2	|not used yet
+ * B    |11|            |
+ * B    |12|            |
+ * B    |13-15|SPI2     |not used yet
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
  * C	|0	|ADC2		|Channel 6 / AccuCap-Input 1
  * C	|1	|ADC2		|Channel 7 / AccuCap-Input 2
  * C	|4	|SD CARD	|INT input / CardDetect
  * C	|5	|SD CARD	|CS
  * C	|6	|TIM3		|Tone signal output
- * C	|7,8,9|DSO	|Attenuator control
- * C	|10	|USART		|TX - not used yet
- * C	|11	|USART		|RX - not used yet
+ * C	|7,8,9|DSO	    |Attenuator control
+ * C	|10	|USART3+4	|TX - not used yet
+ * C	|11	|USART3+4	|RX - not used yet
  * C	|12	|DSO		|AC mode of preamplifier
- * C	|13	|DSO		|
+ * C	|13	|	        |
  * C	|14	|Intern		|Clock
  * C	|15	|Intern		|Clock
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
@@ -64,10 +66,9 @@
  * E	|5	|LSM303		|INT input 2
  * E	|6	|		 	|
  * E	|7	|DEBUG		|
- * E	|13 |LED		|
  * E	|8-15|LED		|Onboard LEDs
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
- * F full	|0,1|Clock		|Clock generator
+ * F full	|0,1|Clock	|Clock generator
  * F	|2	|RELAY		|Mode data acquisition Channel 1
  * F	|4	|RELAY		|Mode data acquisition Channel 2
  * F	|6	|HY32D		|TIM4 PWM output
@@ -97,17 +98,18 @@
  * ---------------------
  * 2 bits for pre-emption priority + 2 bits for subpriority
  *
- * Prio	| ISR Nr| Name  			| Usage
- * -----|---------------------------|-------------
- * 0 1	| 0x22 | ADC1_2_IRQn		| ADC EOC
- * 0 3	| 0x16 | EXTI0				| User button - for screenshots
- * 1 0	| 0x0F | SysTick_IRQn		| SysTick
- * 1 0	| 0x2A | USBWakeUp_IRQn		|
- * 2 0	| 0x24 | USB_LP_CAN1_RX0_IRQn|
- * 2 3	| 0x17 | EXTI1				| Touch
- * 3 0	| 0x1B | DMA1_Channel1_IRQn	| ADC DMA
- * 3 3	| 0x46 | TIM6_DAC_IRQn		| ADC Timer - not used yet
- * 3 3	| 0x1A | EXTI4				| MMC card detect
+ * Prio	| ISR Nr| Name  			    | Usage
+ * -----|-------------------------------|-------------
+ * 0 1	| 0x22 | ADC1_2_IRQn		    | ADC EOC
+ * 0 3	| 0x16 | EXTI0_IRQn			    | User button - for screenshots
+ * 0 3  | 0x1A | TIM1_BRK_TIM15_IRQn    | IR
+ * 1 0	| 0x0F | SysTick_IRQn		    | SysTick
+ * 1 0	| 0x2A | USBWakeUp_IRQn		    | USB Wakeup
+ * 1 3	| 0x24 | USB_LP_CAN1_RX0_IRQn   | USB Transfer
+ * 2 3	| 0x17 | EXTI1_IRQn      	    | Touch
+ * 3 0	| 0x1B | DMA1_Channel1_IRQn	    | ADC DMA
+ * 3 3	| 0x46 | TIM6_DAC_IRQn		    | ADC Timer - not used yet
+ * 3 3  | 0x1A | EXTI4                  | MMC card detect
  *
  */
 
@@ -135,7 +137,8 @@ typedef enum {
 
 #define Set_DebugPin() (DEBUG_GPIO_PORT->BSRR = DEBUG_PIN)
 #define Reset_DebugPin() (DEBUG_GPIO_PORT->BRR = DEBUG_PIN)
-#define Toggle_DebugPin() (DEBUG_GPIO_PORT->ODR ^= GPIO_Pin_7)
+#define Toggle_DebugPin() (DEBUG_GPIO_PORT->ODR ^= DEBUG_PIN)
+
 void Debug_IO_initalize(void);
 
 #define HY32D_CS_PIN                          GPIO_Pin_0
@@ -143,7 +146,7 @@ void Debug_IO_initalize(void);
 #define HY32D_CS_GPIO_CLK                     RCC_AHBPeriph_GPIOB
 
 #define HY32D_DATA_CONTROL_PIN                GPIO_Pin_4
-#define HY32D_DATA_CONTROL_GPIO_PORT          GPIOB
+#define HY32D_DATA_CONTROL_GPIO_PORT          GPIOB  // dedicated Ports are needed by HY32D.cpp for single line setting
 
 #define HY32D_RD_PIN                          GPIO_Pin_10
 #define HY32D_RD_GPIO_PORT                    GPIOB
@@ -153,6 +156,8 @@ void Debug_IO_initalize(void);
 
 #define HY32D_DATA_GPIO_PORT          		  GPIOD
 #define HY32D_DATA_GPIO_CLK                   RCC_AHBPeriph_GPIOD
+
+#define DAC_TIMER_MIN_RELOAD_VALUE 4
 
 void HY32D_IO_initalize(void);
 
@@ -217,11 +222,16 @@ uint16_t ADC_DMA_GetCurrDataCounter(void);
 
 uint16_t ADC1_getChannelValue(uint8_t aChannel);
 void ADC_setRawToVoltFactor(void);
+int ADC_getTemperatureMilligrades(void);
+float ADC_getTemperature(void);
+
 extern float sVrefVoltage;
 extern float ADCToVoltFactor;  // Factor for ADC Reading -> Volt
 #define ADC_SCALE_FACTOR_SHIFT 18
 extern unsigned int sADCScaleFactorShift18; // Factor for ADC Reading -> Display calibrated for sReading3Volt -> 240,  shift 18 because we have 12 bit ADC and 12 + 18 + 2 = 32 bit register
 extern uint16_t sReading3Volt; // Approximately 4096
+extern uint16_t sRefintActualValue;  // actual value of VREFINT / see *((uint16_t*) 0x1FFFF7BA) = value of VREFINT at 3.3V
+extern uint16_t sTempValueAtZeroDegreeShift3;
 
 //SPI
 void SPI1_initialize(void);
@@ -273,8 +283,8 @@ void EndTone(void);
 void noTone(void);
 
 // PWM
-void PWM_initalize(void);
-void PWM_setOnRatio(uint32_t power);
+void PWM_BL_initalize(void);
+void PWM_BL_setOnRatio(uint32_t power);
 
 void setTimeoutLED(void);
 void resetTimeoutLED(void);

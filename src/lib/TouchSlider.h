@@ -31,7 +31,7 @@
 #define TOUCHSLIDER_SHOW_BORDER 0x01
 #define TOUCHSLIDER_SHOW_VALUE 0x02
 #define TOUCHSLIDER_IS_HORIZONTAL 0x04
-#define TOUCHSLIDER_HORIZONTAL_VALUE_LEFT 0x08
+#define TOUCHSLIDER_HORIZONTAL_VALUE_BELOW_TITLE 0x08
 /** @} */
 
 #define TOUCHSLIDER_DEFAULT_SLIDER_COLOR 		RGB( 180, 180, 180)
@@ -101,6 +101,7 @@ public:
 	void setActualValue(int16_t actualValue);
 	void setActualValueAndDraw(int16_t actualValue);
 	void setActualValueAndDrawBar(int16_t actualValue);
+    void setXOffsetValue(int16_t aXOffsetValue);
 	uint16_t getPositionXRight(void) const;
 	uint16_t getPositionYBottom(void) const;
 	void activate(void);
@@ -134,6 +135,7 @@ private:
 	 */
 	uint16_t mPositionX; // X left
 	uint16_t mPositionXRight;
+	uint16_t mXOffsetValue;
 	uint16_t mPositionY; // Y top
 	uint16_t mPositionYBottom;
 	uint16_t mMaxValue; //aMaxValue serves also as height
@@ -144,9 +146,7 @@ private:
 	uint8_t mOptions;
 	bool mIsActive;
 
-	/*
-	 * The Value
-	 */
+	// the value as provided by touch
 	uint16_t mActualTouchValue;
 	// This value can be different from mActualTouchValue and is provided by callback handler
 	int16_t mActualValue;
@@ -161,7 +161,7 @@ private:
 	// misc
 	TouchSlider* mNextObject;
 	uint16_t (*mOnChangeHandler)(TouchSlider* const, uint16_t);
-	const char* (*mValueHandler)(uint16_t);
+	const char* (*mValueHandler)(uint16_t); // provides the string to print
 
 	int checkParameterValues();
 

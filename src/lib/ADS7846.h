@@ -17,14 +17,17 @@
 
 #define MIN_REASONABLE_PRESSURE 9  // depends on position :-(( even slight touch gives more than this
 #define MAX_REASONABLE_PRESSURE 110 // Greater means panel not connected
-/* without oversampling data is very noisy i.e oversampling of 4 is not suitable for drawing (it gives x +/-1 and y +/-2 pixel noise)
- * maybe it is because of the SPI clock of 280 kHz instead of using (40-80 kHz) or at least a clock less than 125 kHz
- * 16 is very good
+/*
+ * without oversampling data is very noisy i.e oversampling of 2 is not suitable for drawing (it gives x +/-1 and y +/-2 pixel noise)
+ * since Y value has much more noise than X, Y is oversampled 2 times.
+ * 4 is reasonable, 8 is pretty good y +/-1 pixel
  */
-#define ADS7846_READ_OVERSAMPLING_DEFAULT 16
+#define ADS7846_READ_OVERSAMPLING_DEFAULT 4
 
 #define TOUCH_STANDARD_CALLBACK_PERIOD_MILLIS 20 // Period between callbacks while touched (a swipe is app 100 ms)
 #define TOUCH_STANDARD_LONG_TOUCH_TIMEOUT_MILLIS 300 // Millis after which a touch is classified as a long touch
+#define TOUCH_SWIPE_THRESHOLD 10  // threshold for swipe detection to suppress long touch handler calling
+
 // A/D input channel for readChannel()
 #define CMD_TEMP0       (0x00)
 // 2,5V reference 2,1 mV/Celsius 600 mV at 25 Celsius 12 Bit
@@ -63,11 +66,27 @@ typedef struct {
 	long div;
 } CAL_MATRIX;
 
+
+typedef struct {
+    uint32_t MillisOfTouch;
+    int TouchDeltaX;
+    int TouchDeltaY;
+    int TouchDeltaXAbs;  // = abs(TouchDeltaX)
+    int TouchDeltaYAbs;
+    int TouchDeltaMax; // max of TouchDeltaX and Y
+    int TouchDeltaAbsMax; // max of TouchDeltaXAbs and YAbs to easily decide if swipe is large enough to be accepted
+//    int SwipeAmount;
+    bool SwipeMainDirectionIsX; // true if TouchDeltaXAbs >= TouchDeltaYAbs
+} SWIPE_INFO;
+
+
 #define ADS7846_CHANNEL_COUNT 8 // The number of ADS7846 channel
 extern const char * const ADS7846ChannelStrings[ADS7846_CHANNEL_COUNT];
 extern const char ADS7846ChannelChars[ADS7846_CHANNEL_COUNT];
 // Channel number to text mapping
 extern unsigned char ADS7846ChannelMapping[ADS7846_CHANNEL_COUNT];
+
+extern volatile bool sDisableEndTouchOnce; // set normally by application if long touch action was made
 
 class ADS7846 {
 public:
@@ -79,9 +98,9 @@ public:
 	uint32_t mLongTouchTimeoutMillis;
 	bool (*mPeriodicTouchCallback)(int const, int const); // if NULL then swipe recognition else call callback for slider and autorepeat buttons - return parameter not yet used
 	uint32_t mPeriodicCallbackPeriodMillis;
-	bool (*mEndTouchCallback)(uint32_t const, int const, int const);
+	bool (*mEndTouchCallback)(SWIPE_INFO const);
 	bool mEndTouchCallbackEnabled;
-	volatile bool sTouchReleaseProcessed; // Flag for ISR and periodic timer callback to call mEndTouchCallback only once per touch
+	volatile bool mTouchReleaseProcessed; // Flag for ISR and periodic timer callback to call mEndTouchCallback only once per touch
 
 	/**
 	 * This function is indirectly called by systick handler with 3. parameter true or
@@ -94,6 +113,9 @@ public:
 	volatile bool ADS7846TouchStart; // is true once for every touch - independent from calling mLongTouchCallback
 	volatile uint32_t ADS7846TouchStartMillis; // start of touch
 
+	bool DisplayXYValuesEnabled;
+
+
 	ADS7846();
 	void init(void);
 
@@ -105,8 +127,9 @@ public:
 	int getYActual(void);
 	int getXFirst(void);
 	int getYFirst(void);
-	int getXLast(void);
-	int getYLast(void);
+
+	void setDisplayXYValuesFlag(bool aEnableDisplay);
+	bool getDisplayXYValuesFlag(void);
 
 	int getPressure(void);
 	bool wasTouched(void);
@@ -116,13 +139,13 @@ public:
 
 	void registerLongTouchCallback(bool (*aLongTouchCallback)(int const, int const), const uint32_t aLongTouchTimeoutMillis);
 	void registerPeriodicTouchCallback(bool (*aPeriodicTouchCallback)(int const, int const), const uint32_t aCallbackPeriodMillis);
-	void registerEndTouchCallback(bool (*aEndTouchCallback)(uint32_t const, int const, int const));
+	void registerEndTouchCallback(bool (*aEndTouchCallback)(SWIPE_INFO const));
 	void setEndTouchCallbackEnabled(bool aEndTouchCallbackEnabled);
 	void setCallbackPeriod(const uint32_t aCallbackPeriod);
 	void printTPData(int x, int y, uint16_t aColor, uint16_t aBackColor);
 	float getSwipeAmount(void);
 
-	bool (* getEndTouchCallback(void))(uint32_t const, int const, int const);
+	bool (* getEndTouchCallback(void))(SWIPE_INFO const);
 
 private	:
 	TP_POINT mTouchActualPositionRaw; // raw pos (touch panel)

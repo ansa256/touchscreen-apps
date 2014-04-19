@@ -57,10 +57,9 @@
 #define IRMP_THOMSON_PROTOCOL                   30              // Thomson
 #define IRMP_BOSE_PROTOCOL                      31              // BOSE
 #define IRMP_A1TVBOX_PROTOCOL                   32              // A1 TV Box
-#define IRMP_IHELICOPTER_PROTOCOL               33               // I-Helicopter
+#define IRMP_IHELICOPTER_PROTOCOL               33              // I-Helicopter
 
 #define IRMP_N_PROTOCOLS                        33              // number of supported protocols
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * timing constants:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -68,17 +67,16 @@
 // fm 22.09.2011: may not be more than 16000L, otherwise some JVC codes will not be accepted
 #define IRMP_TIMEOUT_TIME                       15500.0e-6                  // timeout after 15.5 ms darkness
 #define IRMP_TIMEOUT_TIME_MS                    15500L                      // timeout after 15.5 ms darkness
-
 #if IRMP_SUPPORT_NIKON_PROTOCOL == 1
 #  define IRMP_TIMEOUT_NIKON_TIME               29500.0e-6                  // 2nd timeout after 29.5 ms darkness (only for NIKON!)
 #  define IRMP_TIMEOUT_NIKON_TIME_MS            29500L                      // 2nd timeout after 29.5 ms darkness
-typedef uint16_t    PAUSE_LEN;
+typedef uint16_t PAUSE_LEN;
 #  define IRMP_TIMEOUT_NIKON_LEN                (PAUSE_LEN)(F_INTERRUPTS * IRMP_TIMEOUT_NIKON_TIME + 0.5)
 #else
 #  if (F_INTERRUPTS * IRMP_TIMEOUT_TIME_MS) / 1000000 >= 254
-typedef uint16_t    PAUSE_LEN;
+typedef uint16_t PAUSE_LEN;
 #  else
-typedef uint8_t     PAUSE_LEN;
+typedef uint8_t PAUSE_LEN;
 #  endif
 #endif
 
@@ -113,7 +111,6 @@ typedef uint8_t     PAUSE_LEN;
 #define SIRCS_STOP_BIT                          0                               // has no stop bit
 #define SIRCS_LSB                               1                               // LSB...MSB
 #define SIRCS_FLAGS                             0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * NEC & NEC42 & NEC16:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -133,19 +130,16 @@ typedef uint8_t     PAUSE_LEN;
 #define NEC_STOP_BIT                            1                               // has stop bit
 #define NEC_LSB                                 1                               // LSB...MSB
 #define NEC_FLAGS                               0                               // flags
-
 #define NEC42_ADDRESS_OFFSET                    0                               // skip 0 bits
 #define NEC42_ADDRESS_LEN                      13                               // read 13 address bits
 #define NEC42_COMMAND_OFFSET                   26                               // skip 26 bits (2 x 13 address bits)
 #define NEC42_COMMAND_LEN                       8                               // read 8 command bits
 #define NEC42_COMPLETE_DATA_LEN                42                               // complete length (2 x 13 + 2 x 8)
-
 #define NEC16_ADDRESS_OFFSET                    0                               // skip 0 bits
 #define NEC16_ADDRESS_LEN                       8                               // read 8 address bits
 #define NEC16_COMMAND_OFFSET                    8                               // skip 8 bits (8 address)
 #define NEC16_COMMAND_LEN                       8                               // read 8 bits (8 command)
 #define NEC16_COMPLETE_DATA_LEN                 16                              // complete length
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * SAMSUNG & SAMSUNG32:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -155,7 +149,6 @@ typedef uint8_t     PAUSE_LEN;
 #define SAMSUNG_PULSE_TIME                       550.0e-6                       //  550 usec pulse
 #define SAMSUNG_1_PAUSE_TIME                    1650.0e-6                       // 1650 usec pause
 #define SAMSUNG_0_PAUSE_TIME                     550.0e-6                       //  550 usec pause
-
 #define SAMSUNG_FRAME_REPEAT_PAUSE_TIME           25.0e-3                       // frame repeat after 25ms
 #define SAMSUNG_ADDRESS_OFFSET                   0                              // skip 0 bits
 #define SAMSUNG_ADDRESS_LEN                     16                              // read 16 address bits
@@ -167,14 +160,12 @@ typedef uint8_t     PAUSE_LEN;
 #define SAMSUNG_STOP_BIT                        1                               // has stop bit
 #define SAMSUNG_LSB                             1                               // LSB...MSB?
 #define SAMSUNG_FLAGS                           0                               // flags
-
 #define SAMSUNG32_COMMAND_OFFSET                16                              // skip 16 bits
 #define SAMSUNG32_COMMAND_LEN                   16                              // read 16 command bits
 #define SAMSUNG32_COMPLETE_DATA_LEN             32                              // complete length
 #define SAMSUNG32_FRAMES                        1                               // SAMSUNG32 sends each frame 1 times
 #define SAMSUNG32_AUTO_REPETITION_PAUSE_TIME    47.0e-3                         // repetition after 47 ms
 #define SAMSUNG32_FRAME_REPEAT_PAUSE_TIME       47.0e-3                         // frame repeat after 47ms
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * MATSUSHITA:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -193,7 +184,6 @@ typedef uint8_t     PAUSE_LEN;
 #define MATSUSHITA_STOP_BIT                     1                               // has stop bit
 #define MATSUSHITA_LSB                          1                               // LSB...MSB?
 #define MATSUSHITA_FLAGS                        0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * KASEIKYO:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -214,7 +204,6 @@ typedef uint8_t     PAUSE_LEN;
 #define KASEIKYO_LSB                            1                               // LSB...MSB?
 #define KASEIKYO_FRAMES                         2                               // KASEIKYO sends 1st frame 2 times
 #define KASEIKYO_FLAGS                          0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * RECS80:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -233,14 +222,12 @@ typedef uint8_t     PAUSE_LEN;
 #define RECS80_STOP_BIT                         1                               // has stop bit
 #define RECS80_LSB                              0                               // MSB...LSB
 #define RECS80_FLAGS                            0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * RC5:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
  */
 #define RC5_BIT_TIME                             889.0e-6                       // 889 usec pulse/pause
 #define RC5_FRAME_REPEAT_PAUSE_TIME               45.0e-3                       // frame repeat after 45ms
-
 #define RC5_ADDRESS_OFFSET                      1                               // skip 1 bit (2nd start)
 #define RC5_ADDRESS_LEN                         6                               // read 1 toggle bit (for key repetition detection) + 5 address bits
 #define RC5_COMMAND_OFFSET                      7                               // skip 5 bits (2nd start + 1 toggle + 5 address)
@@ -249,7 +236,6 @@ typedef uint8_t     PAUSE_LEN;
 #define RC5_STOP_BIT                            0                               // has no stop bit
 #define RC5_LSB                                 0                               // MSB...LSB
 #define RC5_FLAGS                               IRMP_PARAM_FLAG_IS_MANCHESTER   // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * DENON:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -268,7 +254,6 @@ typedef uint8_t     PAUSE_LEN;
 #define DENON_STOP_BIT                          1                               // has stop bit
 #define DENON_LSB                               0                               // MSB...LSB
 #define DENON_FLAGS                             0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * RC6:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -287,7 +272,6 @@ typedef uint8_t     PAUSE_LEN;
 #define RC6_STOP_BIT                            0                               // has no stop bit
 #define RC6_LSB                                 0                               // MSB...LSB
 #define RC6_FLAGS                               (IRMP_PARAM_FLAG_IS_MANCHESTER | IRMP_PARAM_FLAG_1ST_PULSE_IS_1)   // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * RECS80EXT:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -306,7 +290,6 @@ typedef uint8_t     PAUSE_LEN;
 #define RECS80EXT_STOP_BIT                      1                               // has stop bit
 #define RECS80EXT_LSB                           0                               // MSB...LSB
 #define RECS80EXT_FLAGS                         0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * NUBERT:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -328,7 +311,6 @@ typedef uint8_t     PAUSE_LEN;
 #define NUBERT_STOP_BIT                         1                               // has stop bit
 #define NUBERT_LSB                              0                               // MSB?
 #define NUBERT_FLAGS                            0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * BANG_OLUFSEN:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -355,7 +337,6 @@ typedef uint8_t     PAUSE_LEN;
 #define BANG_OLUFSEN_STOP_BIT                   1                               // has stop bit
 #define BANG_OLUFSEN_LSB                        0                               // MSB...LSB
 #define BANG_OLUFSEN_FLAGS                      0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * GRUNDIG & NOKIA
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -366,7 +347,6 @@ typedef uint8_t     PAUSE_LEN;
 #define GRUNDIG_NOKIA_IR60_STOP_BIT             0                               // has no stop bit
 #define GRUNDIG_NOKIA_IR60_LSB                  1                               // MSB...LSB
 #define GRUNDIG_NOKIA_IR60_FLAGS                (IRMP_PARAM_FLAG_IS_MANCHESTER | IRMP_PARAM_FLAG_1ST_PULSE_IS_1)  // flags
-
 #define GRUNDIG_FRAMES                          2                               // GRUNDIG sends each frame 1+1 times
 #define GRUNDIG_AUTO_REPETITION_PAUSE_TIME      20.0e-3                         // repetition after 20ms
 #define GRUNDIG_ADDRESS_OFFSET                  0                               // no address
@@ -374,7 +354,6 @@ typedef uint8_t     PAUSE_LEN;
 #define GRUNDIG_COMMAND_OFFSET                  1                               // skip 1 start bit
 #define GRUNDIG_COMMAND_LEN                     9                               // read 9 command bits
 #define GRUNDIG_COMPLETE_DATA_LEN               10                              // complete length: 1 start bit + 9 data bits
-
 #define NOKIA_FRAMES                            3                               // NOKIA sends each frame 1 + 1 + 1 times
 #define NOKIA_AUTO_REPETITION_PAUSE_TIME        20.0e-3                         // repetition after 20ms
 #define NOKIA_ADDRESS_OFFSET                    9                               // skip 9 bits (1 start bit + 8 data bits)
@@ -382,7 +361,6 @@ typedef uint8_t     PAUSE_LEN;
 #define NOKIA_COMMAND_OFFSET                    1                               // skip 1 bit (1 start bit)
 #define NOKIA_COMMAND_LEN                       8                               // read 8 command bits
 #define NOKIA_COMPLETE_DATA_LEN                 17                              // complete length: 1 start bit + 8 address bits + 8 command bits
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * IR60:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -395,7 +373,6 @@ typedef uint8_t     PAUSE_LEN;
 #define IR60_COMMAND_OFFSET                     0                               // skip 1 bit (start bit after pre bit, always 1)
 #define IR60_COMMAND_LEN                        7                               // read 6 command bits
 #define IR60_COMPLETE_DATA_LEN                  7                               // complete length
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * SIEMENS & RUWIDO:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -410,19 +387,16 @@ typedef uint8_t     PAUSE_LEN;
 #define SIEMENS_OR_RUWIDO_STOP_BIT                0                             // has no stop bit
 #define SIEMENS_OR_RUWIDO_LSB                     0                             // MSB...LSB
 #define SIEMENS_OR_RUWIDO_FLAGS                   (IRMP_PARAM_FLAG_IS_MANCHESTER | IRMP_PARAM_FLAG_1ST_PULSE_IS_1)  // flags
-
 #define RUWIDO_ADDRESS_OFFSET                   0                               // skip 0 bits
 #define RUWIDO_ADDRESS_LEN                      9                               // read 9 address bits
 #define RUWIDO_COMMAND_OFFSET                   9                               // skip 9 bits
 #define RUWIDO_COMMAND_LEN                      8                               // read 7 + 1 command bits, last bit is only check bit
 #define RUWIDO_COMPLETE_DATA_LEN                17                              // complete length
-
 #define SIEMENS_ADDRESS_OFFSET                  0                               // skip 0 bits
 #define SIEMENS_ADDRESS_LEN                     11                              // read 11 bits
 #define SIEMENS_COMMAND_OFFSET                  11                              // skip 11 bits
 #define SIEMENS_COMMAND_LEN                     11                              // read 10 + 1 command bits, last bit is only check bit
 #define SIEMENS_COMPLETE_DATA_LEN               22                              // complete length
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * FDC:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -441,7 +415,6 @@ typedef uint8_t     PAUSE_LEN;
 #define FDC_STOP_BIT                            1                               // has stop bit
 #define FDC_LSB                                 1                               // LSB...MSB
 #define FDC_FLAGS                               0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * RCCAR:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -460,7 +433,6 @@ typedef uint8_t     PAUSE_LEN;
 #define RCCAR_STOP_BIT                          1                               // has stop bit
 #define RCCAR_LSB                               1                               // LSB...MSB
 #define RCCAR_FLAGS                             0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * JVC:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -479,7 +451,6 @@ typedef uint8_t     PAUSE_LEN;
 #define JVC_STOP_BIT                            1                               // has stop bit
 #define JVC_LSB                                 1                               // LSB...MSB
 #define JVC_FLAGS                               0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * NIKON:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -498,7 +469,6 @@ typedef uint8_t     PAUSE_LEN;
 #define NIKON_STOP_BIT                          1                               // has stop bit
 #define NIKON_LSB                               0                               // LSB...MSB
 #define NIKON_FLAGS                             0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * KATHREIN:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -521,7 +491,6 @@ typedef uint8_t     PAUSE_LEN;
 #define KATHREIN_STOP_BIT                       1                               // has stop bit
 #define KATHREIN_LSB                            0                               // MSB
 #define KATHREIN_FLAGS                          0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * NETBOX:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -541,7 +510,6 @@ typedef uint8_t     PAUSE_LEN;
 #define NETBOX_STOP_BIT                         0                               // has no stop bit
 #define NETBOX_LSB                              1                               // LSB
 #define NETBOX_FLAGS                            IRMP_PARAM_FLAG_IS_SERIAL       // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * LEGO:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -560,7 +528,6 @@ typedef uint8_t     PAUSE_LEN;
 #define LEGO_STOP_BIT                           1                               // has stop bit
 #define LEGO_LSB                                0                               // MSB...LSB
 #define LEGO_FLAGS                              0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * THOMSON:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -579,7 +546,6 @@ typedef uint8_t     PAUSE_LEN;
 #define THOMSON_STOP_BIT                        1                               // has stop bit
 #define THOMSON_LSB                             0                               // MSB...LSB
 #define THOMSON_FLAGS                           0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * BOSE:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -598,7 +564,6 @@ typedef uint8_t     PAUSE_LEN;
 #define BOSE_STOP_BIT                           1                               // has stop bit
 #define BOSE_LSB                                1                               // LSB...MSB
 #define BOSE_FLAGS                              0                               // flags
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * A1TVBOX:
  * In reality A1 TV Box has no start bit with 300/340 usec. There are 2 start bits "10" with 250us pulse + 150us pause + 150us pause + 250us pulse
@@ -623,29 +588,31 @@ typedef uint8_t     PAUSE_LEN;
 #define A1TVBOX_COMMAND_LEN                     8                               // read 8 command bits
 #define A1TVBOX_COMPLETE_DATA_LEN               17                              // complete length incl. start bit
 #define A1TVBOX_FRAME_REPEAT_PAUSE_TIME         50.0e-3                         // 50 msec pause between frames, don't know if it is correct
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * i-HELICOPTER:
  *---------------------------------------------------------------------------------------------------------------------------------------------------
  */
-#define IHELICOPTER_START_BIT_PULSE_TIME    1000.0e-6                      //  275 usec pulse
-#define IHELICOPTER_START_BIT_PAUSE_TIME    200.0e-6                       //  550 usec pause
-#define IHELICOPTER_START_BITS_NUMBER       2                              //
-#define IHELICOPTER_1_PULSE_TIME            800.0e-6                       // 1340 usec pulse
-#define IHELICOPTER_1_PAUSE_TIME            800.0e-6                       //  340 usec pause
-#define IHELICOPTER_0_PULSE_TIME            500.0e-6                       //  500 usec pulse
-#define IHELICOPTER_0_PAUSE_TIME            300.0e-6                       //  300 usec pause
-
-#define IHELICOPTER_STOP_BIT                0                             // has no stop bit
+#define IHELICOPTER_START_BIT_PULSE_TIME    860.0e-6                      //  860 usec pulse nominal but measured up to 1000 send 13 cycles (866) rec 14 - 16 cycles
+#define IHELICOPTER_START_BIT_PAUSE_TIME    330.0e-6                      //  330 usec pause nominal but down to 200 measured send 5 (333) rec 2-4  - sum = 18
+#define IHELICOPTER_START_BITS_NUMBER       2                             //  2 Start bits
+#define IHELICOPTER_1_PULSE_TIME            860.0e-6                      //  860 usec pulse send 13 (866) rec 12-14
+#define IHELICOPTER_1_PAUSE_TIME            750.0e-6                      //  750 usec pause send 11 (733) rec 10-12 - sum = 24
+#define IHELICOPTER_0_PULSE_TIME            440.0e-6                      //  430 usec pulse but measured up to 600 send 7(466) rec 6-9
+#define IHELICOPTER_0_PAUSE_TIME            320.0e-6                      //  330 usec pause but measured down to 200 send 5 (333) rec 3-6  - sum = 12 (800) / 11 (730)
+#define IHELICOPTER_STOP_BIT                1                             // 1 stop bit
 #define IHELICOPTER_LSB                     0                             // MSB...LSB
 #define IHELICOPTER_FLAGS                   0                             // flags
 
 #define IHELICOPTER_ADDRESS_OFFSET          0                             // skip 0 bits
-#define IHELICOPTER_ADDRESS_LEN             16                            // read 8 address bits
-#define IHELICOPTER_COMMAND_OFFSET          16                            // skip 8 bits
-#define IHELICOPTER_COMMAND_LEN             16                            // read 8 command bits
-#define IHELICOPTER_COMPLETE_DATA_LEN       32                            // complete length
+#define IHELICOPTER_ADDRESS_LEN             16                            // read 8 velocity bits + 1 + 7 yaw bits
+#define IHELICOPTER_COMMAND_OFFSET          16                            // skip 16 bits
+#define IHELICOPTER_COMMAND_LEN             12                            // read 4x0 bits + 1 + light bit + 6 nick bits
+#define IHELICOPTER_COMPLETE_DATA_LEN       28                            // complete length
 
-#define AUTO_FRAME_REPETITION_TIME              80.0e-3                         // SIRCS/SAMSUNG32/NUBERT: automatic repetition after 25-50ms
+#define IHELICOPTER_FRAME_REPEAT_PAUSE_TIME 100.0e-3                       // 77 or 100ms msec frame rate // iHelicopter accepts appr. 3 sec without a frame before it shut down
+#define IHELICOPTER_FRAME_REPEAT_PAUSE_TIME_INT 77
+
+#define AUTO_FRAME_REPETITION_TIME          80.0e-3                         // SIRCS/SAMSUNG32/NUBERT: automatic repetition after 25-50ms
+
 
 #endif // _IRMP_PROTOCOLS_H_

@@ -57,8 +57,9 @@
 #define IRMP_THOMSON_PROTOCOL                   30              // Thomson
 #define IRMP_BOSE_PROTOCOL                      31              // BOSE
 #define IRMP_A1TVBOX_PROTOCOL                   32              // A1 TV Box
+#define IRMP_IHELICOPTER_PROTOCOL               33               // I-Helicopter
 
-#define IRMP_N_PROTOCOLS                        32              // number of supported protocols
+#define IRMP_N_PROTOCOLS                        33              // number of supported protocols
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * timing constants:

@@ -76,7 +76,8 @@ public:
 	void drawAxes(const bool aClearLabelsBefore);
 	void drawAxesAndGrid(void);
 	bool drawChartDataDirect(const uint8_t *aDataPointer, uint16_t aDataLength, const uint8_t aMode);
-	bool drawChartData(const int16_t *aDataPointer, const int16_t * aDataEndPointer, const uint8_t aMode);
+    bool drawChartData(const int16_t *aDataPointer, const int16_t * aDataEndPointer, const uint8_t aMode);
+    bool drawChartDataFloat(const float * aDataPointer, const float * aDataEndPointer, const uint8_t aMode);
 	void drawGrid(void);
 
 	/*
@@ -187,7 +188,7 @@ private:
 	 * aScaleFactor == -1 : compression by 1.5
 	 * aScaleFactor < -1 : compression by factor -aScaleFactor
 	 */
-	int8_t mXScaleFactor; // Factor for X Data expansion(>1) or compression(<1). 2->display 1 value 2 times -2->display average of 2 values etc.
+	int8_t mXScaleFactor; // Factor for X Data expansion(>0) or compression(<0). 2->display 1 value 2 times -2->display average of 2 values etc.
 
 	// label formatting
 	uint8_t mXNumVarsAfterDecimal;
@@ -200,8 +201,8 @@ private:
 	 */
 	uint8_t mGridYSpacing; // difference in pixel between 2 Y grid lines
 	int_float_union mYLabelStartValue;
-	int_float_union mYLabeIncrementValue; // Value difference between 2 grid labels - serves as Y scale factor
-	float mYDataFactor; // Factor for raw to chart (not display!!!) value - e.g. (3.0 / 4096) for adc reading of 4096 for 3 Volt or 0.2 for 1000 display at 5000 raw value
+	int_float_union mYLabelIncrementValue; // Value difference between 2 grid labels - serves as Y scale factor
+	float mYDataFactor; // Factor for input (raw (int16_t) or float) to chart (not display!!!) value - e.g. (3.0 / 4096) for adc reading of 4096 for 3 Volt or 0.2 for 1000 display at 5000 raw value
 
 	// label formatting
 	uint8_t mYNumVarsAfterDecimal;

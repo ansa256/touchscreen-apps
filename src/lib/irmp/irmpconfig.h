@@ -79,7 +79,7 @@
  * Change hardware pin here for STM32F3 - Discovery ARM Cortex M4
  *---------------------------------------------------------------------------------------------------------------------------------------------------
  */
-#elif defined (STM32F30X)
+#elif defined (ARM_STM32F30X)
 #  define IRMP_PORT_LETTER                      B
 #  define IRMP_BIT_NUMBER                       8
 

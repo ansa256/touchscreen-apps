@@ -37,6 +37,8 @@
 #elif defined(STM32F30X)                                                            // ARM STM32
 #  include <stm32f30x.h>
 #  define ARM_STM32
+#  define ARM_STM32F30X
+#  define ANALYZE_LOCAL
 #elif defined(STM32F4XX)                                                            // ARM STM32
 #  include <stm32f4xx.h>
 #  define ARM_STM32
@@ -102,8 +104,8 @@ typedef unsigned short                  uint16_t;
 #endif
 
 #if defined(PIC_CCS) || defined(PIC_C18) || defined(ARM_STM32) || defined(STELLARIS_ARM_CORTEX_M4)
-typedef unsigned char                   uint8_t;
-typedef unsigned short                  uint16_t;
+//typedef unsigned char                   uint8_t;
+//typedef unsigned short                  uint16_t;
 #endif
 
 #if defined (PIC_C18)

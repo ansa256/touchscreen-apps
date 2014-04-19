@@ -12,19 +12,15 @@
  */
 
 #include "HY32D.h"
-#include "misc.h"
-#include <stdio.h>
-#include <string.h>
 
-#ifdef __cplusplus
+#include <stdio.h> // for sprintf
+#include <string.h>  // for strcat
+
 extern "C" {
-
 #include "timing.h"
 #include "ff.h"
 #include "stm32f30xPeripherals.h"
-
 }
-#endif
 
 /** @addtogroup Graphic_Library
  * @{
@@ -61,7 +57,7 @@ void initHY32D(void) {
 	//init pins
 	HY32D_IO_initalize();
 	// init PWM for background LED
-	PWM_initalize();
+	PWM_BL_initalize();
 	setBrightness(BACKLIGHT_START_VALUE);
 
 	// deactivate read output control
@@ -343,7 +339,17 @@ void drawLineFastOneX(uint16_t x0, uint16_t y0, uint16_t y1, uint16_t color) {
 	}
 }
 
-int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color) {
+/**
+ *
+ * @param x
+ * @param y
+ * @param c
+ * @param size
+ * @param color
+ * @param bg_color
+ * @return start x for next character / x + (FONT_WIDTH * size)
+ */
+uint16_t drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color) {
 	/*
 	 * check if a draw in routine which uses setArea() is already executed
 	 */
@@ -354,10 +360,10 @@ int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint1
 	} while (__STREXW(tLock, &sDrawLock));
 
 	if (tLock != 1) {
-		// here in ISR, but interrupted process was still in drawText()
+		// here in ISR, but interrupted process was still in drawChar()
 		sLockCount++;
-		// first approach skip drawing and return -1
-		return -1;
+		// first approach skip drawing and return input x value
+		return x;
 	}
 	int tRetValue;
 #if FONT_WIDTH <= 8
@@ -386,14 +392,11 @@ int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint1
 
 	if (size <= 1) {
 		tRetValue = x + width;
-		if ((tRetValue - 1) >= DISPLAY_WIDTH) {
+		if ((y + height) > DISPLAY_HEIGHT) {
 			tRetValue = DISPLAY_WIDTH + 1;
-		} else if ((y + height - 1) >= DISPLAY_HEIGHT) {
-			tRetValue = DISPLAY_WIDTH + 1;
-		} else {
-
+		}
+		if (tRetValue <= DISPLAY_WIDTH) {
 			setArea(x, y, (x + width - 1), (y + height - 1));
-
 			drawStart();
 			for (; height != 0; height--) {
 #if FONT_WIDTH <= 8
@@ -416,14 +419,11 @@ int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint1
 		}
 	} else {
 		tRetValue = x + (width * size);
-		if ((tRetValue - 1) >= DISPLAY_WIDTH) {
+		if ((y + (height * size)) > DISPLAY_HEIGHT) {
 			tRetValue = DISPLAY_WIDTH + 1;
-		} else if ((y + (height * size) - 1) >= DISPLAY_HEIGHT) {
-			tRetValue = DISPLAY_WIDTH + 1;
-		} else {
-
+		}
+		if (tRetValue <= DISPLAY_WIDTH) {
 			setArea(x, y, (x + (width * size) - 1), (y + (height * size) - 1));
-
 			drawStart();
 			for (; height != 0; height--) {
 #if FONT_WIDTH <= 8
@@ -460,13 +460,14 @@ int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint1
  * @param x left position
  * @param y upper position
  * @param s String
+ * @param aNumberOfCharacters
  * @param size Font size
  * @param color
  * @param bg_color
- * @return
+ * @return start x for next character
  */
-int drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color) {
-	while (*s != 0) {
+int drawNText(uint16_t x, uint16_t y, const char *s, int aNumberOfCharacters, uint8_t size, uint16_t color, uint16_t bg_color) {
+	while (*s != 0 && --aNumberOfCharacters > 0) {
 		x = drawChar(x, y, (char) *s++, size, color, bg_color);
 		if (x > DISPLAY_WIDTH) {
 			break;
@@ -475,7 +476,36 @@ int drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color
 	return x;
 }
 
-int drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer, uint8_t aSize, uint16_t aColor,
+/**
+ *
+ * @param x left position
+ * @param y upper position
+ * @param s String
+ * @param size Font size
+ * @param color
+ * @param bg_color
+ * @return uint16_t start x for next character - next x Parameter
+ */
+uint16_t drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color) {
+	while (*s != 0) {
+		x = drawChar(x, y, (char) *s++, size, color, bg_color);
+		if (x > DISPLAY_WIDTH) {
+			break;
+		}
+	}
+	return x;
+}
+/**
+ *
+ * @param aXPos
+ * @param aYPos
+ * @param aStringPointer
+ * @param aSize
+ * @param aColor
+ * @param aBackgroundColor
+ * @return uint16_t start x for next character - next x Parameter
+ */
+uint16_t drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer, uint8_t aSize, uint16_t aColor,
 		uint16_t aBackgroundColor) {
 	while (*aStringPointer != 0) {
 		drawChar(aXPos, aYPos, (char) *aStringPointer++, aSize, aColor, aBackgroundColor);
@@ -498,16 +528,17 @@ int drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer,
  * @param size Font size
  * @param color
  * @param bg_color
- * @return
+ * @return uint16_t start x for next character
  */
-extern "C" int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const char *s, uint8_t size, uint16_t color,
-		uint16_t bg_color) {
+extern "C" uint16_t drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const char *s, uint8_t size, uint16_t color,
+		uint16_t bg_color, bool doClearBefore) {
 	uint16_t x = x0, y = y0, wlen, llen;
 	char c;
 	const char *wstart;
 
-	fillRect(x0, y0, x1, y1, bg_color);
-
+	if (doClearBefore) {
+		fillRect(x0, y0, x1, y1, bg_color);
+	}
 	llen = (x1 - x0) / (FONT_WIDTH * size); //line length in chars
 	wstart = s;
 	while (*s && (y < y1)) {
@@ -533,7 +564,7 @@ extern "C" int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, co
 
 		if (c) {
 			if ((x + (FONT_WIDTH * size)) > x1) {
-				//new line
+				//start at new line
 				if (c == ' ') {
 					//do not start with space
 					x = x0;
@@ -541,20 +572,22 @@ extern "C" int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, co
 				} else {
 					wlen = (s - wstart);
 					if (wlen > llen) {
-						//word too long
+						//word too long just print on next line
 						x = x0;
 						y += (FONT_HEIGHT * size) + 1;
 						if (y < y1) {
 							x = drawChar(x, y, c, size, color, bg_color);
 						}
 					} else {
-						fillRect(x - (wlen * FONT_WIDTH * size), y, x1, (y + (FONT_HEIGHT * size)), bg_color); //clear word
+						//clear word in actual line and start on next line
+						fillRect(x - (wlen * FONT_WIDTH * size), y, x1, (y + (FONT_HEIGHT * size)), bg_color);
 						x = x0;
 						y += (FONT_HEIGHT * size) + 1;
 						s = wstart;
 					}
 				}
 			} else {
+				// continue on line
 				x = drawChar(x, y, c, size, color, bg_color);
 			}
 		}
@@ -563,7 +596,7 @@ extern "C" int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, co
 	return x;
 }
 
-int drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color) {
+uint16_t drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color) {
 	char tmp[16 + 1];
 	switch (base) {
 	case 8:
@@ -581,7 +614,7 @@ int drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uin
 }
 
 void setBrightness(int power) {
-	PWM_setOnRatio(power);
+	PWM_BL_setOnRatio(power);
 	LCDLastBacklightValue = power;
 }
 
@@ -670,11 +703,11 @@ uint16_t readCommand(int aRegisterAddress) {
 
 // Data enable (high)
 	HY32D_DATA_CONTROL_GPIO_PORT->BSRR = HY32D_DATA_CONTROL_PIN;
-	// set port pins to input
+// set port pins to input
 	HY32D_DATA_GPIO_PORT->MODER = 0x00000000;
-	// Latch data read
+// Latch data read
 	HY32D_WR_GPIO_PORT->BRR = HY32D_RD_PIN;
-	// wait >250ns
+// wait >250ns
 	delayNanos(300);
 	uint16_t tValue = HY32D_DATA_GPIO_PORT->IDR;
 	HY32D_WR_GPIO_PORT->BSRR = HY32D_RD_PIN;
@@ -690,7 +723,7 @@ bool initalizeDisplay(void) {
 // Original Code
 	writeCommand(0x0000, 0x0001); // Enable LCD Oscillator
 	delayMillis(10);
-	// Check Device Code - 0x8989
+// Check Device Code - 0x8989
 	if (readCommand(0x0000) != 0x8989) {
 		return false;
 	}
@@ -743,11 +776,11 @@ void initalizeDisplay2(void) {
 // Reset is done by hardware reset button
 	delayMillis(1);
 	writeCommand(0x0011, 0x6838); // 6=65k Color, 8 = OE defines the display window 0 =the display window is defined by R4Eh and R4Fh.
-	//writeCommand(0x0011, 0x6038); // 6=65k Color, 8 = OE defines the display window 0 =the display window is defined by R4Eh and R4Fh.
+//writeCommand(0x0011, 0x6038); // 6=65k Color, 8 = OE defines the display window 0 =the display window is defined by R4Eh and R4Fh.
 //Entry Mode setting
 	writeCommand(0x0002, 0x0600); // LCD driver AC setting
 	writeCommand(0x0012, 0x6CEB); // RAM data write
-	// power control
+// power control
 	writeCommand(0x0003, 0xA8A4);
 	writeCommand(0x000C, 0x0000); //VCIX2 only bit [2:0]
 	writeCommand(0x000D, 0x080C); // VLCD63 only bit [3:0] ==
@@ -756,11 +789,11 @@ void initalizeDisplay2(void) {
 	writeCommand(0x001E, 0x00B0); // Bit7 + VcomH bit [5:0] ==
 	writeCommand(0x0001, 0x293F); // reverse 320
 
-	// compare register
-	//writeCommand(0x0005, 0x0000);
-	//writeCommand(0x0006, 0x0000);
+// compare register
+//writeCommand(0x0005, 0x0000);
+//writeCommand(0x0006, 0x0000);
 
-	//writeCommand(0x0017, 0x0103); //Vertical Porch
+//writeCommand(0x0017, 0x0103); //Vertical Porch
 	delayMillis(1);
 
 	delayMillis(30);
@@ -1033,6 +1066,7 @@ extern "C" void storeScreenshot(void) {
 	}
 	FeedbackTone(tFeedbackType);
 }
+
 /** @} */
 /** @} */
 

@@ -104,7 +104,7 @@
 #  define IRSND_SUPPORT_LEGO_PROTOCOL           0
 #endif
 
-#include "irmpprotocols.h"
+#include "../irmp/irmpprotocols.h"
 
 #define IRSND_NO_REPETITIONS                     0      // no repetitions
 #define IRSND_MAX_REPETITIONS                   14      // max # of repetitions

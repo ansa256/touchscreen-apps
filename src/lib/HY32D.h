@@ -8,12 +8,14 @@
  * @version 1.5.0
  *
  */
+ 
 #ifndef HY32D_h
 #define HY32D_h
 
 #include "thickline.h"
 #include "fonts.h"
 #include <stdbool.h>
+
 
 /** @addtogroup Graphic_Library
  * @{
@@ -27,11 +29,11 @@
 #define DISPLAY_WIDTH   320
 
 /*
- * Backlight
+ * Backlight values in percent
  */
 #define BACKLIGHT_START_VALUE 50
 #define BACKLIGHT_MAX_VALUE 100
-#define BACKLIGHT_MIN_VALUE 3
+#define BACKLIGHT_MIN_VALUE 0
 #define BACKLIGHT_DIM_VALUE 7
 #define BACKLIGHT_DIM_DEFAULT_DELAY TWO_MINUTES
 
@@ -43,6 +45,7 @@
 #define COLOR_RED     RGB(255,  0,  0)
 #define COLOR_GREEN   RGB(  0,255,  0)
 #define COLOR_BLUE    RGB(  0,  0,255)
+#define COLOR_DARK_BLUE  RGB(  0,  0,0xA0)
 #define COLOR_YELLOW  RGB(255,255,  0)
 #define COLOR_MAGENTA RGB(255,  0,255)
 #define COLOR_CYAN    RGB(  0,255,255)
@@ -50,6 +53,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 extern uint8_t DisplayBuffer1[DISPLAY_WIDTH];
 extern uint8_t DisplayBuffer2[DISPLAY_WIDTH];
 extern bool isInitializedHY32D;
@@ -75,21 +79,24 @@ void drawRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color
 void drawCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color);
 void fillCircle(uint16_t x0, uint16_t y0, uint16_t radius, uint16_t color);
 
-int drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color);
-int drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color);
-int drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer, uint8_t aSize, uint16_t aColor,
+uint16_t drawChar(uint16_t x, uint16_t y, char c, uint8_t size, uint16_t color, uint16_t bg_color);
+uint16_t drawText(uint16_t x, uint16_t y, const char *s, uint8_t size, uint16_t color, uint16_t bg_color);
+int drawNText(uint16_t x, uint16_t y, const char *s, int aNumberOfCharacters, uint8_t size, uint16_t color, uint16_t bg_color);
+uint16_t drawTextVertical(uint16_t aXPos, uint16_t aYPos, const char *aStringPointer, uint8_t aSize, uint16_t aColor,
 		uint16_t aBackgroundColor);
-int drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color);
+uint16_t drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const char *s, uint8_t size, uint16_t color, uint16_t bg_color, bool doClearBefore);
+uint16_t drawInteger(uint16_t x, uint16_t y, int val, uint8_t base, uint8_t size, uint16_t color, uint16_t bg_color);
 
 void clearDisplay(uint16_t color);
 void drawPixel(uint16_t x0, uint16_t y0, uint16_t color);
 uint16_t readPixel(uint16_t aXPos, uint16_t aYPos);
 void fillRect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
-int drawMLText(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, const char *s, uint8_t size, uint16_t color, uint16_t bg_color);
 void storeScreenshot(void);
+
 #ifdef __cplusplus
 }
 #endif
+
 
 // Tests
 void initalizeDisplay2(void);

@@ -12,11 +12,11 @@
  * LED   | COLOR / POS  | SOURCE 				| INFO
  * ------|--------------|-----------------------|--------
  * LED6  | GREEN LEFT   | Assertion but display not available |
- * LED7  | GREEN FRONT  | TIM6_DAC_IRQHandle 	| not used yet
  * LED8  | ORANGE FRONT |  						| Timeout
  * LED9  | BLUE FRONT   | EXTI1 				| Touch interrupt
  * LED10 | RED FRONT    | EXTI4 				| MMC Card inserted
  */
+ 
 #include "stm32f3_discovery.h"
 #include "timing.h"
 #include "stm32f30xPeripherals.h"

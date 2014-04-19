@@ -1,8 +1,11 @@
 /*
  * thickLine.c
  *
-* @date 25.03.2013
- * @author O66853
+ * @date 25.03.2013
+ * @author Armin Joachimsmeyer
+ *      Email:   armin.joachimsmeyer@gmx.de
+ * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
+ * @version 1.5.0
  */
 
 #include "thickline.h"
@@ -173,7 +176,7 @@ void drawThickLine(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEn
 	}
 
 	/**
-	 * For coordinatesystem with 0.0 topleft
+	 * For coordinate system with 0.0 top left
 	 * Swap X and Y delta and calculate clockwise (new delta X inverted)
 	 * or counterclockwise (new delta Y inverted) rectangular direction.
 	 * The right rectangular direction for LINE_OVERLAP_MAJOR toggles with each octant
@@ -250,19 +253,19 @@ void drawThickLine(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEn
 				tError -= tDeltaXTimes2;
 				/*
 				 * change in minor direction reverse to line (main) direction
-				 * because of chosing the right (counter)clockwise draw vector
+				 * because of choosing the right (counter)clockwise draw vector
 				 * use LINE_OVERLAP_MAJOR to fill all pixel
 				 *
 				 * EXAMPLE:
 				 * 1,2 = Pixel of first lines
 				 * 3 = Pixel of third line in normal line mode
-				 * - = Pixel which will be drawn in LINE_OVERLAP_MAJOR mode
+				 * - = Pixel which will additionally be drawn in LINE_OVERLAP_MAJOR mode
 				 *           33
 				 *       3333-22
 				 *   3333-222211
 				 * 33-22221111
 				 *  221111                     /\
-					 *  11                          Main direction of draw vector
+				 *  11                          Main direction of draw vector
 				 *  -> Line main direction
 				 *  <- Minor direction of counterclockwise draw vector
 				 */
@@ -310,7 +313,7 @@ void drawThickLine(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEn
 	}
 }
 /**
- * The same as before, but no clipping, some pixel are drawn twice (use LINE_OVERLAP_BOTH)
+ * The same as before, but no clipping to display range, some pixel are drawn twice (because of using LINE_OVERLAP_BOTH)
  * and direction of thickness changes for each octant (except for LINE_THICKNESS_MIDDLE and aThickness odd)
  */
 void drawThickLineSimple(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEnd, int16_t aThickness, uint8_t aThicknessMode,

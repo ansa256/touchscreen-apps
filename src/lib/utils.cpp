@@ -7,14 +7,11 @@
 
 #include "utils.h"
 #include "misc.h"
-#ifdef __cplusplus
 
 extern "C" {
 #include "timing.h"
 #include "stm32f30xPeripherals.h"
 }
-
-#endif
 
 static uint32_t MillisOfLastDrawRTCTime;
 /**
@@ -44,4 +41,11 @@ void showRTCTime(uint16_t x, uint16_t y, uint16_t aColor, uint16_t aBackColor, b
 	}
 }
 
-
+void formatThousandSeparator(char * aDestPointer, char * aSeparatorAddress) {
+    // set separator for thousands
+    char* tSrcPtr = aDestPointer + 1;
+    while (tSrcPtr <= aSeparatorAddress) {
+        *aDestPointer++ = *tSrcPtr++;
+    }
+    *aSeparatorAddress = THOUSANDS_SEPARATOR;
+}

@@ -16,8 +16,8 @@
   *
   *        http://www.st.com/software_license_agreement_liberty_v2
   *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
@@ -30,7 +30,6 @@
 #define __HW_CONFIG_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "usb_type.h"
 #include "stm32f30x.h"
 
 
@@ -38,6 +37,7 @@
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported define -----------------------------------------------------------*/
+
 #define CURSOR_STEP     5
 
 #define DOWN            1
@@ -45,6 +45,9 @@
 #define RIGHT           3
 #define UP              4
 
+//CDC
+#define MASS_MEMORY_START     0x04002000
+#define BULK_MAX_PACKET_SIZE  0x00000040
 
 /* Exported functions ------------------------------------------------------- */
 void Set_System(void);
@@ -54,11 +57,8 @@ void Enter_LowPowerMode(void);
 void Leave_LowPowerMode(void);
 void USB_Interrupts_Config(void);
 void USB_Cable_Config (FunctionalState NewState);
-void Joystick_Send(uint8_t Keys);
-uint8_t JoyState(void);
 void Get_SerialNum(void);
-
 
 #endif  /*__HW_CONFIG_H*/
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/ 
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

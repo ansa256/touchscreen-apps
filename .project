@@ -82,19 +82,39 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>STM32F3_Discovery</name>
+			<type>2</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32F3-Discovery_FW_V1.1.0/Utilities/STM32F3_Discovery</locationURI>
+		</link>
+		<link>
 			<name>StdPeriph_Driver</name>
 			<type>2</type>
-			<location>E:/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/STM32F30x_StdPeriph_Driver/src</location>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/STM32F30x_StdPeriph_Driver/src</locationURI>
 		</link>
+		<link>
+			<name>TransformFunctions</name>
+			<type>2</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/CMSIS/DSP_Lib/Source/TransformFunctions</locationURI>
+		</link>
+		<link>
+			<name>CommonTables</name>
+			<type>2</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/CMSIS/DSP_Lib/Source/CommonTables</locationURI>
+		</link>
+		<link>
+			<name>ComplexMathFunctions</name>
+			<type>2</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/CMSIS/DSP_Lib/Source/ComplexMathFunctions</locationURI>
+		</link>
+		<link>
+			<name>StatisticsFunctions</name>
+			<type>2</type>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/CMSIS/DSP_Lib/Source/StatisticsFunctions</locationURI>
+		</link>		
 		<link>
 			<name>USB-FS-Device_Driver</name>
 			<type>2</type>
-			<location>E:/Elektro/STM32F3-Discovery_FW_V1.1.0/Libraries/STM32_USB-FS-Device_Driver/src</location>
-		</link>
-		<link>
-			<name>Utilities</name>
-			<type>2</type>
-			<location>E:/Elektro/STM32F3-Discovery_FW_V1.1.0/Utilities/STM32F3_Discovery</location>
+			<locationURI>PARENT-2-PROJECT_LOC/Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

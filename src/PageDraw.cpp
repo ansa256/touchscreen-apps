@@ -63,15 +63,14 @@ void startDrawPage(void) {
 		tPosY += 30;
 	}
 
-	TouchButtonClear = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
+	TouchButtonClear = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
 			BUTTON_HEIGHT_4, COLOR_RED, StringClear, 2, 0, &doDrawClear);
 
-	initMainHomeButtonWithPosition(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, false);
 	displayDrawPage();
 }
 
-void loopDrawPage(int aGuiTouchState) {
-	if (aGuiTouchState == GUI_TOUCH_NO_MATCH) {
+void loopDrawPage(void) {
+	if (CheckTouchGeneric(true) == GUI_TOUCH_NO_MATCH) {
 		int x = TouchPanel.getXActual();
 		int y = TouchPanel.getYActual();
 		// start draw line

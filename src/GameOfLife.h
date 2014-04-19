@@ -14,7 +14,7 @@
 #define DIE1_COLOR  (3)
 #define DIE2_COLOR  (4)
 
-#define GOL_MAX_GEN (400) //max generations
+#define GOL_MAX_GEN  (600) //max generations
 #define GOL_X_SIZE   (40)
 #define GOL_Y_SIZE   (30)
 

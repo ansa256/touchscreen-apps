@@ -16,8 +16,8 @@
   *
   *        http://www.st.com/software_license_agreement_liberty_v2
   *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
@@ -28,6 +28,8 @@
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __USB_DESC_H
 #define __USB_DESC_H
+
+#include <stdint.h> /* for uint8_t */
 
 /* Includes ------------------------------------------------------------------*/
 /* Exported types ------------------------------------------------------------*/
@@ -52,6 +54,15 @@
 #define JOYSTICK_SIZ_STRING_PRODUCT             30
 #define JOYSTICK_SIZ_STRING_SERIAL              26
 
+#define VIRTUAL_COM_PORT_INT_SIZE               8
+
+#define VIRTUAL_COM_PORT_SIZ_DEVICE_DESC        18
+#define VIRTUAL_COM_PORT_SIZ_CONFIG_DESC        67
+#define VIRTUAL_COM_PORT_SIZ_STRING_LANGID      4
+#define VIRTUAL_COM_PORT_SIZ_STRING_VENDOR      38
+#define VIRTUAL_COM_PORT_SIZ_STRING_PRODUCT     50
+#define VIRTUAL_COM_PORT_SIZ_STRING_SERIAL      26
+
 #define STANDARD_ENDPOINT_DESC_SIZE             0x09
 
 /* Exported functions ------------------------------------------------------- */
@@ -63,6 +74,13 @@ extern const uint8_t Joystick_StringVendor[JOYSTICK_SIZ_STRING_VENDOR];
 extern const uint8_t Joystick_StringProduct[JOYSTICK_SIZ_STRING_PRODUCT];
 extern uint8_t Joystick_StringSerial[JOYSTICK_SIZ_STRING_SERIAL];
 
+extern const uint8_t Virtual_Com_Port_DeviceDescriptor[VIRTUAL_COM_PORT_SIZ_DEVICE_DESC];
+extern const uint8_t Virtual_Com_Port_ConfigDescriptor[VIRTUAL_COM_PORT_SIZ_CONFIG_DESC];
+extern const uint8_t Virtual_Com_Port_StringLangID[VIRTUAL_COM_PORT_SIZ_STRING_LANGID];
+extern const uint8_t Virtual_Com_Port_StringVendor[VIRTUAL_COM_PORT_SIZ_STRING_VENDOR];
+extern const uint8_t Virtual_Com_Port_StringProduct[VIRTUAL_COM_PORT_SIZ_STRING_PRODUCT];
+extern uint8_t Virtual_Com_Port_StringSerial[VIRTUAL_COM_PORT_SIZ_STRING_SERIAL];
+
 #endif /* __USB_DESC_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/ 
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

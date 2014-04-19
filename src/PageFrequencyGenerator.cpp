@@ -12,19 +12,25 @@
 #include "misc.h"
 #include <math.h>
 
+const char String10[] = "10";
+const char String20[] = "20";
+const char String50[] = "50";
+const char String100[] = "100";
+const char String200[] = "200";
+const char String500[] = "500";
+const char String1000[] = "1000";
+const char String1k[] = "1k";
+
 /* Private define ------------------------------------------------------------*/
 
 #define BACKGROUND_COLOR COLOR_WHITE
 #define FREQ_SLIDER_SIZE 5 // size of border
 #define FREQ_SLIDER_MAX_VALUE 300 /* size of slider */
-// Start values for 10 kHz
-#define START_FREQ_SLIDER_VALUE 100 // for value of 10
-#define FREQ_START_FACTOR_INDEX 2 // for kHz
+
 #define NUMBER_OF_FIXED_FREQUENCY_BUTTONS 10
 
 #define INFO_Y_MARGIN (4 + (2 * FONT_HEIGHT)) // Margin between slider and freq display
-
-#define FREQUENCY_X_POS ((20 - sizeof(StringFrequency)) * FONT_WIDTH)
+#define FREQUENCY_X_POS ((18 - sizeof(StringFrequency)) * FONT_WIDTH)
 
 #define SLIDER_POS_X 5
 
@@ -50,21 +56,19 @@ static TouchButton * TouchButtonMHz;
 static TouchButton * TouchButtonStartStop;
 static TouchButton * TouchButtonSetFrequency;
 static TouchButton ** TouchButtonsFreqGen[] = { &TouchButton1, &TouchButton2, &TouchButton5, &TouchButton10, &TouchButton20,
-		&TouchButton50, &TouchButton100, &TouchButton200, &TouchButton500, &TouchButton1k, &TouchButtonmHz, &TouchButtonHz,
-		&TouchButtonkHz, &TouchButtonMHz, &TouchButtonSetFrequency, &TouchButtonStartStop };
+        &TouchButton50, &TouchButton100, &TouchButton200, &TouchButton500, &TouchButton1k, &TouchButtonmHz, &TouchButtonHz,
+        &TouchButtonkHz, &TouchButtonMHz, &TouchButtonSetFrequency, &TouchButtonStartStop };
 
 const uint16_t Frequency[NUMBER_OF_FIXED_FREQUENCY_BUTTONS] = { 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000 };
 const char * const FrequencyStrings[NUMBER_OF_FIXED_FREQUENCY_BUTTONS] = { String1, String2, String5, String10, String20, String50,
-		String100, String200, String500, String1k };
+        String100, String200, String500, String1k };
 
-static float sFrequency = 0;
+// Start values for 10 kHz
+static float sFrequency = 10;
+static uint8_t sFrequencyFactorIndex = 2; // for kHz
 
 const char FrequencyFactorChars[4] = { 'm', ' ', 'k', 'M' };
-static uint8_t sFrequencyFactorIndex = FREQ_START_FACTOR_INDEX;
-static uint32_t sFrequencyFactorTimes1000; // factor for mHz/Hz/kHz/MHz
-static uint16_t sLastFrequencySliderValue = START_FREQ_SLIDER_VALUE;
-
-static bool sFreqGenIsStopped = true;
+static uint32_t sFrequencyFactorTimes1000; // factor for mHz/Hz/kHz/MHz - times 100 because of mHz handling
 
 /* Private function prototypes -----------------------------------------------*/
 void drawFreqGenPage(void);
@@ -74,48 +78,46 @@ uint16_t doFrequencySlider(TouchSlider * const aTheTouchedSlider, uint16_t aValu
 /* Private functions ---------------------------------------------------------*/
 
 void setFrequencyFactor(int aIndexValue) {
-	sFrequencyFactorIndex = aIndexValue;
-	int tFactor = 1;
-	while (aIndexValue > 0) {
-		tFactor *= 1000;
-		aIndexValue--;
-	}
-	sFrequencyFactorTimes1000 = tFactor;
+    sFrequencyFactorIndex = aIndexValue;
+    int tFactor = 1;
+    while (aIndexValue > 0) {
+        tFactor *= 1000;
+        aIndexValue--;
+    }
+    sFrequencyFactorTimes1000 = tFactor;
 }
 
 void initFreqGenPage(void) {
-	HIRES_Timer_initialize(72000);
-	setFrequencyFactor(sFrequencyFactorIndex);
-	doFrequencySlider(NULL, sLastFrequencySliderValue);
+    HIRES_Timer_initialize(72000);
 }
 
 /**
  * Computes Autoreload value for synthesizer
  * from 8,381 mHz (0xFFFFFFFF) to 18MHz (0x02)
+ * and prints frequency value
  * @param aSliderValue
  * @param aSetTimer
  */
 void ComputePeriodAndSetTimer(bool aSetSlider) {
-	float tPeriod = (36000000000 / sFrequencyFactorTimes1000) / sFrequency; // 3600... because it is toggle mode
-	uint32_t tPeriodInt = tPeriod;
-	if (tPeriodInt < 2) {
-		tPeriodInt = 2;
-	}
-	HIRES_Timer_SetReloadValue(tPeriodInt);
-	// recompute exact frequency for given integer period
-	tPeriod = tPeriodInt;
-	float sFrequency = (36000000000 / sFrequencyFactorTimes1000) / tPeriod; // 3600... because it is toggle mode
-	snprintf(StringBuffer, sizeof StringBuffer, "%9.3f%cHz", sFrequency, FrequencyFactorChars[sFrequencyFactorIndex]);
-	drawText(FREQUENCY_X_POS, TouchSliderHorizontal.getPositionYBottom() + INFO_Y_MARGIN, StringBuffer, 2, COLOR_RED,
-	BACKGROUND_COLOR);
+    float tPeriod = (36000000000 / sFrequencyFactorTimes1000) / sFrequency; // 3600... because timer runs in toggle mode
+    uint32_t tPeriodInt = tPeriod;
+    if (tPeriodInt < 2) {
+        tPeriodInt = 2;
+    }
+    HIRES_Timer_SetReloadValue(tPeriodInt);
+    // recompute exact frequency for given integer period
+    tPeriod = tPeriodInt;
+    float sFrequency = (36000000000 / sFrequencyFactorTimes1000) / tPeriod;
+    snprintf(StringBuffer, sizeof StringBuffer, "%9.3f%cHz", sFrequency, FrequencyFactorChars[sFrequencyFactorIndex]);
+    drawText(FREQUENCY_X_POS - 2 * FONT_WIDTH, 2 * FONT_HEIGHT + 4, StringBuffer, 2, COLOR_RED, BACKGROUND_COLOR);
 // output period
 //	snprintf(StringBuffer, sizeof StringBuffer, "%#010lX", tPeriodInt);
 //	drawText(SLIDER_POS_X, BUTTON_HEIGHT_4_LINE_2 + BUTTON_HEIGHT_6 + BUTTON_DEFAULT_SPACING_HALF, StringBuffer, 1, COLOR_BLUE,
 //	BACKGROUND_COLOR);
-	if (aSetSlider) {
-		uint16_t tValue = log10f(sFrequency) * 100;
-		TouchSliderHorizontal.setActualValueAndDrawBar(tValue);
-	}
+    if (aSetSlider) {
+        uint16_t tValue = log10f(sFrequency) * 100;
+        TouchSliderHorizontal.setActualValueAndDrawBar(tValue);
+    }
 }
 
 /**
@@ -123,40 +125,40 @@ void ComputePeriodAndSetTimer(bool aSetSlider) {
  */
 void setCapionAndDrawFixedFreqButtons(int aStartindex) {
 // Fixed frequency buttons next
-	int tXPos = 0;
-	for (int i = 0; i < NUMBER_OF_FIXED_FREQUENCY_BUTTONS; ++i) {
-		(*TouchButtonsFreqGen[i])->setCaption(FrequencyStrings[i + aStartindex]);
-		(*TouchButtonsFreqGen[i])->setValue(Frequency[i + aStartindex]);
-		(*TouchButtonsFreqGen[i])->drawButton();
-		tXPos = tXPos + BUTTON_WIDTH_8 + BUTTON_DEFAULT_SPACING_HALF + 6;
-	}
+    int tXPos = 0;
+    for (int i = 0; i < NUMBER_OF_FIXED_FREQUENCY_BUTTONS; ++i) {
+        (*TouchButtonsFreqGen[i])->setCaption(FrequencyStrings[i + aStartindex]);
+        (*TouchButtonsFreqGen[i])->setValue(Frequency[i + aStartindex]);
+        (*TouchButtonsFreqGen[i])->drawButton();
+        tXPos = tXPos + BUTTON_WIDTH_8 + BUTTON_DEFAULT_SPACING_HALF + 6;
+    }
 }
 
 uint16_t doFrequencySlider(TouchSlider * const aTheTouchedSlider, uint16_t aValue) {
-	float tValue = aValue;
-	tValue = tValue / (FREQ_SLIDER_MAX_VALUE / 3); // gives 0-3
-	sFrequency = pow10f(tValue);
-	ComputePeriodAndSetTimer(false);
-	return aValue;
+    float tValue = aValue;
+    tValue = tValue / (FREQ_SLIDER_MAX_VALUE / 3); // gives 0-3
+    sFrequency = pow10f(tValue);
+    ComputePeriodAndSetTimer(false);
+    return aValue;
 }
 
 void doFreqGenStartStop(TouchButton * const aTheTouchedButton, int16_t aValue) {
-	FeedbackToneOK();
-	if (sFreqGenIsStopped) {
-		aTheTouchedButton->setCaption(StringStop);
-		HIRES_Timer_Start();
-	} else {
-		aTheTouchedButton->setCaption(StringStart);
-		HIRES_Timer_Stop();
-	}
-	sFreqGenIsStopped = !sFreqGenIsStopped;
-	aTheTouchedButton->drawButton();
+    FeedbackToneOK();
+    aValue = !aValue;
+    if (aValue) {
+        aTheTouchedButton->setCaption(StringStop);
+        HIRES_Timer_Start();
+    } else {
+        aTheTouchedButton->setCaption(StringStart);
+        HIRES_Timer_Stop();
+    }
+    aTheTouchedButton->setRedGreenButtonColorAndDraw(aValue);
 }
 
 void doSetFixedFrequency(TouchButton * const aTheTouchedButton, int16_t aValue) {
-	FeedbackToneOK();
-	sFrequency = aValue;
-	ComputePeriodAndSetTimer(true);
+    FeedbackToneOK();
+    sFrequency = aValue;
+    ComputePeriodAndSetTimer(true);
 }
 
 /**
@@ -165,9 +167,9 @@ void doSetFixedFrequency(TouchButton * const aTheTouchedButton, int16_t aValue) 
  * @param aValue
  */
 void doChangeFrequencyFactor(TouchButton * const aTheTouchedButton, int16_t aValue) {
-	FeedbackToneOK();
-	setFrequencyFactor(aValue);
-	ComputePeriodAndSetTimer(true);
+    FeedbackToneOK();
+    setFrequencyFactor(aValue);
+    ComputePeriodAndSetTimer(true);
 }
 
 /**
@@ -176,80 +178,84 @@ void doChangeFrequencyFactor(TouchButton * const aTheTouchedButton, int16_t aVal
  * @param aValue
  */
 void doSetFrequency(TouchButton * const aTheTouchedButton, int16_t aValue) {
-	FeedbackToneOK();
-	float tNumber = getNumberFromNumberPad(NUMBERPAD_DEFAULT_X, 0, COLOR_BLUE);
-	if (!isnan(tNumber)) {
-		sFrequency = tNumber;
-	}
-	drawFreqGenPage();
-	ComputePeriodAndSetTimer(true);
+    FeedbackToneOK();
+    float tNumber = getNumberFromNumberPad(NUMBERPAD_DEFAULT_X, 0, COLOR_BLUE);
+    // check for cancel
+    if (!isnan(tNumber)) {
+        sFrequency = tNumber;
+    }
+    drawFreqGenPage();
+    ComputePeriodAndSetTimer(true);
 }
 
 /**
  * draws slider, text and buttons
  */
 void drawFreqGenPage(void) {
-	clearDisplay(COLOR_BACKGROUND_DEFAULT);
-	TouchSliderHorizontal.drawSlider();
-	drawText(FREQUENCY_X_POS, TouchSliderHorizontal.getPositionYBottom() + 2, StringFrequency, 2, COLOR_GREEN,
-	BACKGROUND_COLOR);
+    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    TouchButtonMainHome->drawButton();
 
-	drawChar(SLIDER_POS_X, TouchSliderHorizontal.getPositionYBottom() + 2, '1', 1, COLOR_BLUE, BACKGROUND_COLOR);
-	drawText(TouchSliderHorizontal.getPositionXRight() - 4 * FONT_WIDTH, TouchSliderHorizontal.getPositionYBottom() + 2, String1000,
-			1, COLOR_BLUE, BACKGROUND_COLOR);
-	for (unsigned int i = 0; i < sizeof(TouchButtonsFreqGen) / sizeof(TouchButtonsFreqGen[0]); ++i) {
-		(*TouchButtonsFreqGen[i])->drawButton();
-	}
-	TouchButtonMainHome->drawButton();
+    drawText(FREQUENCY_X_POS, 2, StringFrequency, 2, COLOR_GREEN, BACKGROUND_COLOR);
+
+    // slider + labels
+    TouchSliderHorizontal.drawSlider();
+    drawChar(SLIDER_POS_X, TouchSliderHorizontal.getPositionYBottom() + 2, '1', 1, COLOR_BLUE, BACKGROUND_COLOR);
+    drawText(TouchSliderHorizontal.getPositionXRight() - 4 * FONT_WIDTH, TouchSliderHorizontal.getPositionYBottom() + 2, String1000,
+            1, COLOR_BLUE, BACKGROUND_COLOR);
+
+    // all frequency page buttons
+    for (unsigned int i = 0; i < sizeof(TouchButtonsFreqGen) / sizeof(TouchButtonsFreqGen[0]); ++i) {
+        (*TouchButtonsFreqGen[i])->drawButton();
+    }
+
 }
 
 void startFreqGenPage(void) {
-	// Frequency slider for 1 to 1000 at top of screen
-	TouchSlider::setDefaultBarColor(TOUCHSLIDER_DEFAULT_BAR_COLOR);
-	TouchSlider::setDefaultSliderColor(COLOR_BLUE);
-	TouchSliderHorizontal.initSlider(SLIDER_POS_X, 5, FREQ_SLIDER_SIZE, FREQ_SLIDER_MAX_VALUE, FREQ_SLIDER_MAX_VALUE,
-			sLastFrequencySliderValue, NULL, TOUCHSLIDER_DEFAULT_TOUCH_BORDER,
-			TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_IS_HORIZONTAL | TOUCHSLIDER_HORIZONTAL_VALUE_LEFT, &doFrequencySlider,
-			NULL);
+
+    // Frequency slider for 1 to 1000 at top of screen
+    TouchSlider::setDefaultBarColor(TOUCHSLIDER_DEFAULT_BAR_COLOR);
+    TouchSlider::setDefaultSliderColor(COLOR_BLUE);
+    TouchSliderHorizontal.initSlider(SLIDER_POS_X, 4 * FONT_HEIGHT + 6, FREQ_SLIDER_SIZE, FREQ_SLIDER_MAX_VALUE,
+            FREQ_SLIDER_MAX_VALUE, 0, NULL, TOUCHSLIDER_DEFAULT_TOUCH_BORDER, TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_IS_HORIZONTAL,
+            &doFrequencySlider, NULL);
 
 // Fixed frequency buttons next
-	int tXPos = 0;
-	for (int i = 0; i < NUMBER_OF_FIXED_FREQUENCY_BUTTONS; ++i) {
-		(*TouchButtonsFreqGen[i]) = TouchButton::allocAndInitSimpleButton(tXPos,
-		DISPLAY_HEIGHT - BUTTON_HEIGHT_4 - BUTTON_HEIGHT_5 - BUTTON_HEIGHT_6 - (2 * BUTTON_DEFAULT_SPACING), BUTTON_WIDTH_10,
-		BUTTON_HEIGHT_6, COLOR_BLUE, FrequencyStrings[i], 1, Frequency[i], &doSetFixedFrequency);
-		tXPos = tXPos + BUTTON_WIDTH_10 + BUTTON_DEFAULT_SPACING_QUARTER;
-	}
+    int tXPos = 0;
+    for (int i = 0; i < NUMBER_OF_FIXED_FREQUENCY_BUTTONS; ++i) {
+        (*TouchButtonsFreqGen[i]) = TouchButton::allocAndInitSimpleButton(tXPos,
+                DISPLAY_HEIGHT - BUTTON_HEIGHT_4 - BUTTON_HEIGHT_5 - BUTTON_HEIGHT_6 - (2 * BUTTON_DEFAULT_SPACING),
+                BUTTON_WIDTH_10, BUTTON_HEIGHT_6, COLOR_BLUE, FrequencyStrings[i], 1, Frequency[i], &doSetFixedFrequency);
+        tXPos = tXPos + BUTTON_WIDTH_10 + BUTTON_DEFAULT_SPACING_QUARTER;
+    }
 
-	// Range next
-	tXPos = 0;
-	int tYPos = DISPLAY_HEIGHT - BUTTON_HEIGHT_4 - BUTTON_HEIGHT_5 - BUTTON_DEFAULT_SPACING;
-	TouchButtonmHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "mHz", 2, 0,
-			&doChangeFrequencyFactor);
-	tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
-	TouchButtonHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "Hz", 2, 1,
-			&doChangeFrequencyFactor);
-	tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
-	TouchButtonkHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "kHz", 2, 2,
-			&doChangeFrequencyFactor);
-	tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
-	TouchButtonMHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "MHz", 2, 3,
-			&doChangeFrequencyFactor);
+    // Range next
+    tXPos = 0;
+    int tYPos = DISPLAY_HEIGHT - BUTTON_HEIGHT_4 - BUTTON_HEIGHT_5 - BUTTON_DEFAULT_SPACING;
+    TouchButtonmHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "mHz", 2, 0,
+            &doChangeFrequencyFactor);
+    tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
+    TouchButtonHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "Hz", 2, 1,
+            &doChangeFrequencyFactor);
+    tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
+    TouchButtonkHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "kHz", 2, 2,
+            &doChangeFrequencyFactor);
+    tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
+    TouchButtonMHz = TouchButton::allocAndInitSimpleButton(tXPos, tYPos, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, COLOR_GREEN, "MHz", 2, 3,
+            &doChangeFrequencyFactor);
 
-	// Start + Frequency + Home last
-	TouchButtonStartStop = TouchButton::allocAndInitSimpleButton(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-	COLOR_RED, StringStop, 2, 0, &doFreqGenStartStop);
+    // Start + Frequency + Home last
+    TouchButtonStartStop = TouchButton::allocAndInitSimpleButton(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
+            COLOR_RED, StringStop, 2, true, &doFreqGenStartStop);
+    TouchButtonStartStop->setRedGreenButtonColor();
 
-	TouchButtonSetFrequency = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4,
-	BUTTON_WIDTH_3,
-	BUTTON_HEIGHT_4, COLOR_BLUE, "Hz", 3, 0, &doSetFrequency);
+    TouchButtonSetFrequency = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
+            BUTTON_HEIGHT_4, COLOR_BLUE, "Hz", 3, 0, &doSetFrequency);
 
-	initMainHomeButtonWithPosition(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, false);
-	drawFreqGenPage();
-	setFrequencyFactor(sFrequencyFactorIndex);
-	ComputePeriodAndSetTimer(true);
-	HIRES_Timer_Start();
-	sFreqGenIsStopped = false;
+    drawFreqGenPage();
+    setFrequencyFactor(sFrequencyFactorIndex);
+    ComputePeriodAndSetTimer(true);
+    HIRES_Timer_Start();
+
 }
 
 void loopFreqGenPage(void) {
@@ -259,8 +265,8 @@ void loopFreqGenPage(void) {
 
 void stopFreqGenPage(void) {
 // free buttons
-	for (unsigned int i = 0; i < sizeof(TouchButtonsFreqGen) / sizeof(TouchButtonsFreqGen[0]); ++i) {
-		(*TouchButtonsFreqGen[i])->setFree();
-	}
+    for (unsigned int i = 0; i < sizeof(TouchButtonsFreqGen) / sizeof(TouchButtonsFreqGen[0]); ++i) {
+        (*TouchButtonsFreqGen[i])->setFree();
+    }
 }
 

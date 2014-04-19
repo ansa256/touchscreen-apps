@@ -69,7 +69,6 @@ extern TouchSlider TouchSliderBacklight;
 
 #define BACKLIGHT_CONTROL_X 30
 #define BACKLIGHT_CONTROL_Y 4
-#define INFO_X_POSITION 100
 #define COLOR_PAGE_INFO COLOR_RED
 
 void initBacklightElements(void);
@@ -125,11 +124,6 @@ void initAcceleratorCompass(void);
 void startAcceleratorCompass(void);
 void loopAcceleratorGyroCompassDemo(void);
 void stopAcceleratorCompass(void);
-void readAcceleratorRaw(int16_t* aAcceleratorRawData);
-void readAcceleratorZeroCompensated(int16_t* aAcceleratorRawData);
-void readGyroscopeRaw(int16_t* aGyroscopeRawData);
-void readGyroscopeZeroCompensated(int16_t* aGyroscopeRawData);
-void setZeroAcceleratorGyroValue(void);
 
 /**
  * From BobsDemo
@@ -142,21 +136,22 @@ void stopBobsDemo(void);
 /**
  * From Tests page
  */
-void initTestsPage(void);
+void initInfoPage(void);
 void startTestsPage(void);
 void stopTestsPage(void);
 
-extern int DebugValue1;
-extern int DebugValue2;
-extern int DebugValue3;
-extern int DebugValue4;
-extern int DebugValue5;
+/**
+ * From Info page
+ */
+void initInfoPage(void);
+void startInfoPage(void);
+void stopInfoPage(void);
 
 /**
  * From Draw page
  */
 void startDrawPage(void);
-void loopDrawPage(int aGuiTouchState);
+void loopDrawPage(void);
 void stopDrawPage(void);
 
 #else //cplusplus

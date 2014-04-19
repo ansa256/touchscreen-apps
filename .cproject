@@ -15,43 +15,51 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.cross.arm.gnu.buildArtefactType.application" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.cross.arm.gnu.buildArtefactType.application" description="" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323" name="Debug" parent="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug" postannouncebuildStep="" postbuildStep="" preannouncebuildStep="" prebuildStep="">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.cross.arm.gnu.buildArtefactType.application" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.cross.arm.gnu.buildArtefactType.application" description="For debugging" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323" name="Debug" parent="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug" postannouncebuildStep="Hex, listing and size" postbuildStep="Postprocess.cmd" preannouncebuildStep="" prebuildStep="">
 					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323." name="/" resourcePath="">
-						<toolChain errorParsers="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug.463327293" name="ARM Windows GCC (Sourcery G++ Lite)" nonInternalBuilderId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.builder.debug" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug">
+						<toolChain errorParsers="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug.463327293" name="ARM Windows GCC (Sourcery G++ Lite)" nonInternalBuilderId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.builder.debug" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug">
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level.1623680897" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.debugging.level.max" valueType="enumerated"/>
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.format.701618323" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.format" value="org.eclipse.cdt.cross.arm.gnu.base.option.debugging.format.dwarf2" valueType="enumerated"/>
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.abi.685747426" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.abi" value="org.eclipse.cdt.cross.arm.gnu.base.option.target.fpu.abi.softfp" valueType="enumerated"/>
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.unit.1421400413" name="FPU Type" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.unit" value="org.eclipse.cdt.cross.arm.gnu.base.option.target.fpu.unit.fpv4spd16" valueType="enumerated"/>
 							<targetPlatform binaryParser="org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.platform.debug.843582644" isAbstract="false" name="Windows Platform" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.platform.debug"/>
-							<builder buildPath="${workspace_loc:/TouchScreenApps/Debug}" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.builder.base.1401187599" keepEnvironmentInBuildfile="false" name="ARM Sourcery Windows GNU Make builder" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.builder.base"/>
+							<builder buildPath="${workspace_loc:/TouchScreenApps/Debug}" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.builder.base.1401187599" keepEnvironmentInBuildfile="false" name="ARM Sourcery Windows GNU Make builder" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.builder.base"/>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GASErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.debug.1458565915" name="ARM Sourcery Windows GCC Assembler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.debug">
 								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.preprocessor.def.880402023" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STDPERIPH_DRIVER"/>
 									<listOptionValue builtIn="false" value="USE_STM32_DISCOVERY"/>
 									<listOptionValue builtIn="false" value="HSE_VALUE=8000000"/>
 									<listOptionValue builtIn="false" value="STM32F30X"/>
+									<listOptionValue builtIn="false" value="__FPU_PRESENT"/>
+									<listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 								</option>
-								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.1386123380" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath"/>
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.1386123380" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/irsnd}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}/../Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/inc&quot;"/>
+								</option>
 								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.278266716" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input"/>
 							</tool>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug.1526816463" name="ARM Sourcery Windows GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug">
-								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.level.993531514" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.none" valueType="enumerated"/>
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.level.993531514" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.size" valueType="enumerated"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths.505041848" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32_USB-FS-Device_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/fat_sd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/irsnd}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}/../Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/inc&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def.1263713432" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STDPERIPH_DRIVER"/>
 									<listOptionValue builtIn="false" value="USE_STM32_DISCOVERY"/>
 									<listOptionValue builtIn="false" value="HSE_VALUE=8000000"/>
 									<listOptionValue builtIn="false" value="STM32F30X"/>
+									<listOptionValue builtIn="false" value="__FPU_PRESENT"/>
+									<listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.functionsections.2126957800" name="Function sections (-ffunction-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.functionsections" value="true" valueType="boolean"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.datasections.176250892" name="Data sections (-fdata-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.datasections" value="true" valueType="boolean"/>
@@ -59,25 +67,27 @@
 								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.c.compiler.base.input.945103405" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.c.compiler.base.input"/>
 							</tool>
 							<tool command="arm-none-eabi-g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.974162390" name="ARM Sourcery Windows GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug">
-								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level.1328306755" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.none" valueType="enumerated"/>
+								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level.1328306755" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.size" valueType="enumerated"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths.1615351047" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32_USB-FS-Device_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}/../Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/fat_sd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/usb}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/irsnd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/irmp}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/irmp}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/usb}&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.preprocessor.def.784494753" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STDPERIPH_DRIVER"/>
 									<listOptionValue builtIn="false" value="USE_STM32_DISCOVERY"/>
 									<listOptionValue builtIn="false" value="HSE_VALUE=8000000"/>
 									<listOptionValue builtIn="false" value="STM32F30X"/>
+									<listOptionValue builtIn="false" value="__FPU_PRESENT"/>
+									<listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.functionsections.1425903459" name="Function sections (-ffunction-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.functionsections" value="true" valueType="boolean"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.datasections.465184035" name="Data sections (-fdata-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.datasections" value="true" valueType="boolean"/>
@@ -85,7 +95,7 @@
 							</tool>
 							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.linker.debug.2091195496" name="ARM Sourcery Windows GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.linker.debug"/>
 							<tool command="arm-none-eabi-g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.linker.debug.1345905789" name="ARM Sourcery Windows GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.linker.debug">
-								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile.1162098608" name="Script file (-T)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile" value="E:\WORKSPACE_STM32\TouchScreenApps\src\STM32_FLASH.ld" valueType="string"/>
+								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile.1162098608" name="Script file (-T)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile" value="${WorkspaceDirPath}\..\WORKSPACE_STM32\TouchScreenApps\src\STM32_FLASH.ld" valueType="string"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.gcsections.1286532969" name="Remove unused sections (-Xlinker --gc-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.gcsections" value="true" valueType="boolean"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.printgcsections.405553901" name="Print removed sections (-Xlinker --print-gc-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.printgcsections" value="false" valueType="boolean"/>
 								<inputType id="org.eclipse.cdt.cross.arm.gnu.cpp.linker.input.1981981526" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.linker.input">
@@ -99,8 +109,40 @@
 							<tool command="arm-none-eabi-size" commandLinePattern="${COMMAND}  ${FLAGS}" errorParsers="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.printsize.debug.168085097" name="ARM Sourcery Windows GNU Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.printsize.debug"/>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.533232958" name="/" resourcePath="src">
+						<toolChain id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug.674515151" name="ARM Windows GCC (Sourcery G++ Lite)" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug" unusedChildren="">
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level.1623680897.2103516425" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level.1623680897"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.format.701618323.523728771" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.format.701618323"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.abi.685747426" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.abi" value="org.eclipse.cdt.cross.arm.gnu.base.option.target.fpu.abi.softfp" valueType="enumerated"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.unit.1421400413" name="FPU Type" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.unit" value="org.eclipse.cdt.cross.arm.gnu.base.option.target.fpu.unit.fpv4spd16" valueType="enumerated"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level.694504973" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.debugging.level.max" valueType="enumerated"/>
+							<targetPlatform id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.platform.debug" isAbstract="false" name="Windows Platform" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.platform.debug"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.debug.203889396" name="ARM Sourcery Windows GCC Assembler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.debug.1458565915">
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.2080308812" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug.153687233" name="ARM Sourcery Windows GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug.1526816463">
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.c.compiler.base.input.1690805962" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.c.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.490785195" name="ARM Sourcery Windows GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.974162390">
+								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level.234101389" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.none" valueType="enumerated"/>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.1992833199" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.linker.debug.48806540" name="ARM Sourcery Windows GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.linker.debug.2091195496"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.linker.debug.285203828" name="ARM Sourcery Windows GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.linker.debug.1345905789"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.archiver.base.1766064192" name="ARM Sourcery Windows GCC Archiver" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.archiver.base.1776282435"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.createflash.debug.1744719439" name="ARM Sourcery Windows GNU Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.createflash.debug.2005194090"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.createlisting.debug.1278333658" name="ARM Sourcery Windows GNU Create Listing" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.createlisting.debug.15980023"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.printsize.debug.222997688" name="ARM Sourcery Windows GNU Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.printsize.debug.168085097"/>
+						</toolChain>
+					</folderInfo>
+					<fileInfo id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.162137278" name="HY32D.cpp" rcbsApplicability="disable" resourcePath="src/lib/HY32D.cpp" toolsToInvoke="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.490785195.1360467194">
+						<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.490785195.1360467194" name="ARM Sourcery Windows GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.490785195">
+							<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level.885203367" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.size" valueType="enumerated"/>
+							<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.1866043824" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input"/>
+						</tool>
+					</fileInfo>
 					<sourceEntries>
-						<entry excluding="StdPeriph_Driver/stm32f30x_comp.c|StdPeriph_Driver/stm32f30x_can.c|StdPeriph_Driver/stm32f30x_crc.c|StdPeriph_Driver/stm32f30x_dbgmcu.c|StdPeriph_Driver/stm32f30x_usart.c|StdPeriph_Driver/stm32f30x_flash.c|StdPeriph_Driver/stm32f30x_iwdg.c|StdPeriph_Driver/stm32f30x_opamp.c|StdPeriph_Driver/stm32f30x_wwdg.c" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+						<entry excluding="StatisticsFunctions/arm_max_f32.c|TransformFunctions/arm_cfft_radix4_q31.c|TransformFunctions/arm_cfft_radix4_q15.c|TransformFunctions/arm_cfft_radix4_init_q31.c|TransformFunctions/arm_cfft_radix4_init_q15.c|StatisticsFunctions/arm_var_q31.c|StatisticsFunctions/arm_var_q15.c|StatisticsFunctions/arm_var_f32.c|StatisticsFunctions/arm_std_q31.c|StatisticsFunctions/arm_std_q15.c|StatisticsFunctions/arm_std_f32.c|StatisticsFunctions/arm_rms_q31.c|StatisticsFunctions/arm_rms_q15.c|StatisticsFunctions/arm_rms_f32.c|StatisticsFunctions/arm_power_q7.c|StatisticsFunctions/arm_power_q31.c|StatisticsFunctions/arm_power_q15.c|StatisticsFunctions/arm_power_f32.c|StatisticsFunctions/arm_min_q7.c|StatisticsFunctions/arm_min_q31.c|StatisticsFunctions/arm_min_q15.c|StatisticsFunctions/arm_min_f32.c|StatisticsFunctions/arm_mean_q7.c|StatisticsFunctions/arm_mean_q31.c|StatisticsFunctions/arm_mean_q15.c|StatisticsFunctions/arm_mean_f32.c|StatisticsFunctions/arm_max_q7.c|StatisticsFunctions/arm_max_q31.c|StatisticsFunctions/arm_max_q15.c|TransformFunctions/arm_dct4_q31.c|TransformFunctions/arm_dct4_q15.c|TransformFunctions/arm_dct4_init_q31.c|TransformFunctions/arm_dct4_init_q15.c|TransformFunctions/arm_dct4_init_f32.c|TransformFunctions/arm_dct4_f32.c|TransformFunctions/arm_rfft_q31.c|TransformFunctions/arm_rfft_q15.c|TransformFunctions/arm_rfft_init_q31.c|TransformFunctions/arm_rfft_init_q15.c|TransformFunctions/arm_rfft_init_f32.c|TransformFunctions/arm_rfft_f32.c|ComplexMathFunctions/arm_cmplx_mult_real_q31.c|ComplexMathFunctions/arm_cmplx_mult_real_q15.c|ComplexMathFunctions/arm_cmplx_mult_real_f32.c|ComplexMathFunctions/arm_cmplx_mult_cmplx_q31.c|ComplexMathFunctions/arm_cmplx_mult_cmplx_q15.c|ComplexMathFunctions/arm_cmplx_mult_cmplx_f32.c|ComplexMathFunctions/arm_cmplx_mag_squared_q31.c|ComplexMathFunctions/arm_cmplx_mag_squared_q15.c|ComplexMathFunctions/arm_cmplx_mag_squared_f32.c|ComplexMathFunctions/arm_cmplx_mag_q31.c|ComplexMathFunctions/arm_cmplx_mag_q15.c|ComplexMathFunctions/arm_cmplx_dot_prod_q31.c|ComplexMathFunctions/arm_cmplx_dot_prod_q15.c|ComplexMathFunctions/arm_cmplx_dot_prod_f32.c|ComplexMathFunctions/arm_cmplx_conj_q31.c|ComplexMathFunctions/arm_cmplx_conj_q15.c|ComplexMathFunctions/arm_cmplx_conj_f32.c|StdPeriph_Driver/stm32f30x_comp.c|StdPeriph_Driver/stm32f30x_can.c|StdPeriph_Driver/stm32f30x_crc.c|StdPeriph_Driver/stm32f30x_dbgmcu.c|StdPeriph_Driver/stm32f30x_usart.c|StdPeriph_Driver/stm32f30x_flash.c|StdPeriph_Driver/stm32f30x_iwdg.c|StdPeriph_Driver/stm32f30x_opamp.c|StdPeriph_Driver/stm32f30x_wwdg.c" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -122,7 +164,7 @@
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.cross.arm.gnu.buildArtefactType.application" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.cross.arm.gnu.buildArtefactType.application" description="With -Os optimisation" errorParsers="org.eclipse.cdt.core.MakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184" name="Release" parent="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug" postannouncebuildStep="" postbuildStep="" preannouncebuildStep="" prebuildStep="">
 					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184." name="/" resourcePath="">
-						<toolChain errorParsers="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug.2101306197" name="ARM Windows GCC (Sourcery G++ Lite)" nonInternalBuilderId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.builder.debug" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug">
+						<toolChain errorParsers="" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug.2101306197" name="ARM Windows GCC (Sourcery G++ Lite)" nonInternalBuilderId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.builder.debug" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.toolchain.debug">
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level.985573733" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.debugging.level.max" valueType="enumerated"/>
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.format.1408393706" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.debugging.format" value="org.eclipse.cdt.cross.arm.gnu.base.option.debugging.format.dwarf2" valueType="enumerated"/>
 							<option id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.abi.116955605" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.option.target.fpu.abi" value="org.eclipse.cdt.cross.arm.gnu.base.option.target.fpu.abi.default" valueType="enumerated"/>
@@ -135,24 +177,29 @@
 									<listOptionValue builtIn="false" value="HSE_VALUE=8000000"/>
 									<listOptionValue builtIn="false" value="STM32F0X"/>
 									<listOptionValue builtIn="false" value="STM32F30X"/>
+									<listOptionValue builtIn="false" value="__FPU_PRESENT"/>
+									<listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.850366834" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/irsnd}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}/../Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/inc&quot;"/>
 								</option>
 								<inputType id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.745040937" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input"/>
 							</tool>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug.151887101" name="ARM Sourcery Windows GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug">
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.level.1532977952" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.size" valueType="enumerated"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths.1188002698" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32_USB-FS-Device_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/fat_sd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/irsnd}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}/../Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/inc&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def.1531102354" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STDPERIPH_DRIVER"/>
@@ -160,6 +207,8 @@
 									<listOptionValue builtIn="false" value="HSE_VALUE=8000000"/>
 									<listOptionValue builtIn="false" value="STM32F0X"/>
 									<listOptionValue builtIn="false" value="STM32F30X"/>
+									<listOptionValue builtIn="false" value="__FPU_PRESENT"/>
+									<listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.functionsections.1763102971" name="Function sections (-ffunction-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.functionsections" value="true" valueType="boolean"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.datasections.333054001" name="Data sections (-fdata-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.optimization.datasections" value="true" valueType="boolean"/>
@@ -169,22 +218,25 @@
 							<tool command="arm-none-eabi-g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.122409891" name="ARM Sourcery Windows GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug">
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level.1560922145" name="Optimization level" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.level" value="org.eclipse.cdt.cross.arm.gnu.base.option.optimization.level.size" valueType="enumerated"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths.1206613849" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32_USB-FS-Device_Driver\inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\CMSIS\Device\ST\STM32F30x\Include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Libraries\STM32F30x_StdPeriph_Driver\inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}\..\Elektro\STM32F3-Discovery_FW_V1.1.0\Utilities\STM32F3_Discovery&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/fat_sd}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/usb}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/TouchScreenApps/src/lib/irmp}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/usb}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/irmp}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/lib/irsnd}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${WorkspaceDirPath}/../Elektro/STM32_USB-FS-Device_Lib_V4.0.0/Libraries/STM32_USB-FS-Device_Driver/inc&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.preprocessor.def.667550289" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="USE_STDPERIPH_DRIVER"/>
 									<listOptionValue builtIn="false" value="USE_STM32_DISCOVERY"/>
 									<listOptionValue builtIn="false" value="HSE_VALUE=8000000"/>
 									<listOptionValue builtIn="false" value="STM32F30X"/>
+									<listOptionValue builtIn="false" value="__FPU_PRESENT"/>
+									<listOptionValue builtIn="false" value="ARM_MATH_CM4"/>
 								</option>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.functionsections.1617357037" name="Function sections (-ffunction-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.functionsections" value="true" valueType="boolean"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.datasections.1062112135" name="Data sections (-fdata-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.compiler.option.optimization.datasections" value="true" valueType="boolean"/>
@@ -192,7 +244,7 @@
 							</tool>
 							<tool id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.linker.debug.1417917519" name="ARM Sourcery Windows GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.linker.debug"/>
 							<tool command="arm-none-eabi-g++" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.linker.debug.2035768581" name="ARM Sourcery Windows GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.linker.debug">
-								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile.1202758870" name="Script file (-T)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile" value="E:\WORKSPACE_STM32\TouchScreenApps\src\STM32_FLASH.ld" valueType="string"/>
+								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile.1202758870" name="Script file (-T)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.scriptfile" value="${WorkspaceDirPath}\..\WORKSPACE_STM32\TouchScreenApps\src\STM32_FLASH.ld" valueType="string"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.gcsections.1517682059" name="Remove unused sections (-Xlinker --gc-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.gcsections" value="true" valueType="boolean"/>
 								<option id="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.printgcsections.907197419" name="Print removed sections (-Xlinker --print-gc-sections)" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.link.option.printgcsections" value="false" valueType="boolean"/>
 								<inputType id="org.eclipse.cdt.cross.arm.gnu.cpp.linker.input.1193968520" superClass="org.eclipse.cdt.cross.arm.gnu.cpp.linker.input">
@@ -207,9 +259,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src/lib/fat_sd/sd_spi_stm32.c|src/ff_test_term.c|src/lib/fat_sd/diskio.c|src/lib/MI0283QT2.h|src/lib/MI0283QT2.cpp|src/lib/touch_7846.h|src/lib/touch_7846.c|src/lib/SSD1289.h|src/lib/SSD1289.c|Utilities|StdPeriph_Driver" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
-						<entry excluding="stm32f30x_usart.c|stm32f30x_dbgmcu.c|stm32f30x_iwdg.c|stm32f30x_comp.c|stm32f30x_flash.c|stm32f30x_wwdg.c|stm32f30x_crc.c|stm32f30x_can.c|stm32f30x_opamp.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="StdPeriph_Driver"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Utilities"/>
+						<entry excluding="StatisticsFunctions/arm_max_f32.c|TransformFunctions/arm_cfft_radix4_q31.c|TransformFunctions/arm_cfft_radix4_q15.c|TransformFunctions/arm_cfft_radix4_init_q31.c|TransformFunctions/arm_cfft_radix4_init_q15.c|StatisticsFunctions/arm_var_q31.c|StatisticsFunctions/arm_var_q15.c|StatisticsFunctions/arm_var_f32.c|StatisticsFunctions/arm_std_q31.c|StatisticsFunctions/arm_std_q15.c|StatisticsFunctions/arm_std_f32.c|StatisticsFunctions/arm_rms_q31.c|StatisticsFunctions/arm_rms_q15.c|StatisticsFunctions/arm_rms_f32.c|StatisticsFunctions/arm_power_q7.c|StatisticsFunctions/arm_power_q31.c|StatisticsFunctions/arm_power_q15.c|StatisticsFunctions/arm_power_f32.c|StatisticsFunctions/arm_min_q7.c|StatisticsFunctions/arm_min_q31.c|StatisticsFunctions/arm_min_q15.c|StatisticsFunctions/arm_min_f32.c|StatisticsFunctions/arm_mean_q7.c|StatisticsFunctions/arm_mean_q31.c|StatisticsFunctions/arm_mean_q15.c|StatisticsFunctions/arm_mean_f32.c|StatisticsFunctions/arm_max_q7.c|StatisticsFunctions/arm_max_q31.c|StatisticsFunctions/arm_max_q15.c|TransformFunctions/arm_dct4_q31.c|TransformFunctions/arm_dct4_q15.c|TransformFunctions/arm_dct4_init_q31.c|TransformFunctions/arm_dct4_init_q15.c|TransformFunctions/arm_dct4_init_f32.c|TransformFunctions/arm_dct4_f32.c|TransformFunctions/arm_rfft_q31.c|TransformFunctions/arm_rfft_q15.c|TransformFunctions/arm_rfft_init_q31.c|TransformFunctions/arm_rfft_init_q15.c|TransformFunctions/arm_rfft_init_f32.c|TransformFunctions/arm_rfft_f32.c|ComplexMathFunctions/arm_cmplx_mult_real_q31.c|ComplexMathFunctions/arm_cmplx_mult_real_q15.c|ComplexMathFunctions/arm_cmplx_mult_real_f32.c|ComplexMathFunctions/arm_cmplx_mult_cmplx_q31.c|ComplexMathFunctions/arm_cmplx_mult_cmplx_q15.c|ComplexMathFunctions/arm_cmplx_mult_cmplx_f32.c|ComplexMathFunctions/arm_cmplx_mag_squared_q31.c|ComplexMathFunctions/arm_cmplx_mag_squared_q15.c|ComplexMathFunctions/arm_cmplx_mag_squared_f32.c|ComplexMathFunctions/arm_cmplx_mag_q31.c|ComplexMathFunctions/arm_cmplx_mag_q15.c|ComplexMathFunctions/arm_cmplx_dot_prod_q31.c|ComplexMathFunctions/arm_cmplx_dot_prod_q15.c|ComplexMathFunctions/arm_cmplx_dot_prod_f32.c|ComplexMathFunctions/arm_cmplx_conj_q31.c|ComplexMathFunctions/arm_cmplx_conj_q15.c|ComplexMathFunctions/arm_cmplx_conj_f32.c|StdPeriph_Driver/stm32f30x_comp.c|StdPeriph_Driver/stm32f30x_can.c|StdPeriph_Driver/stm32f30x_crc.c|StdPeriph_Driver/stm32f30x_dbgmcu.c|StdPeriph_Driver/stm32f30x_usart.c|StdPeriph_Driver/stm32f30x_flash.c|StdPeriph_Driver/stm32f30x_iwdg.c|StdPeriph_Driver/stm32f30x_opamp.c|StdPeriph_Driver/stm32f30x_wwdg.c" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -238,26 +288,32 @@
 		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.release.1107412408;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.c.compiler.base.input.303346928">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.release.626788677;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.221291332">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.debug.1028120408;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.745040937">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.release.626788677;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.221291332">
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.c.compiler.debug.151887101;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.c.compiler.base.input.1296072944">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.122409891;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.1768250335">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileCPP"/>
-		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.assembler.debug.1458565915;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.assembler.base.input.278266716">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.974162390;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.75054599">
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.122409891;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.1768250335">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileCPP"/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.release.649720624.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.release.428321892;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.2093223683">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileCPP"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.cpp.compiler.debug.974162390;org.eclipse.cdt.cross.arm.gnu.sourcery.windows.cpp.compiler.base.input.75054599">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileCPP"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.sourcery.windows.elf.debug.1646412323.145762184">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_CS_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

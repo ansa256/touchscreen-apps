@@ -18,6 +18,7 @@
 #define TOUCHBUTTON_H_
 
 #include "HY32D.h"
+#include "ADS7846.h" // for sDisableEndTouchOnce
 #include <stdint.h>
 /** @addtogroup Gui_Library
  * @{
@@ -27,8 +28,8 @@
  */
 
 // 45 needed for AccuCap/settings/Numberpad
-// 47 needed for DSO/settings/calibrate/Numberpad
-#define NUMBER_OF_BUTTONS_IN_POOL 47
+// 50 needed for DSO/settings/calibrate/Numberpad
+#define NUMBER_OF_BUTTONS_IN_POOL 50
 
 #define BUTTON_DEFAULT_SPACING 16
 #define BUTTON_DEFAULT_SPACING_HALF 8
@@ -44,13 +45,17 @@
 #define BUTTON_WIDTH_4 68 // for 4 buttons horizontal - 8 characters
 #define BUTTON_WIDTH_4_POS_2 (BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING)
 #define BUTTON_WIDTH_4_POS_3 (2*(BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING))
-#define BUTTON_WIDTH_4_POS_4 (DISPLAY_WIDTH - BUTTON_WIDTH_4))
+#define BUTTON_WIDTH_4_POS_4 (DISPLAY_WIDTH - BUTTON_WIDTH_4)
 
 #define BUTTON_WIDTH_5 51 // for 5 buttons horizontal 51,2  - 6 characters
 #define BUTTON_WIDTH_5_POS_2 (BUTTON_WIDTH_5 + BUTTON_DEFAULT_SPACING)
 #define BUTTON_WIDTH_5_POS_3 (2*(BUTTON_WIDTH_5 + BUTTON_DEFAULT_SPACING))
 #define BUTTON_WIDTH_5_POS_4 (3*(BUTTON_WIDTH_5 + BUTTON_DEFAULT_SPACING))
 #define BUTTON_WIDTH_5_POS_5 (DISPLAY_WIDTH - BUTTON_WIDTH_5)
+
+#define BUTTON_WIDTH_2_5 120 //  for 2 buttons horizontal plus one small with BUTTON_WIDTH_5 (118,5)- 15 characters
+#define BUTTON_WIDTH_2_5_POS_2   (BUTTON_WIDTH_2_5 + BUTTON_DEFAULT_SPACING -1)
+#define BUTTON_WIDTH_2_5_POS_2_5 (DISPLAY_WIDTH - BUTTON_WIDTH_5)
 
 #define BUTTON_WIDTH_6 40 // for 6 buttons horizontal
 #define BUTTON_WIDTH_6_POS_2 (BUTTON_WIDTH_6 + BUTTON_DEFAULT_SPACING)
@@ -61,13 +66,12 @@
 
 #define BUTTON_WIDTH_8 33 // for 8 buttons horizontal
 #define BUTTON_WIDTH_10 28 // for 10 buttons horizontal
-
 #define BUTTON_HEIGHT_4 48 // for 4 buttons vertical
 #define BUTTON_HEIGHT_4_LINE_2 (BUTTON_HEIGHT_4 + BUTTON_DEFAULT_SPACING)
 #define BUTTON_HEIGHT_4_LINE_3 (2*(BUTTON_HEIGHT_4 + BUTTON_DEFAULT_SPACING))
 #define BUTTON_HEIGHT_4_LINE_4 (DISPLAY_HEIGHT - BUTTON_HEIGHT_4)
 
-#define BUTTON_HEIGHT_5 35 // for 5 buttons vertical
+#define BUTTON_HEIGHT_5 35 // for 5 buttons vertical with BUTTON_DEFAULT_SPACING
 #define BUTTON_HEIGHT_5_LINE_2 (BUTTON_HEIGHT_5 + BUTTON_DEFAULT_SPACING)
 #define BUTTON_HEIGHT_5_LINE_3 (2*(BUTTON_HEIGHT_5 + BUTTON_DEFAULT_SPACING))
 #define BUTTON_HEIGHT_5_LINE_4 (3*(BUTTON_HEIGHT_5 + BUTTON_DEFAULT_SPACING))
@@ -98,9 +102,6 @@
 #define BUTTON_NOT_TOUCHED 0
 #define BUTTON_TOUCHED 1
 #define BUTTON_TOUCHED_AUTOREPEAT 2 // an autorepeat button was touched
-
-int CheckTouchGeneric(bool aCheckAlsoPlainButtons);
-
 /*
  * helper variables for swipe recognition with longTouchHandler and endTouchHandler
  */
@@ -109,7 +110,6 @@ extern bool sAutorepeatButtonTouched;
 extern bool sSliderTouched;
 extern bool sEndTouchProcessed;
 
-extern volatile bool sDisableEndTouchOnce;
 extern volatile bool sCheckButtonsForEndTouch;
 
 #define GUI_NO_TOUCH 0			// No touch happened
@@ -118,93 +118,103 @@ extern volatile bool sCheckButtonsForEndTouch;
 class TouchButton {
 public:
 
-	TouchButton();
-	// Pool stuff
-	static TouchButton * allocButton(bool aOnlyAutorepeatButtons);
-	static void freeButton(TouchButton * aTouchButton);
-	static void infoButtonPool(char * aStringBuffer);
-	static TouchButton * allocAndInitSimpleButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX,
-			const uint8_t aHeightY, const uint16_t aButtonColor, const char *aCaption, const uint8_t aCaptionSize,
-			const int16_t aValue, void (*aOnTouchHandler)(TouchButton* const, int16_t));
-	void setAllocated(bool isAllocated);
-	void setFree(void);
+    TouchButton();
+    // Pool stuff
+    static TouchButton * allocButton(bool aOnlyAutorepeatButtons);
+    static void freeButton(TouchButton * aTouchButton);
+    static void infoButtonPool(char * aStringBuffer);
+    static TouchButton * allocAndInitSimpleButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX,
+            const uint8_t aHeightY, const uint16_t aButtonColor, const char *aCaption, const uint8_t aCaptionSize,
+            const int16_t aValue, void (*aOnTouchHandler)(TouchButton* const, int16_t));
+    void setAllocated(bool isAllocated);
+    void setFree(void);
 
-	static void setDefaultTouchBorder(const uint8_t aDefaultTouchBorder);
-	static void setDefaultButtonColor(const uint16_t aDefaultButtonColor);
-	static void setDefaultCaptionColor(const uint16_t aDefaultCaptionColor);
-	static int checkAllButtons(const int aTouchPositionX, const int aTouchPositionY, const bool doCallback);
-	static void activateAllButtons(void);
-	static void deactivateAllButtons(void);
+    static void setDefaultTouchBorder(const uint8_t aDefaultTouchBorder);
+    static void setDefaultButtonColor(const uint16_t aDefaultButtonColor);
+    static void setDefaultCaptionColor(const uint16_t aDefaultCaptionColor);
+    static int checkAllButtons(const int aTouchPositionX, const int aTouchPositionY, const bool doCallback);
+    static void activateAllButtons(void);
+    static void deactivateAllButtons(void);
 
-	int8_t initSimpleButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX, const uint8_t aHeightY,
-			const uint16_t aButtonColor, const char *aCaption, const uint8_t aCaptionSize, const int16_t aValue,
-			void (*aOnTouchHandler)(TouchButton* const, int16_t));
-	int8_t initButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX, const uint8_t aHeightY,
-			const char *aCaption, const uint8_t aCaptionSize, const uint8_t aTouchBorder, const uint16_t aButtonColor,
-			const uint16_t aCaptionColor, const int16_t aValue, void (*aOnTouchHandler)(TouchButton* const, int16_t));
+    int8_t initSimpleButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX, const uint8_t aHeightY,
+            const uint16_t aButtonColor, const char *aCaption, const uint8_t aCaptionSize, const int16_t aValue,
+            void (*aOnTouchHandler)(TouchButton* const, int16_t));
+    int8_t initButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX, const uint8_t aHeightY,
+            const char *aCaption, const uint8_t aCaptionSize, const uint8_t aTouchBorder, const uint16_t aButtonColor,
+            const uint16_t aCaptionColor, const int16_t aValue, void (*aOnTouchHandler)(TouchButton* const, int16_t));
 
-	bool checkButton(const int aTouchPositionX, const int aTouchPositionY, const bool doCallback);
+    bool checkButton(const int aTouchPositionX, const int aTouchPositionY, const bool doCallback);
 
-	bool checkButtonInArea(const uint16_t aTouchPositionX, const uint16_t aTouchPositionY);
-	int8_t drawButton(void);
-	void removeButton(const uint16_t aBackgroundColor);
-	int drawCaption(void);
-	int8_t setPosition(const uint16_t aPositionX, const uint16_t aPositionY);
-	void setColor(const uint16_t aColor);
-	void setCaption(const char *aCaption);
-	void setCaptionColor(const uint16_t aColor);
-	void setValue(const int16_t aValue);
-	const char *getCaption(void) const;
-	uint16_t getValue() const;
-	uint16_t getPositionX(void) const;
-	uint16_t getPositionY(void) const;
-	uint16_t getPositionXRight(void) const;
-	uint16_t getPositionYBottom(void) const;
-	int8_t setPositionX(const uint16_t aPositionX);
-	int8_t setPositionY(const uint16_t aPositionY);
-	void activate(void);
-	void deactivate(void);
-	uint8_t getTouchBorder(void) const;
-	void setTouchBorder(const uint8_t touchBorder);
-	void setTouchHandler(void (*aOnTouchHandler)(TouchButton* const, int16_t));
+    bool checkButtonInArea(const uint16_t aTouchPositionX, const uint16_t aTouchPositionY);
+    int8_t drawButton(void);
+    void removeButton(const uint16_t aBackgroundColor);
+    int drawCaption(void);
+    int8_t setPosition(const uint16_t aPositionX, const uint16_t aPositionY);
+    void setColor(const uint16_t aColor);
+    void setCaption(const char *aCaption);
+    void setCaptionColor(const uint16_t aColor);
+    void setValue(const int16_t aValue);
+    const char *getCaption(void) const;
+    uint16_t getValue() const;
+    uint16_t getPositionX(void) const;
+    uint16_t getPositionY(void) const;
+    uint16_t getPositionXRight(void) const;
+    uint16_t getPositionYBottom(void) const;
+    int8_t setPositionX(const uint16_t aPositionX);
+    int8_t setPositionY(const uint16_t aPositionY);
+    void activate(void);
+    void deactivate(void);
+    uint8_t getTouchBorder(void) const;
+    void setTouchBorder(const uint8_t touchBorder);
+    void setTouchHandler(void (*aOnTouchHandler)(TouchButton* const, int16_t));
 
-	bool isAllocated(void) const;
+    void setRedGreenButtonColor(void);
+    void setRedGreenButtonColor(int16_t aValue);
+    void setRedGreenButtonColorAndDraw(void);
+    void setRedGreenButtonColorAndDraw(int16_t aValue);
+
+    bool isAllocated(void) const;
 
 private:
-	// Pool stuff
-	static TouchButton TouchButtonPool[NUMBER_OF_BUTTONS_IN_POOL];
-	static bool sButtonPoolIsInitialized; // used by allocButton
+    // Pool stuff
+    static TouchButton TouchButtonPool[NUMBER_OF_BUTTONS_IN_POOL];
+    static bool sButtonPoolIsInitialized; // used by allocButton
 
-	uint16_t mButtonColor;
-	uint16_t mCaptionColor;
-	uint16_t mPositionX;
-	uint16_t mPositionY;
-	uint16_t mWidth;
-	uint8_t mHeight;
-	uint8_t mCaptionSize;
-	uint8_t mTouchBorder;
-	uint16_t mPositionXRight;
-	uint16_t mPositionYBottom;
-	const char *mCaption; // Pointer to caption
+    uint16_t mButtonColor;
+    uint16_t mCaptionColor;
+    uint16_t mPositionX;
+    uint16_t mPositionY;
+    uint16_t mWidth;
+    uint8_t mHeight;
+    uint8_t mCaptionSize;
+    uint8_t mTouchBorder;
+    uint16_t mPositionXRight;
+    uint16_t mPositionYBottom;
+    const char *mCaption; // Pointer to caption
 
 protected:
-	static uint16_t sDefaultButtonColor;
-	static uint16_t sDefaultCaptionColor;
-	static uint8_t sDefaultTouchBorder;
+    static uint16_t sDefaultButtonColor;
+    static uint16_t sDefaultCaptionColor;
+    static uint8_t sDefaultTouchBorder;
 
-	static uint8_t sButtonCombinedPoolSize;
-	static uint8_t sMinButtonPoolSize;
+    static uint8_t sButtonCombinedPoolSize;
+    static uint8_t sMinButtonPoolSize;
 
-	static TouchButton *sListStart; // Root pointer to list of all buttons
+    static TouchButton *sListStart; // Root pointer to list of all buttons
 
-	uint8_t mFlags; //Flag for: Autorepeat type, allocated, only caption
-	TouchButton *mNextObject;
+    uint8_t mFlags; //Flag for: Autorepeat type, allocated, only caption
+    TouchButton *mNextObject;
 
-	int16_t mValue;
-	uint8_t getCaptionLength(char * aCaptionPointer) const;
-	void (*mOnTouchHandler)(TouchButton * const, int16_t);
+    int16_t mValue;
+    uint8_t getCaptionLength(char * aCaptionPointer) const;
+    void (*mOnTouchHandler)(TouchButton * const, int16_t);
 
 };
+
+// Handler for red green button
+void doToggleRedGreenButton(TouchButton * const aTheTouchedButton, int16_t aValue);
+int CheckTouchGeneric(bool aCheckAlsoPlainButtons);
+
 /** @} */
 /** @} */
 
