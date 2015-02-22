@@ -4,7 +4,7 @@
  *
  * @date 02.01.2013
  * @author Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  *      Source based on STM code samples
  * @version 1.2.0
@@ -29,7 +29,7 @@ extern "C" {
 
 #define COMPASS_RADIUS 40
 #define COMPASS_MID_X (COMPASS_RADIUS + 10)
-#define COMPASS_MID_Y (DISPLAY_HEIGHT / 2)
+#define COMPASS_MID_Y (BlueDisplay1.getDisplayHeight() / 2)
 
 #define GYRO_MID_X BUTTON_WIDTH_3_POS_3
 #define GYRO_MID_Y (BUTTON_HEIGHT_4_LINE_4 - BUTTON_DEFAULT_SPACING)
@@ -37,7 +37,7 @@ extern "C" {
 #define VERTICAL_SLIDER_NULL_VALUE 90
 #define HORIZONTAL_SLIDER_NULL_VALUE 160
 
-#define TEXT_START_Y 10 // Space for slider
+#define TEXT_START_Y (10 + TEXT_SIZE_11_ASCEND) // Space for slider
 #define TEXT_START_X 10 // Space for slider
 static struct ThickLine AcceleratorLine;
 static struct ThickLine CompassLine;
@@ -68,7 +68,7 @@ void drawAccDemoGui(void) {
     TouchButtonClearScreen->drawButton();
     TouchButtonAutorepeatAccScalePlus->drawButton();
     TouchButtonAutorepeatAccScaleMinus->drawButton();
-    drawCircle(COMPASS_MID_X, COMPASS_MID_Y, COMPASS_RADIUS, COLOR_BLACK);
+    BlueDisplay1.drawCircle(COMPASS_MID_X, COMPASS_MID_Y, COMPASS_RADIUS, COLOR_BLACK, 1);
 
     TouchButtonSetZero->drawButton();
 
@@ -102,10 +102,10 @@ void drawAccDemoGui(void) {
  */
 void initAcceleratorCompass(void) {
 
-    AcceleratorLine.StartX = DISPLAY_WIDTH / 2;
-    AcceleratorLine.StartY = DISPLAY_HEIGHT / 2;
-    AcceleratorLine.EndX = DISPLAY_WIDTH / 2;
-    AcceleratorLine.EndY = DISPLAY_HEIGHT / 2;
+    AcceleratorLine.StartX = BlueDisplay1.getDisplayWidth() / 2;
+    AcceleratorLine.StartY = BlueDisplay1.getDisplayHeight() / 2;
+    AcceleratorLine.EndX = BlueDisplay1.getDisplayWidth() / 2;
+    AcceleratorLine.EndY = BlueDisplay1.getDisplayHeight() / 2;
     AcceleratorLine.Thickness = 2;
     AcceleratorLine.ThicknessMode = LINE_THICKNESS_DRAW_CLOCKWISE;
     AcceleratorLine.Color = COLOR_RED;
@@ -133,31 +133,34 @@ void initAcceleratorCompass(void) {
 
 void doClearAcceleratorCompassScreen(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
-    clearDisplay(aValue);
+    BlueDisplay1.clearDisplay(aValue);
     drawAccDemoGui();
 }
 
 void startAcceleratorCompass(void) {
     USB_ChangeToJoystick();
-    clearDisplay(COLOR_ACC_GYRO_BACKGROUND);
+    BlueDisplay1.clearDisplay(COLOR_ACC_GYRO_BACKGROUND);
 
     // 4. row
     TouchButtonAutorepeatAccScalePlus = TouchButtonAutorepeat::allocAndInitSimpleButton(BUTTON_WIDTH_6_POS_2,
-            BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6, BUTTON_HEIGHT_4, COLOR_RED, StringPlus, 2, 1, &doChangeAccScale);
+            BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6, BUTTON_HEIGHT_4, COLOR_RED, StringPlus, TEXT_SIZE_22, 1, &doChangeAccScale);
     TouchButtonAutorepeatAccScalePlus->setButtonAutorepeatTiming(600, 100, 10, 20);
 
     TouchButtonAutorepeatAccScaleMinus = TouchButtonAutorepeat::allocAndInitSimpleButton(0, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6,
-            BUTTON_HEIGHT_4, COLOR_RED, StringMinus, 2, -1, &doChangeAccScale);
+            BUTTON_HEIGHT_4, COLOR_RED, StringMinus, TEXT_SIZE_22, -1, &doChangeAccScale);
     TouchButtonAutorepeatAccScaleMinus->setButtonAutorepeatTiming(600, 100, 10, 20);
 
     TouchButtonSetZero = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_RED, StringZero, 2, 0, &doSetZero);
+            BUTTON_HEIGHT_4, COLOR_RED, StringZero, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doSetZero);
 
     // Clear button - lower left corner
     TouchButtonClearScreen = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_RED, StringClear, 2, COLOR_BACKGROUND_DEFAULT, &doClearAcceleratorCompassScreen);
+            BUTTON_HEIGHT_4, COLOR_RED, StringClear, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, COLOR_BACKGROUND_DEFAULT,
+            &doClearAcceleratorCompassScreen);
 
     drawAccDemoGui();
+    registerSimpleResizeAndReconnectCallback(&drawAccDemoGui);
+
     sAcceleratorScale = 9;
     MillisSinceLastAction = 0;
 
@@ -216,10 +219,10 @@ void loopAcceleratorGyroCompassDemo(void) {
         readAcceleratorZeroCompensated(&AcceleratorGyroscopeCompassRawDataBuffer[0]);
         snprintf(StringBuffer, sizeof StringBuffer, "Accelerator X=%5d Y=%5d Z=%5d", AcceleratorGyroscopeCompassRawDataBuffer[0],
                 AcceleratorGyroscopeCompassRawDataBuffer[1], AcceleratorGyroscopeCompassRawDataBuffer[2]);
-        drawText(TEXT_START_X, TEXT_START_Y, StringBuffer, 1, COLOR_BLACK, COLOR_GREEN);
-        refreshVector(&AcceleratorLine, (AcceleratorGyroscopeCompassRawDataBuffer[0] / sAcceleratorScale),
+        BlueDisplay1.drawText(TEXT_START_X, TEXT_START_Y, StringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_GREEN);
+        BlueDisplay1.refreshVector(&AcceleratorLine, (AcceleratorGyroscopeCompassRawDataBuffer[0] / sAcceleratorScale),
                 -(AcceleratorGyroscopeCompassRawDataBuffer[1] / sAcceleratorScale));
-        drawPixel(AcceleratorLine.StartX, AcceleratorLine.StartY, COLOR_BLACK);
+        BlueDisplay1.drawPixel(AcceleratorLine.StartX, AcceleratorLine.StartY, COLOR_BLACK);
 
         /**
          * Send over USB
@@ -231,11 +234,12 @@ void loopAcceleratorGyroCompassDemo(void) {
         readCompassRaw(AcceleratorGyroscopeCompassRawDataBuffer);
         snprintf(StringBuffer, sizeof StringBuffer, "Compass X=%5d Y=%5d Z=%5d", AcceleratorGyroscopeCompassRawDataBuffer[0],
                 AcceleratorGyroscopeCompassRawDataBuffer[1], AcceleratorGyroscopeCompassRawDataBuffer[2]);
-        drawText(TEXT_START_X, FONT_HEIGHT + TEXT_START_Y, StringBuffer, 1, COLOR_BLACK, COLOR_GREEN);
+        BlueDisplay1.drawText(TEXT_START_X, TEXT_SIZE_11_HEIGHT + TEXT_START_Y, StringBuffer, TEXT_SIZE_11, COLOR_BLACK,
+                COLOR_GREEN);
         // values can reach 800
-        refreshVector(&CompassLine, (AcceleratorGyroscopeCompassRawDataBuffer[0] >> 5),
+        BlueDisplay1.refreshVector(&CompassLine, (AcceleratorGyroscopeCompassRawDataBuffer[0] >> 5),
                 -(AcceleratorGyroscopeCompassRawDataBuffer[2] >> 5));
-        drawPixel(CompassLine.StartX, CompassLine.StartY, COLOR_RED);
+        BlueDisplay1.drawPixel(CompassLine.StartX, CompassLine.StartY, COLOR_RED);
 
         /**
          * Gyroscope data
@@ -243,16 +247,18 @@ void loopAcceleratorGyroCompassDemo(void) {
         readGyroscopeZeroCompensated(AcceleratorGyroscopeCompassRawDataBuffer);
         snprintf(StringBuffer, sizeof StringBuffer, "Gyroscope R=%5d P=%5d Y=%5d", AcceleratorGyroscopeCompassRawDataBuffer[0],
                 AcceleratorGyroscopeCompassRawDataBuffer[1], AcceleratorGyroscopeCompassRawDataBuffer[2]);
-        drawText(TEXT_START_X, 2 * FONT_HEIGHT + TEXT_START_Y, StringBuffer, 1, COLOR_BLACK, COLOR_GREEN);
+        BlueDisplay1.drawText(TEXT_START_X, 2 * TEXT_SIZE_11_HEIGHT + TEXT_START_Y, StringBuffer, TEXT_SIZE_11, COLOR_BLACK,
+                COLOR_GREEN);
 
         TouchSliderHorizontal.setActualValueAndDrawBar(
                 (AcceleratorGyroscopeCompassRawDataBuffer[0] / 4) + HORIZONTAL_SLIDER_NULL_VALUE);
         TouchSliderVertical.setActualValueAndDrawBar(
                 (AcceleratorGyroscopeCompassRawDataBuffer[1] / 4) + VERTICAL_SLIDER_NULL_VALUE);
 
-        refreshVector(&GyroYawLine, -AcceleratorGyroscopeCompassRawDataBuffer[2] / 8, -(2 * COMPASS_RADIUS));
-        drawPixel(GyroYawLine.StartX, GyroYawLine.StartY, COLOR_RED);
+        BlueDisplay1.refreshVector(&GyroYawLine, -AcceleratorGyroscopeCompassRawDataBuffer[2] / 8, -(2 * COMPASS_RADIUS));
+        BlueDisplay1.drawPixel(GyroYawLine.StartX, GyroYawLine.StartY, COLOR_RED);
     }
+    checkAndHandleEvents();
 }
 
 void stopAcceleratorCompass(void) {
@@ -271,7 +277,8 @@ void doChangeAccScale(TouchButton * const aTheTouchedButton, int16_t aValue) {
         tFeedbackType = FEEDBACK_TONE_SHORT_ERROR;
     }
     snprintf(StringBuffer, sizeof StringBuffer, "Scale=%2u", sAcceleratorScale);
-    drawText(10, BUTTON_HEIGHT_4_LINE_4 - FONT_HEIGHT - 4, StringBuffer, 1, COLOR_BLUE, COLOR_ACC_GYRO_BACKGROUND);
+    BlueDisplay1.drawText(10, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND - 4, StringBuffer, TEXT_SIZE_11, COLOR_BLUE,
+            COLOR_ACC_GYRO_BACKGROUND);
     FeedbackTone(tFeedbackType);
 }
 
@@ -342,6 +349,6 @@ void DemoPitchRoll(void) {
     } else if (fSinPitch < -0.2f) {
         STM_EVAL_LEDOn(LED10);
     }
-    CheckTouchGeneric(true);
+    checkAndHandleEvents();
 }
 

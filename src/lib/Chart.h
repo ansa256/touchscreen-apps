@@ -8,12 +8,14 @@
  *
  * @date  14.02.2012
  * @author  Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  *
  * 	64 / 0x40 Bytes per button on 32Bit ARM
  */
+
+#include "BlueDisplay.h"
 
 #ifndef CHART_H_
 #define CHART_H_
@@ -50,6 +52,7 @@ typedef union {
 
 int adjustIntWithScaleFactor(int aValue, int aScaleFactor);
 float adjustFloatWithScaleFactor(float aValue, int aScaleFactor);
+void showChartDemo(void);
 
 class Chart {
 public:
@@ -158,6 +161,7 @@ public:
 
 private:
 
+    BlueDisplay * mDisplay; // The Display to use
 	// layout
 	uint16_t mPositionX; // Position in display coordinates of x - origin is on x axis
 	uint16_t mPositionY; // Position in display coordinates of y - origin is on y axis

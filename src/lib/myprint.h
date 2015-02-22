@@ -3,7 +3,7 @@
  *
  * @date  05.1.2014
  * @author  Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *

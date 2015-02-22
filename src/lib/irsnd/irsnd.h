@@ -110,7 +110,6 @@
 #define IRSND_MAX_REPETITIONS                   14      // max # of repetitions
 #define IRSND_ENDLESS_REPETITION                15      // endless repetions
 #define IRSND_REPETITION_MASK                   0x0F    // lower nibble of flags
-
 extern void irsnd_init(void);
 extern uint8_t irsnd_is_busy(void);
 extern uint8_t irsnd_send_data(IRMP_DATA *, uint8_t);

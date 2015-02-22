@@ -3,7 +3,7 @@
  *
  * @date 31.01.2012
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  *
@@ -23,12 +23,13 @@
  */
 
 #include "Pages.h"
+#ifdef LOCAL_DISPLAY_EXISTS
+#include "ADS7846.h"
+#endif
 
 #include "GameOfLife.h"
 #include "Chart.h"
 #include "misc.h"
-
-#include <stdlib.h>
 
 /** @addtogroup Gui_Demo
  * @{
@@ -86,7 +87,6 @@ void showGuiDemoMenu(void);
 
 static TouchButton * TouchButtonChartDemo;
 void showCharts(void);
-Chart ChartExample;
 
 // space between buttons
 #define APPLICATION_MENU 0
@@ -103,7 +103,6 @@ int mActualApplication = APPLICATION_MENU;
  */
 void showSettings(void);
 
-static TouchButton * TouchButtonCalibration;
 static TouchButton * TouchButtonGameOfLife;
 const char StringTPCalibration[] = "TP-Calibration";
 
@@ -114,42 +113,51 @@ unsigned int ActionSliderValue = 0;
 #define ACTION_SLIDER_MAX 100
 bool ActionSliderUp = true;
 
+#ifdef LOCAL_DISPLAY_EXISTS
+static TouchButton * TouchButtonCalibration;
+
 /*
  * ADS7846 channels stuff
  */
 static TouchButton * TouchButtonADS7846Channels;
 void ADS7846DisplayChannels(void);
 void doADS7846Channels(TouchButton * const aTheTouchedButton, int16_t aValue);
+#endif
 
 void initGuiDemo(void) {
 }
 
 static TouchButton ** TouchButtonsGuiDemo[] = { &TouchButtonDemoSettings, &TouchButtonChartDemo, &TouchButtonGameOfLife,
-        &TouchButtonADS7846Channels, &TouchButtonBack, &TouchButtonCalibration, &TouchButtonGolDying, &TouchButtonNew,
-        &TouchButtonContinue };
+        &TouchButtonBack, &TouchButtonGolDying, &TouchButtonNew, &TouchButtonContinue
+#ifdef LOCAL_DISPLAY_EXISTS
+        , &TouchButtonCalibration, &TouchButtonADS7846Channels
+#endif
+        };
 
 void startGuiDemo(void) {
     createDemoButtonsAndSliders();
-    initBacklightElements();
 
+#ifdef LOCAL_DISPLAY_EXISTS
+    initBacklightElements();
+#endif
     showGuiDemoMenu();
     MillisLastLoop = getMillisSinceBoot();
 }
 
-void loopGuiDemo(int aGuiTouchState) {
-
+void loopGuiDemo(void) {
     // count milliseconds for loop control
     uint32_t tMillis = getMillisSinceBoot();
     MillisSinceLastAction += tMillis - MillisLastLoop;
     MillisLastLoop = tMillis;
 
-    if (aGuiTouchState == GUI_TOUCH_NO_MATCH) {
+    if (sNothingTouched) {
         /*
          * switch for different "apps"
          */
         switch (mActualApplication) {
         case APPLICATION_GAME_OF_LIFE:
             if (GolRunning) {
+                // switch back to settings page
                 showGolSettings();
             }
             break;
@@ -189,15 +197,20 @@ void loopGuiDemo(int aGuiTouchState) {
             MillisSinceLastAction = 0;
         }
         break;
+
+    case APPLICATION_MENU:
+        break;
     }
 
     /*
      * Actions independent of touch
      */
+#ifdef LOCAL_DISPLAY_EXISTS
     if (mActualApplication == APPLICATION_ADS7846_CHANNELS) {
         ADS7846DisplayChannels();
     }
-
+#endif
+    checkAndHandleEvents();
 }
 
 void stopGuiDemo(void) {
@@ -205,8 +218,9 @@ void stopGuiDemo(void) {
     for (unsigned int i = 0; i < sizeof(TouchButtonsGuiDemo) / sizeof(TouchButtonsGuiDemo[0]); ++i) {
         (*TouchButtonsGuiDemo[i])->setFree();
     }
+#ifdef LOCAL_DISPLAY_EXISTS
     deinitBacklightElements();
-
+#endif
 }
 
 /*
@@ -223,36 +237,38 @@ void createDemoButtonsAndSliders(void) {
 
     //1. row
     int tPosY = 0;
-    TouchButtonChartDemo = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, "Chart", 2, 0,
-            &doGuiDemoButtons);
+    TouchButtonChartDemo = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, "Chart",
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doGuiDemoButtons);
 
     // Back text button for sub pages
     TouchButtonBack = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED,
-            StringBack, 2, 0, &doGuiDemoButtons);
+            StringBack, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doGuiDemoButtons);
 
     // 2. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonGameOfLife = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, StringGOL, 1, 0,
-            &doGuiDemoButtons);
+    TouchButtonGameOfLife = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, StringGOL,
+            TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doGuiDemoButtons);
 
     // 3. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonDemoSettings = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, StringSettings, 2,
-            0, &doGuiDemoButtons);
+    TouchButtonDemoSettings = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, StringSettings,
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doGuiDemoButtons);
 
+#ifdef LOCAL_DISPLAY_EXISTS
     // 4. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonADS7846Channels = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, "ADS7846", 2,
-            0, &doADS7846Channels);
+    TouchButtonADS7846Channels = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0, "ADS7846",
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doADS7846Channels);
 
     // sub pages
     TouchButtonCalibration = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_2_POS_2, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, 0,
-            StringTPCalibration, 1, 0, &doGuiDemoButtons);
-
-    TouchButtonNew = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "New", 2, 0, &doNew);
+            StringTPCalibration, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doGuiDemoButtons);
+#endif
+    TouchButtonNew = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "New", TEXT_SIZE_22,
+            BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doNew);
 
     TouchButtonContinue = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
-            StringContinue, 1, 0, &doContinue);
+            StringContinue, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doContinue);
 
     /*
      * Slider
@@ -262,12 +278,14 @@ void createDemoButtonsAndSliders(void) {
             TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE | TOUCHSLIDER_IS_HORIZONTAL | TOUCHSLIDER_HORIZONTAL_VALUE_BELOW_TITLE,
             &doSliders, &mapValueGol);
 // slider as switch
-    TouchSliderGolDying.initSlider(120, TouchSliderGolSpeed.getPositionYBottom() + (2 * FONT_HEIGHT)+4 , TOUCHSLIDER_DEFAULT_SIZE,
-    GOL_DIE_MAX, GOL_DIE_MAX, GOL_DIE_MAX, "Show dying", 20, TOUCHSLIDER_SHOW_BORDER, &doSliders, NULL);
+    TouchSliderGolDying.initSlider(120, TouchSliderGolSpeed.getPositionYBottom() + TEXT_SIZE_22_HEIGHT + 4,
+            TOUCHSLIDER_DEFAULT_SIZE, GOL_DIE_MAX, GOL_DIE_MAX, GOL_DIE_MAX, "Show dying", 20, TOUCHSLIDER_SHOW_BORDER, &doSliders,
+            NULL);
 
 // ON OFF button relative to slider
-TouchButtonGolDying    = TouchButton::allocAndInitSimpleButton(120, TouchSliderGolDying.getPositionYBottom() + FONT_HEIGHT + 8, 25, 25, 0, NULL, 1,
-            false, &doGolDying);
+    TouchButtonGolDying = TouchButton::allocAndInitSimpleButton(120,
+            TouchSliderGolDying.getPositionYBottom() + TEXT_SIZE_11_HEIGHT + 8, 25, 25, 0, NULL, TEXT_SIZE_11,
+            BUTTON_FLAG_DO_BEEP_ON_TOUCH, false, &doGolDying);
 
 // self moving sliders
     TouchSliderActionWithoutBorder.initSlider(180, BUTTON_HEIGHT_4_LINE_2, 10, ACTION_SLIDER_MAX, ACTION_SLIDER_MAX, 0, NULL, 3,
@@ -300,12 +318,16 @@ void doGuiDemoButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         return;
     }
 
+#ifdef LOCAL_DISPLAY_EXISTS
+
     if (aTheTouchedButton == TouchButtonCalibration) {
         //Calibration Button pressed -> calibrate touch panel
         TouchPanel.doCalibration(false);
         showSettings();
         return;
     }
+#endif
+
     if (aTheTouchedButton == TouchButtonGameOfLife) {
         // Game of Life button pressed
         showGolSettings();
@@ -322,21 +344,6 @@ void doGuiDemoButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         showGuiDemoMenu();
         return;
     }
-}
-
-void doADS7846Channels(TouchButton * const aTheTouchedButton, int16_t aValue) {
-    FeedbackToneOK();
-    TouchButton::deactivateAllButtons();
-    mActualApplication = APPLICATION_ADS7846_CHANNELS;
-    clearDisplay(COLOR_DEMO_BACKGROUND);
-    uint16_t tPosY = 30;
-    // draw text
-    for (uint8_t i = 0; i < 8; ++i) {
-        drawText(90, tPosY, (char *) ADS7846ChannelStrings[i], 2, COLOR_RED, COLOR_DEMO_BACKGROUND);
-        tPosY += FONT_HEIGHT * 2;
-    }
-    TouchButtonBack->drawButton();
-
 }
 
 char StringSlowest[] = "slowest";
@@ -375,7 +382,7 @@ void showGolSettings(void) {
      * Settings button pressed
      */
     GolRunning = false;
-    clearDisplay(COLOR_DEMO_BACKGROUND);
+    BlueDisplay1.clearDisplay(COLOR_DEMO_BACKGROUND);
     TouchButtonBack->drawButton();
     TouchSliderGolDying.drawSlider();
     syncronizeGolSliderAndButton(false);
@@ -418,12 +425,14 @@ void showSettings(void) {
     /*
      * Settings button pressed
      */
-    clearDisplay(COLOR_DEMO_BACKGROUND);
+    BlueDisplay1.clearDisplay(COLOR_DEMO_BACKGROUND);
     TouchButtonBack->drawButton();
+#ifdef LOCAL_DISPLAY_EXISTS
     TouchButtonCalibration->drawButton();
+    drawBacklightElements();
+#endif
     TouchSliderGolDying.drawSlider();
     syncronizeGolSliderAndButton(false);
-    drawBacklightElements();
     TouchSliderGolSpeed.drawSlider();
     TouchSliderAction.drawSlider();
     TouchSliderActionWithoutBorder.drawSlider();
@@ -433,30 +442,32 @@ void showSettings(void) {
 void showGuiDemoMenu(void) {
     TouchButtonBack->deactivate();
 
-    clearDisplay(COLOR_DEMO_BACKGROUND);
+    BlueDisplay1.clearDisplay(COLOR_DEMO_BACKGROUND);
     TouchButtonMainHome->drawButton();
     TouchButtonDemoSettings->drawButton();
     TouchButtonChartDemo->drawButton();
+#ifdef LOCAL_DISPLAY_EXISTS
     TouchButtonADS7846Channels->drawButton();
+#endif
     TouchButtonGameOfLife->drawButton();
     GolInitialized = false;
     mActualApplication = APPLICATION_MENU;
 }
 
 void showFont(void) {
-    clearDisplay(COLOR_DEMO_BACKGROUND);
+    BlueDisplay1.clearDisplay(COLOR_DEMO_BACKGROUND);
     TouchButtonBack->drawButton();
 
     uint16_t tXPos;
     uint16_t tYPos = 10;
-    unsigned char tChar = FONT_START;
+    unsigned char tChar = 0x20;
     for (uint8_t i = 14; i != 0; i--) {
         tXPos = 10;
         for (uint8_t j = 16; j != 0; j--) {
-            tXPos = drawChar(tXPos, tYPos, tChar, 1, COLOR_BLACK, COLOR_YELLOW) + 4;
+            tXPos = BlueDisplay1.drawChar(tXPos, tYPos, tChar, TEXT_SIZE_11, COLOR_BLACK, COLOR_YELLOW) + 4;
             tChar++;
         }
-        tYPos += FONT_HEIGHT + 4;
+        tYPos += TEXT_SIZE_11_HEIGHT + 4;
     }
 }
 
@@ -464,57 +475,9 @@ void showFont(void) {
  * Show charts features
  */
 void showCharts(void) {
-    clearDisplay(COLOR_DEMO_BACKGROUND);
+    BlueDisplay1.clearDisplay(COLOR_DEMO_BACKGROUND);
     TouchButtonBack->drawButton();
-    unsigned int i;
-
-    /*
-     * 1. Chart: pixel with grid and no labels, 120 values
-     */
-    ChartExample.disableXLabel();
-    ChartExample.disableYLabel();
-    ChartExample.initChartColors(COLOR_RED, COLOR_RED, CHART_DEFAULT_GRID_COLOR, COLOR_RED, COLOR_DEMO_BACKGROUND);
-    ChartExample.initChart(5, DISPLAY_HEIGHT - 20, 120, 90, 2, true, 20, 20);
-    ChartExample.drawAxesAndGrid();
-
-//generate random data
-    srand(120);
-    char * tPtr = StringBuffer;
-    for (i = 0; i < sizeof StringBuffer; i++) {
-        *tPtr++ = 30 + (rand() >> 27);
-    }
-    ChartExample.drawChartDataDirect((uint8_t *) &StringBuffer, sizeof StringBuffer, CHART_MODE_PIXEL);
-
-    /*
-     * 2. Chart: with grid with (negative) integer labels, 140 values
-     */
-    ChartExample.initXLabelInt(0, 12, 1, 2);
-    ChartExample.initYLabelInt(-20, 20, 20 / 15, 3);
-    ChartExample.initChart(170, DISPLAY_HEIGHT - 20, 140, 88, 2, true, 30, 15);
-    ChartExample.drawAxesAndGrid();
-// new data
-    uint16_t * tPtr2 = FourDisplayLinesBuffer;
-    uint16_t tVal = 0;
-    for (i = 0; i < sizeof FourDisplayLinesBuffer / 2; i++) {
-        tVal += rand() >> 30;
-        *tPtr2++ = tVal;
-    }
-    tPtr2--;
-    *tPtr2 = 30;
-    ChartExample.initChartColors(COLOR_RED, COLOR_BLUE, COLOR_GREEN, COLOR_BLACK, COLOR_DEMO_BACKGROUND);
-    ChartExample.drawChartData((int16_t *) FourDisplayLinesBuffer, (int16_t *) &FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER],
-            CHART_MODE_LINE);
-
-    /*
-     * 3. Chart: without grid with float labels, 140 values area mode
-     */
-    ChartExample.initXLabelFloat(0, 0.5, 1, 3, 1);
-    ChartExample.initYLabelFloat(0, 0.3, 1.3 / 60, 3, 1); // display 1.3 for raw value of 60
-    ChartExample.initChart(30, 100, 180, 90, 2, false, 30, 16);
-    ChartExample.drawAxesAndGrid();
-    ChartExample.drawChartData((int16_t *) FourDisplayLinesBuffer, (int16_t *) &FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER],
-            CHART_MODE_AREA);
-
+    showChartDemo();
     mActualApplication = APPLICATION_CHART;
 }
 
@@ -526,6 +489,21 @@ void syncronizeGolSliderAndButton(bool aValue) {
     } else {
         TouchSliderGolDying.setActualValueAndDraw(GOL_DIE_MAX);
     }
+}
+
+#ifdef LOCAL_DISPLAY_EXISTS
+void doADS7846Channels(TouchButton * const aTheTouchedButton, int16_t aValue) {
+    FeedbackToneOK();
+    TouchButton::deactivateAllButtons();
+    mActualApplication = APPLICATION_ADS7846_CHANNELS;
+    BlueDisplay1.clearDisplay(COLOR_DEMO_BACKGROUND);
+    uint16_t tPosY = 30;
+    // draw text
+    for (uint8_t i = 0; i < 8; ++i) {
+        BlueDisplay1.drawText(90, tPosY, (char *) ADS7846ChannelStrings[i], TEXT_SIZE_22, COLOR_RED, COLOR_DEMO_BACKGROUND);
+        tPosY += TEXT_SIZE_22_HEIGHT;
+    }
+    TouchButtonBack->drawButton();
 }
 
 #define BUTTON_CHECK_INTERVAL 20
@@ -545,8 +523,8 @@ void ADS7846DisplayChannels(void) {
         }
         tTemp = TouchPanel.readChannel(ADS7846ChannelMapping[i], tUse12BitMode, tUseDiffMode, 2);
         snprintf(StringBuffer, sizeof StringBuffer, "%04u", tTemp);
-        drawText(15, tPosY, StringBuffer, 2, COLOR_RED, COLOR_DEMO_BACKGROUND);
-        tPosY += FONT_HEIGHT * 2;
+        BlueDisplay1.drawText(15, tPosY, StringBuffer, TEXT_SIZE_22, COLOR_RED, COLOR_DEMO_BACKGROUND);
+        tPosY += TEXT_SIZE_22_HEIGHT;
     }
     aButtonCheckInterval++;
     if (aButtonCheckInterval >= BUTTON_CHECK_INTERVAL) {
@@ -557,6 +535,7 @@ void ADS7846DisplayChannels(void) {
 
     }
 }
+#endif
 
 /**
  * @}

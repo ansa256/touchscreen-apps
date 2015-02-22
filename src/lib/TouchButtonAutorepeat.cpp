@@ -6,7 +6,7 @@
  *
  * @date  30.02.2012
  * @author  Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
@@ -17,7 +17,7 @@
 #include "TouchButtonAutorepeat.h"
 #include <stm32f30x.h>
 #include <stdlib.h> // for NULL
-#include "ADS7846.h"
+#include "TouchLib.h"
 
 extern "C" {
 #include "timing.h"
@@ -52,7 +52,7 @@ TouchButtonAutorepeat * TouchButtonAutorepeat::allocAndInitSimpleButton(const ui
         const uint16_t aWidthX, const uint8_t aHeightY, const uint16_t aButtonColor, const char * aCaption,
         const uint8_t aCaptionSize, const int16_t aValue, void (*aOnTouchHandler)(TouchButton * const, int16_t)) {
     TouchButtonAutorepeat * tButton = allocButton();
-    tButton->initButton(aPositionX, aPositionY, aWidthX, aHeightY, aCaption, aCaptionSize, sDefaultTouchBorder, aButtonColor,
+    tButton->initButton(aPositionX, aPositionY, aWidthX, aHeightY, aCaption, aCaptionSize, aButtonColor,
             sDefaultCaptionColor, aValue, aOnTouchHandler);
     return tButton;
 }
@@ -83,7 +83,7 @@ void TouchButtonAutorepeat::setButtonAutorepeatTiming(const uint16_t aMillisFirs
 void TouchButtonAutorepeat::autorepeatTouchHandler(TouchButtonAutorepeat * const aTheTouchedButton, int16_t aButtonValue) {
     // First touch here => register callback
     mLastAutorepeatButtonTouched = aTheTouchedButton;
-    TouchPanel.registerPeriodicTouchCallback(&TouchButtonAutorepeat::autorepeatButtonTimerHandler,
+    registerPeriodicTouchCallback(&TouchButtonAutorepeat::autorepeatButtonTimerHandler,
             aTheTouchedButton->mMillisFirstDelay);
     aTheTouchedButton->mOnTouchHandlerAutorepeat(aTheTouchedButton, aButtonValue);
     sState = AUTOREPEAT_BUTTON_STATE_FIRST_DELAY;
@@ -104,13 +104,13 @@ bool TouchButtonAutorepeat::autorepeatButtonTimerHandler(const int aTouchPositio
     }
     switch (sState) {
     case AUTOREPEAT_BUTTON_STATE_FIRST_DELAY:
-        TouchPanel.setCallbackPeriod(tTouchedButton->mMillisFirstRate);
+        setPeriodicTouchCallbackPeriod(tTouchedButton->mMillisFirstRate);
         sState++;
         sCount--;
         break;
     case AUTOREPEAT_BUTTON_STATE_FIRST_PERIOD:
         if (sCount == 0) {
-            TouchPanel.setCallbackPeriod(tTouchedButton->mMillisSecondRate);
+            setPeriodicTouchCallbackPeriod(tTouchedButton->mMillisSecondRate);
             sCount = 0;
         } else {
             sCount--;
@@ -147,7 +147,7 @@ int TouchButtonAutorepeat::checkAllButtons(const int aTouchPositionX, const int 
         }
         tObjectPointer = (TouchButtonAutorepeat*) tObjectPointer->mNextObject;
     }
-    return BUTTON_NOT_TOUCHED;
+    return NOT_TOUCHED;
 }
 
 /**

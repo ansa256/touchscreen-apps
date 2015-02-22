@@ -3,13 +3,13 @@
  *
  * @date 05.1.2014
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
  */
 
-#include "HY32D.h"
+#include "BlueDisplay.h"
 #include "misc.h" // for StringBuffer
 #include "myprint.h"
 #include <stdio.h> // for sprintf
@@ -50,7 +50,7 @@ void printClearScreen(void) {
     if (!sPrintEnabled) {
         return;
     }
-    clearDisplay(sPrintBackgroundColor);
+    clearDisplayC(sPrintBackgroundColor);
     sPrintX = 0;
     sPrintY = 0;
 }
@@ -66,12 +66,12 @@ void printSetPosition(int aPosX, int aPosY) {
 }
 
 void printSetPositionLineColumn(int aColumnNumber, int aLineNumber) {
-    sPrintX = aColumnNumber * FONT_WIDTH;
-    if (sPrintX >= (DISPLAY_WIDTH - FONT_WIDTH)) {
+    sPrintX = aColumnNumber * TEXT_SIZE_11_WIDTH;
+    if (sPrintX >= (DISPLAY_DEFAULT_WIDTH - TEXT_SIZE_11_WIDTH)) {
         sPrintX = 0;
     }
-    sPrintY = aLineNumber * FONT_HEIGHT;
-    if (sPrintY >= (DISPLAY_HEIGHT - FONT_HEIGHT)) {
+    sPrintY = aLineNumber * TEXT_SIZE_11_HEIGHT;
+    if (sPrintY >= (DISPLAY_DEFAULT_HEIGHT - TEXT_SIZE_11_HEIGHT)) {
         sPrintY = 0;
     }
 }
@@ -80,12 +80,12 @@ int printNewline(void) {
     if (!sPrintEnabled) {
         return -1;
     }
-    int tPrintY = sPrintY + FONT_HEIGHT;
-    if (tPrintY >= DISPLAY_HEIGHT) {
+    int tPrintY = sPrintY + TEXT_SIZE_11_HEIGHT;
+    if (tPrintY >= DISPLAY_DEFAULT_HEIGHT) {
         // wrap around to top of screen
         tPrintY = 0;
         if (sClearOnNewScreen) {
-            clearDisplay(sPrintBackgroundColor);
+            clearDisplayC(sPrintBackgroundColor);
         }
     }
     sPrintX = 0;
@@ -115,18 +115,19 @@ void myPrint(const char * StringPointer, int aLength) {
     const char *tWordStart = StringPointer;
     const char *tPrintBufferStart = StringPointer;
     const char *tPrintBufferEnd = StringPointer + aLength;
-    int tLineLengthInChars = DISPLAY_WIDTH / (FONT_WIDTH * sPrintSize);
+    int tLineLengthInChars = DISPLAY_DEFAULT_WIDTH / (TEXT_SIZE_11_WIDTH * sPrintSize);
     bool doFlushAndNewline = false;
-    int tColumn = sPrintX / FONT_WIDTH;
+    int tColumn = sPrintX / TEXT_SIZE_11_WIDTH;
     while (true) {
         tChar = *StringPointer++;
+
         // check for terminate condition
         if (tChar == '\0' || StringPointer > tPrintBufferEnd) {
             // flush "buffer"
             sPrintX = drawNText(sPrintX, sPrintY, tPrintBufferStart, StringPointer - tPrintBufferStart, sPrintSize, sPrintColor,
                     sPrintBackgroundColor);
             // handling of newline - after end of string
-            if (sPrintX >= DISPLAY_WIDTH) {
+            if (sPrintX >= DISPLAY_DEFAULT_WIDTH) {
                 sPrintY = printNewline();
             }
             break;
@@ -147,7 +148,7 @@ void myPrint(const char * StringPointer, int aLength) {
                 tPrintBufferStart = StringPointer;
             }
         } else {
-            if (tColumn >= (DISPLAY_WIDTH / FONT_WIDTH)) {
+            if (tColumn >= (DISPLAY_DEFAULT_WIDTH / TEXT_SIZE_11_WIDTH)) {
                 // character does not fit in line -> print it at next line
                 doFlushAndNewline = true;
                 int tWordlength = (StringPointer - tWordStart);

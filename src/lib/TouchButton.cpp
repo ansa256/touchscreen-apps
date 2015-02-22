@@ -7,26 +7,26 @@
  *
  * @date  30.01.2012
  * @author  Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
  *  LCD interface used:
- * 		fillRect()
- * 		drawText()
+ * 		mDisplay->fillRect()
+ * 		mDisplay->drawText()
  * 		DISPLAY_WIDTH
  * 		DISPLAY_HEIGHT
- * 		FONT_WIDTH
- * 		FONT_HEIGHT
  *
  *
  */
 
 #include "TouchButton.h"
+
 #include "TouchButtonAutorepeat.h"
+#include "TouchLib.h"
 #include <stm32f30x.h>
 #include <stdio.h>
-
+#include <string.h> // for strlen
 extern "C" {
 #include "stm32f30xPeripherals.h"// for FeedbackToneOK
 }
@@ -37,17 +37,20 @@ extern "C" {
 /** @addtogroup Button
  * @{
  */
-TouchButton * TouchButton::sListStart = NULL;
-uint8_t TouchButton::sDefaultTouchBorder = TOUCHBUTTON_DEFAULT_TOUCH_BORDER;
-uint16_t TouchButton::sDefaultButtonColor = TOUCHBUTTON_DEFAULT_COLOR;
-uint16_t TouchButton::sDefaultCaptionColor = TOUCHBUTTON_DEFAULT_CAPTION_COLOR;
-
+/**
+ * The preallocated pool of buttons for this application
+ */
 TouchButton TouchButton::TouchButtonPool[NUMBER_OF_BUTTONS_IN_POOL];
 uint8_t TouchButton::sButtonCombinedPoolSize = NUMBER_OF_BUTTONS_IN_POOL; // NUMBER_OF_AUTOREPEAT_BUTTONS_IN_POOL is added while initializing autorepeat pool
 uint8_t TouchButton::sMinButtonPoolSize = NUMBER_OF_BUTTONS_IN_POOL;
 bool TouchButton::sButtonPoolIsInitialized = false;
 
+TouchButton * TouchButton::sListStart = NULL;
+uint16_t TouchButton::sDefaultButtonColor = TOUCHBUTTON_DEFAULT_COLOR;
+uint16_t TouchButton::sDefaultCaptionColor = TOUCHBUTTON_DEFAULT_CAPTION_COLOR;
+
 TouchButton::TouchButton() {
+    mDisplay = &BlueDisplay1;
     mFlags = 0;
     // buttons are allocated by default!
     mFlags |= FLAG_IS_ALLOCATED;
@@ -67,9 +70,6 @@ TouchButton::TouchButton() {
     }
 }
 
-void TouchButton::setDefaultTouchBorder(const uint8_t aDefaultTouchBorder) {
-    sDefaultTouchBorder = aDefaultTouchBorder;
-}
 void TouchButton::setDefaultButtonColor(const uint16_t aDefaultButtonColor) {
     sDefaultButtonColor = aDefaultButtonColor;
 }
@@ -83,10 +83,10 @@ void TouchButton::setDefaultCaptionColor(const uint16_t aDefaultCaptionColor) {
  * if aCaptionSize == 0 don't render anything, just check touch area -> transparent button ;-)
  */
 int8_t TouchButton::initSimpleButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX,
-        const uint8_t aHeightY, const uint16_t aButtonColor, const char * aCaption, const uint8_t aCaptionSize,
+        const uint16_t aHeightY, const uint16_t aButtonColor, const char * aCaption, const uint8_t aCaptionSize,
         const int16_t aValue, void (*aOnTouchHandler)(TouchButton * const, int16_t)) {
-    return initButton(aPositionX, aPositionY, aWidthX, aHeightY, aCaption, aCaptionSize, sDefaultTouchBorder, aButtonColor,
-            sDefaultCaptionColor, aValue, aOnTouchHandler);
+    return initButton(aPositionX, aPositionY, aWidthX, aHeightY, aCaption, aCaptionSize, aButtonColor, sDefaultCaptionColor, aValue,
+            aOnTouchHandler);
 }
 
 /**
@@ -94,8 +94,8 @@ int8_t TouchButton::initSimpleButton(const uint16_t aPositionX, const uint16_t a
  * if aWidthX == 0 render only text no background box
  * if aCaptionSize == 0 don't render anything, just check touch area -> transparent button ;-)
  */
-int8_t TouchButton::initButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX, const uint8_t aHeightY,
-        const char * aCaption, const uint8_t aCaptionSize, const uint8_t aTouchBorder, const uint16_t aButtonColor,
+int8_t TouchButton::initButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX,
+        const uint16_t aHeightY, const char * aCaption, const uint8_t aCaptionSize, const uint16_t aButtonColor,
         const uint16_t aCaptionColor, const int16_t aValue, void (*aOnTouchHandler)(TouchButton * const, int16_t)) {
 
     mWidth = aWidthX;
@@ -105,14 +105,8 @@ int8_t TouchButton::initButton(const uint16_t aPositionX, const uint16_t aPositi
         mButtonColor = sDefaultButtonColor;
     }
     mCaptionColor = aCaptionColor;
-    mTouchBorder = aTouchBorder;
     mCaption = aCaption;
     mCaptionSize = aCaptionSize;
-    if (aWidthX == 0) {
-        mFlags |= FLAG_IS_ONLY_CAPTION;
-    } else {
-        mFlags &= ~FLAG_IS_ONLY_CAPTION;
-    }
     mOnTouchHandler = aOnTouchHandler;
     mValue = aValue;
     return setPosition(aPositionX, aPositionY);
@@ -132,8 +126,8 @@ int8_t TouchButton::initButton(const uint16_t aPositionX, const uint16_t aPositi
  * @return pointer to allocated button
  */
 TouchButton * TouchButton::allocAndInitSimpleButton(const uint16_t aPositionX, const uint16_t aPositionY, const uint16_t aWidthX,
-        const uint8_t aHeightY, const uint16_t aButtonColor, const char * aCaption, const uint8_t aCaptionSize,
-        const int16_t aValue, void (*aOnTouchHandler)(TouchButton * const, int16_t)) {
+        const uint16_t aHeightY, const uint16_t aButtonColor, const char * aCaption, const uint8_t aCaptionSize,
+        const uint8_t aFlags, const int16_t aValue, void (*aOnTouchHandler)(TouchButton * const, int16_t)) {
     TouchButton * tButton = allocButton(false);
 
     tButton->mWidth = aWidthX;
@@ -143,17 +137,8 @@ TouchButton * TouchButton::allocAndInitSimpleButton(const uint16_t aPositionX, c
         tButton->mButtonColor = sDefaultButtonColor;
     }
     tButton->mCaptionColor = sDefaultCaptionColor;
-    tButton->mTouchBorder = sDefaultTouchBorder;
     tButton->mCaption = aCaption;
     tButton->mCaptionSize = aCaptionSize;
-    if (aWidthX == 0) {
-        if (aCaptionSize == 0) {
-            failParamMessage(aCaptionSize, "CaptionSize and WidthX are 0");
-        }
-        tButton->mFlags |= FLAG_IS_ONLY_CAPTION;
-    } else {
-        tButton->mFlags &= ~FLAG_IS_ONLY_CAPTION;
-    }
     tButton->mOnTouchHandler = aOnTouchHandler;
     tButton->mValue = aValue;
     tButton->setPosition(aPositionX, aPositionY);
@@ -164,25 +149,16 @@ int8_t TouchButton::setPosition(const uint16_t aPositionX, const uint16_t aPosit
     int8_t tRetValue = 0;
     mPositionX = aPositionX;
     mPositionY = aPositionY;
-    if (mFlags & FLAG_IS_ONLY_CAPTION) {
-        // print only string, no enclosing box
-        uint8_t tLength = getCaptionLength((char *) mCaption);
-        mPositionXRight = aPositionX + tLength - 1;
-        mPositionYBottom = aPositionY + (FONT_HEIGHT * mCaptionSize) - 1;
-    } else {
-        mPositionXRight = aPositionX + mWidth - 1;
-        mPositionYBottom = aPositionY + mHeight - 1;
-    }
 
     // check values
-    if (mPositionXRight > DISPLAY_WIDTH) {
-        mPositionXRight = DISPLAY_WIDTH - 1;
-        failParamMessage(mPositionXRight, "XRight wrong");
+    if (aPositionX + mWidth > mDisplay->getDisplayWidth()) {
+        mWidth = mDisplay->getDisplayWidth() - aPositionX;
+        failParamMessage(aPositionX + mWidth, "XRight wrong");
         tRetValue = TOUCHBUTTON_ERROR_X_RIGHT;
     }
-    if (mPositionYBottom >= DISPLAY_HEIGHT) {
-        mPositionYBottom = DISPLAY_HEIGHT - 1;
-        failParamMessage(mPositionYBottom, "YBottom wrong");
+    if (aPositionY + mHeight > mDisplay->getDisplayHeight()) {
+        mHeight = mDisplay->getDisplayHeight() - mPositionY;
+        failParamMessage(aPositionY + mHeight, "YBottom wrong");
         tRetValue = TOUCHBUTTON_ERROR_Y_BOTTOM;
     }
     return tRetValue;
@@ -192,10 +168,8 @@ int8_t TouchButton::setPosition(const uint16_t aPositionX, const uint16_t aPosit
  * renders the button on lcd
  */
 int8_t TouchButton::drawButton() {
-    if (!(mFlags & FLAG_IS_ONLY_CAPTION)) {
-        // Draw rect
-        fillRect(mPositionX, mPositionY, mPositionXRight, mPositionYBottom, mButtonColor);
-    }
+    // Draw rect
+    mDisplay->fillRectRel(mPositionX, mPositionY, mWidth, mHeight, mButtonColor);
     return drawCaption();
 }
 
@@ -205,7 +179,7 @@ int8_t TouchButton::drawButton() {
 void TouchButton::removeButton(const uint16_t aBackgroundColor) {
     mFlags &= ~FLAG_IS_ACTIVE;
     // Draw rect
-    fillRect(mPositionX, mPositionY, mPositionXRight, mPositionYBottom, aBackgroundColor);
+    mDisplay->fillRectRel(mPositionX, mPositionY, mWidth, mHeight, aBackgroundColor);
 
 }
 
@@ -217,30 +191,27 @@ int TouchButton::drawCaption(void) {
     mFlags |= FLAG_IS_ACTIVE;
     int tRetValue = 0;
     if (mCaptionSize > 0) { // dont render anything if caption size == 0
-        if (mFlags & FLAG_IS_ONLY_CAPTION) {
-            // print only string
-            drawText(mPositionX, mPositionY, mCaption, mCaptionSize, mCaptionColor, mButtonColor);
-        } else if (mCaption != NULL) {
+        if (mCaption != NULL) {
             int tXCaptionPosition;
             int tYCaptionPosition;
             // try to position the string in the middle of the box
-            int tLength = getCaptionLength((char *) mCaption);
-            if (mPositionX + tLength >= mPositionXRight) {
+            int tLength = getTextWidth(mCaptionSize) * strlen(mCaption);
+            if (tLength >= mWidth) {
                 // String too long here
                 tXCaptionPosition = mPositionX;
                 tRetValue = TOUCHBUTTON_ERROR_CAPTION_TOO_LONG;
             } else {
-                tXCaptionPosition = mPositionX + 1 + ((mWidth - tLength) / 2);
+                tXCaptionPosition = mPositionX + ((mWidth - tLength) / 2);
             }
 
-            if (mPositionY + (FONT_HEIGHT * mCaptionSize) >= mPositionYBottom) {
+            if (mCaptionSize >= mHeight) {
                 // Font height to big
                 tYCaptionPosition = mPositionY;
                 tRetValue = TOUCHBUTTON_ERROR_CAPTION_TOO_HIGH;
             } else {
-                tYCaptionPosition = mPositionY + 1 + ((mHeight - (FONT_HEIGHT * mCaptionSize)) / 2);
+                tYCaptionPosition = mPositionY + ((mHeight + getTextAscendMinusDescend(mCaptionSize)) / 2);
             }
-            drawText(tXCaptionPosition, tYCaptionPosition, mCaption, mCaptionSize, mCaptionColor, mButtonColor);
+            mDisplay->drawText(tXCaptionPosition, tYCaptionPosition, mCaption, mCaptionSize, mCaptionColor, mButtonColor);
 
         }
     }
@@ -252,16 +223,8 @@ int TouchButton::drawCaption(void) {
  * if yes - return true
  * if no - return false
  */bool TouchButton::checkButtonInArea(const uint16_t aTouchPositionX, const uint16_t aTouchPositionY) {
-    int tPositionBorderX = mPositionX - mTouchBorder;
-    if (mTouchBorder > mPositionX) {
-        tPositionBorderX = 0;
-    }
-    int tPositionBorderY = mPositionY - mTouchBorder;
-    if (mTouchBorder > mPositionY) {
-        tPositionBorderY = 0;
-    }
-    if (aTouchPositionX < tPositionBorderX || aTouchPositionX > mPositionXRight + mTouchBorder || aTouchPositionY < tPositionBorderY
-            || aTouchPositionY > mPositionYBottom + mTouchBorder) {
+    if (aTouchPositionX < mPositionX || aTouchPositionX > mPositionX + mWidth || aTouchPositionY < mPositionY
+            || aTouchPositionY > (mPositionY + mHeight)) {
         return false;
     }
     return true;
@@ -287,7 +250,6 @@ int TouchButton::drawCaption(void) {
 /**
  * Static convenience method - checks all buttons for matching touch position.
  */
-
 int TouchButton::checkAllButtons(const int aTouchPositionX, const int aTouchPositionY, const bool doCallback) {
     TouchButton * tObjectPointer = sListStart;
 
@@ -296,13 +258,17 @@ int TouchButton::checkAllButtons(const int aTouchPositionX, const int aTouchPosi
         if ((tObjectPointer->mFlags & FLAG_IS_ACTIVE)
                 && tObjectPointer->checkButton(aTouchPositionX, aTouchPositionY, doCallback)) {
             if (tObjectPointer->mFlags & FLAG_IS_AUTOREPEAT_BUTTON) {
+                sAutorepeatButtonTouched = true;
                 return BUTTON_TOUCHED_AUTOREPEAT;
             }
+            sButtonTouched = true;
             return BUTTON_TOUCHED;
         }
         tObjectPointer = tObjectPointer->mNextObject;
     }
-    return BUTTON_NOT_TOUCHED;
+    sAutorepeatButtonTouched = false;
+    sButtonTouched = false;
+    return NOT_TOUCHED;
 }
 
 /**
@@ -329,20 +295,8 @@ void TouchButton::activateAllButtons() {
     }
 }
 
-uint8_t TouchButton::getCaptionLength(char * aCaptionPointer) const {
-    int tLength = 0;
-    while (*aCaptionPointer++ != 0) {
-        tLength += (FONT_WIDTH * mCaptionSize);
-    }
-    return tLength;
-}
-
 const char * TouchButton::getCaption() const {
     return mCaption;
-}
-
-uint8_t TouchButton::getTouchBorder() const {
-    return mTouchBorder;
 }
 
 uint16_t TouchButton::getValue() const {
@@ -387,11 +341,11 @@ int8_t TouchButton::setPositionY(const uint16_t aPositionY) {
 }
 
 uint16_t TouchButton::getPositionXRight() const {
-    return mPositionXRight;
+    return mPositionX + mWidth - 1;
 }
 
 uint16_t TouchButton::getPositionYBottom() const {
-    return mPositionYBottom;
+    return mPositionY + mHeight - 1;
 }
 
 /*
@@ -409,10 +363,6 @@ void TouchButton::deactivate() {
     mFlags &= ~FLAG_IS_ACTIVE;
 }
 
-void TouchButton::setTouchBorder(uint8_t touchBorder) {
-    mTouchBorder = touchBorder;
-}
-
 void TouchButton::setTouchHandler(void (*aOnTouchHandler)(TouchButton* const, int16_t)) {
     mOnTouchHandler = aOnTouchHandler;
 }
@@ -424,8 +374,13 @@ void TouchButton::setRedGreenButtonColor() {
         mButtonColor = COLOR_RED;
     }
 }
+
+/*
+ * value 0 -> red, 1 -> green
+ */
 void TouchButton::setRedGreenButtonColor(int16_t aValue) {
     if (aValue != 0) {
+        // map to boolean
         aValue = true;
         mButtonColor = COLOR_GREEN;
     } else {
@@ -544,74 +499,8 @@ void TouchButton::infoButtonPool(char * aStringBuffer) {
 }
 
 /****************************************
- * Plain util functions
+ * Plain util c++ functions
  ****************************************/
-#include "TouchSlider.h"
-
-/*
- * helper variables for CheckTouchGeneric and swipe recognition with longTouchHandler and endTouchHandler
- */
-int sLastGuiTouchState;
-bool sAutorepeatButtonTouched = false; // flag if autorepeat button was touched - to influence long button press handling
-bool sSliderTouched = false; // flag if slider was touched - to influence long button press handling
-bool sEndTouchProcessed = false; // flag if end touch was done
-
-volatile bool sCheckButtonsForEndTouch = false; // EndTouchHandler called from ISR signals with "true" thread to check GUI
-
-/**
- * first check all buttons and then all sliders
- * if aCheckAlsoPlainButtons false then only elements are checked which internally require autorepeat
- * and therefore are not compatible with swipes
- * @param aCheckAlsoPlainButtons if false only sliders and autorepeat buttons are checked
- * @return sLastGuiTouchState
- */
-int CheckTouchGeneric(bool aCheckAlsoPlainButtons) {
-    int tReturn = GUI_NO_TOUCH;
-    int tGuiTouched = BUTTON_NOT_TOUCHED;
-
-    if (sCheckButtonsForEndTouch) {
-        sCheckButtonsForEndTouch = false;
-        tGuiTouched = TouchButton::checkAllButtons(TouchPanel.getXActual(), TouchPanel.getYActual(), true);
-        if (tGuiTouched == BUTTON_TOUCHED_AUTOREPEAT) {
-            sAutorepeatButtonTouched = true;
-        }
-        sEndTouchProcessed = true;
-    } else {
-        if (TouchPanel.wasTouched()) {
-            // read it here, not at top of function, to avoid race conditions
-            int x = TouchPanel.getXActual();
-            int y = TouchPanel.getYActual();
-            sSliderTouched = false;
-            sAutorepeatButtonTouched = false;
-            tReturn = GUI_TOUCH_NO_MATCH;
-            /*
-             * check if button or slider is touched
-             */
-            if (aCheckAlsoPlainButtons) {
-                tGuiTouched = TouchButton::checkAllButtons(x, y, true);
-                if (tGuiTouched == BUTTON_TOUCHED_AUTOREPEAT) {
-                    sAutorepeatButtonTouched = true;
-                }
-            } else {
-                // check only autorepeat buttons
-                tGuiTouched = TouchButtonAutorepeat::checkAllButtons(x, y, true);
-                if (tGuiTouched == BUTTON_TOUCHED_AUTOREPEAT) {
-                    sAutorepeatButtonTouched = true;
-                }
-            }
-            if (!tGuiTouched) {
-                tGuiTouched = TouchSlider::checkAllSliders(x, y);
-                // set flag that slider was touched
-                sSliderTouched = tGuiTouched;
-            }
-        }
-    }
-    if (tGuiTouched != BUTTON_NOT_TOUCHED) {
-        tReturn = GUI_TOUCH_MATCH;
-    }
-    sLastGuiTouchState = tReturn;
-    return tReturn;
-}
 
 /**
  *

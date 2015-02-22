@@ -3,7 +3,7 @@
  *
  * @date 21.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  */
@@ -47,13 +47,13 @@ const char StringSpace[] = " ";
 // Single character strings
 const char StringPlus[] = "+";
 const char StringMinus[] = "-";
-const char StringPlusMinus[] = "\xF1"; // +- character
+const char StringPlusMinus[] = "\xB1"; // +- character
 const char StringGreaterThan[] = ">";
 const char StringLessThan[] = "<";
 const char StringComma[] = ",";
 const char StringDot[] = ".";
 const char StringHomeChar[] = "\xD3";
-const char StringDoubleHorizontalArrow[] = "\xD7\xD8";
+const char StringDoubleHorizontalArrow[] = "\xAB\xBB";
 
 // Numeric character strings
 
@@ -86,11 +86,10 @@ const char StringZero[] = "Zero";
 extern "C" bool assert_failed(uint8_t* aFile, uint32_t aLine) {
     /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-    if (isInitializedHY32D) {
+    if (isDisplayAvailable) {
         char * tFile = (strrchr(const_cast<char*>((char*) aFile), '/') + 1);
         snprintf(StringBuffer, sizeof StringBuffer, "Wrong parameters value on line: %lu\nfile: %s", aLine, tFile);
-        drawMLText(0, ASSERT_START_Y, DISPLAY_WIDTH,
-                ASSERT_START_Y + (4 * FONT_HEIGHT), StringBuffer, 1, COLOR_RED, COLOR_WHITE,true);
+        drawMLText(0, ASSERT_START_Y, StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
         delayMillis(2000);
     } else {
         /* Infinite loop */
@@ -119,14 +118,15 @@ extern "C" bool assertFailedParamMessage(uint8_t* aFile, uint32_t aLine, uint32_
         const char * aMessage) {
     /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-    if (isInitializedHY32D) {
+    if (isDisplayAvailable) {
         char * tFile = (strrchr(const_cast<char*>((char*) aFile), '/') + 1);
         snprintf(StringBuffer, sizeof StringBuffer, "%s on line: %lu\nfile: %s\nval: %#X %d LR=%#X", aMessage, aLine, tFile,
                 aWrongParameter, aWrongParameter, (unsigned int) aLinkRegister);
+#ifdef LOCAL_DISPLAY_EXISTS
         // reset lock (just in case...)
         sDrawLock = 0;
-        drawMLText(0, ASSERT_START_Y, DISPLAY_WIDTH,
-                ASSERT_START_Y + (4 * FONT_HEIGHT), StringBuffer, 1, COLOR_RED, COLOR_WHITE,true);
+#endif
+        drawMLText(0, ASSERT_START_Y, StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
         delayMillis(2000);
     } else {
         /* Infinite loop */
@@ -139,8 +139,8 @@ extern "C" bool assertFailedParamMessage(uint8_t* aFile, uint32_t aLine, uint32_
     return false;
 }
 extern "C" void errorMessage(const char * aMessage) {
-    if (isInitializedHY32D) {
-        drawMLText(0, ASSERT_START_Y, DISPLAY_WIDTH, ASSERT_START_Y + (4 * FONT_HEIGHT), aMessage, 1, COLOR_RED, COLOR_WHITE,true);
+    if (isDisplayAvailable) {
+        drawMLText(0, ASSERT_START_Y, aMessage, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
     }
 }
 
@@ -226,9 +226,11 @@ extern "C" void FaultHandler(unsigned int * aFaultArgs) {
         // makes only sense if != 0
         tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, "AuxFSR=%lX\n", tAuxFaultStatusRegister);
     }
+#ifdef LOCAL_DISPLAY_EXISTS
     // reset lock (just in case...)
     sDrawLock = 0;
-    drawMLText(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE, true);
+#endif
+    drawMLText(0, TEXT_SIZE_11_ASCEND, StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
     while (1) {
     }
 }

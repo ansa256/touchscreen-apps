@@ -3,7 +3,7 @@
  *
  * @date 25.03.2013
  * @author  Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  */
@@ -17,34 +17,31 @@
 #define LINE_OVERLAP_MAJOR 0x01 // Overlap - first go major then minor direction
 #define LINE_OVERLAP_MINOR 0x02 // Overlap - first go minor then major direction
 #define LINE_OVERLAP_BOTH 0x03  // Overlap - both
-
 #define LINE_THICKNESS_MIDDLE 0
 #define LINE_THICKNESS_DRAW_CLOCKWISE 1
 #define LINE_THICKNESS_DRAW_COUNTERCLOCKWISE 2
 
 struct ThickLine {
-	int16_t StartX;
-	int16_t StartY;
-	int16_t EndX;
-	int16_t EndY;
-	int16_t Thickness;
-	uint8_t ThicknessMode;
-	uint16_t Color;
-	int16_t BackgroundColor;
+    int16_t StartX;
+    int16_t StartY;
+    int16_t EndX;
+    int16_t EndY;
+    int16_t Thickness;
+    uint8_t ThicknessMode;
+    uint16_t Color;
+    int16_t BackgroundColor;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
 void drawLineOverlap(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEnd, uint8_t aOverlap, uint16_t aColor);
 void drawThickLine(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEnd, int16_t aThickness, uint8_t aThicknessMode,
-		uint16_t aColor);
+        uint16_t aColor);
 void drawThickLineSimple(int16_t aXStart, int16_t aYStart, int16_t aXEnd, int16_t aYEnd, int16_t aThickness, uint8_t aThicknessMode,
-		uint16_t aColor);
+        uint16_t aColor);
 
-void refreshVector(struct ThickLine * aLine, int16_t aNewRelEndX, int16_t aNewRelEndY);
 #ifdef __cplusplus
 }
 #endif

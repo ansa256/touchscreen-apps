@@ -3,7 +3,7 @@
  *
  * @date 17.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  *
@@ -93,17 +93,16 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         startGuiDemo();
         sInApplication = true;
         while (sInApplication) {
-            loopGuiDemo(CheckTouchGeneric(true));
+            loopGuiDemo();
         }
         stopGuiDemo();
         return;
     } else if (aTheTouchedButton == TouchButtonMainSettings) {
         // Settings button pressed
-        clearDisplay(COLOR_BACKGROUND_DEFAULT);
+        BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
         startSettingsPage();
         sInApplication = true;
         while (sInApplication) {
-            CheckTouchGeneric(true);
             loopSettingsPage();
         }
         stopSettingsPage();
@@ -113,7 +112,6 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         sInApplication = true;
         while (sInApplication) {
             loopAcceleratorGyroCompassDemo();
-            CheckTouchGeneric(true);
         }
         stopAcceleratorCompass();
         return;
@@ -129,7 +127,7 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         startDACPage();
         sInApplication = true;
         while (sInApplication) {
-            CheckTouchGeneric(true);
+            loopDACPage();
         }
         stopDACPage();
         return;
@@ -137,8 +135,7 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         startFreqGenPage();
         sInApplication = true;
         while (sInApplication) {
-            CheckTouchGeneric(true);
-            //loopFreqGenPage();
+            loopFreqGenPage();
         }
         stopFreqGenPage();
         return;
@@ -151,14 +148,13 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         stopDrawPage();
         return;
     } else if (aTheTouchedButton == TouchButtonBob) {
-        clearDisplay(COLOR_GREEN);
+        BlueDisplay1.clearDisplay(COLOR_GREEN);
         SPI1_setPrescaler(SPI_BaudRatePrescaler_8 );
         initBobsDemo();
         sInApplication = true;
         startBobsDemo();
         while (sInApplication) {
             loopBobsDemo();
-            CheckTouchGeneric(true);
         }
         stopBobsDemo();
         return;
@@ -166,7 +162,7 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         sInApplication = true;
         startInfoPage();
         while (sInApplication) {
-            CheckTouchGeneric(true);
+            loopInfoPage();
         }
         stopInfoPage();
         return;
@@ -174,7 +170,7 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         sInApplication = true;
         startTestsPage();
         while (sInApplication) {
-            CheckTouchGeneric(true);
+            loopInfoPage();
         }
         stopTestsPage();
         return;
@@ -183,7 +179,6 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
         startIRPage();
         while (sInApplication) {
             loopIRPage();
-            CheckTouchGeneric(true);
         }
         stopIRPage();
         return;
@@ -198,23 +193,23 @@ void doMainMenuButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
 void doTestButton(TouchButton * const aTheTouchedButton, int16_t aValue) {
     TouchButton::deactivateAllButtons();
     FeedbackToneOK();
-    clearDisplay(COLOR_WHITE);
-    drawLine(10, 10, 20, 16, COLOR_BLACK);
-    drawLine(10, 11, 20, 17, COLOR_BLACK);
-    drawLine(9, 11, 19, 17, COLOR_BLACK);
+    BlueDisplay1.clearDisplay(COLOR_WHITE);
+    BlueDisplay1.drawLine(10, 10, 20, 16, COLOR_BLACK);
+    BlueDisplay1.drawLine(10, 11, 20, 17, COLOR_BLACK);
+    BlueDisplay1.drawLine(9, 11, 19, 17, COLOR_BLACK);
 
-    drawLine(10, 80, 80, 17, COLOR_BLACK);
-    drawLine(10, 79, 80, 16, COLOR_BLACK);
-    drawLine(11, 80, 81, 17, COLOR_BLACK);
+    BlueDisplay1.drawLine(10, 80, 80, 17, COLOR_BLACK);
+    BlueDisplay1.drawLine(10, 79, 80, 16, COLOR_BLACK);
+    BlueDisplay1.drawLine(11, 80, 81, 17, COLOR_BLACK);
 
-//	clearDisplay(COLOR_WHITE);
+//	 BlueDisplay1.clearDisplay(COLOR_WHITE);
 //	BYTE b1 = f_open(&File1, "test.asc", FA_OPEN_EXISTING | FA_READ);
 //	snprintf(StringBuffer, sizeof StringBuffer, "Open Result of test.asc: %u\n", b1);
-//	drawText(0, 0, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
+//	BlueDisplay1.drawText(0, 0, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
 //
 //	b1 = f_open(&File2, "test2.asc", FA_CREATE_ALWAYS | FA_WRITE);
 //	snprintf(StringBuffer, sizeof StringBuffer, "Open Result of test2.asc: %u\n", b1);
-//	drawText(0, FONT_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
+//	BlueDisplay1.drawText(0, TEXT_SIZE_11_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE);
 //
 //	f_close(&File1);
 //	f_close(&File2);
@@ -237,7 +232,7 @@ void doMainMenuHomeButton(TouchButton * const aTheTouchedButton, int16_t aValue)
  */
 void doClearScreen(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
-    clearDisplay(aValue);
+    BlueDisplay1.clearDisplay(aValue);
 }
 
 /**
@@ -248,75 +243,14 @@ void backToMainMenu(void) {
     TouchButton::deactivateAllButtons();
     TouchSlider::deactivateAllSliders();
     initMainHomeButton(false);
+    registerSimpleResizeAndReconnectCallback(&displayMainMenuPage);
     displayMainMenuPage();
 }
 
 /* Public functions ---------------------------------------------------------*/
-void initMainMenuPage(void) {
-}
-
-void startMainMenuPage(void) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-    /**
-     * create and position all buttons initially
-     */
-    TouchButton::setDefaultButtonColor(MAIN_MENU_COLOR);
-    // 1. row
-    int tPosY = 0;
-    TouchButtonDSO = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "DSO", 2, 0,
-            &doMainMenuButtons);
-
-    TouchButtonMainSettings = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
-            StringSettings, 1, 0, &doMainMenuButtons);
-
-    TouchButtonDemo = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Demo",
-            2, 0, &doMainMenuButtons);
-
-    // not visible on this page
-    TouchButtonMainHome = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_5, tPosY, BUTTON_WIDTH_5, BUTTON_HEIGHT_4,
-            MAIN_MENU_COLOR, StringHomeChar, 2, 0, &doMainMenuHomeButton);
-
-    // 2. row
-    tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonIR = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "IR", 2, 0,
-            &doMainMenuButtons);
-
-    TouchButtonAccelerator = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
-            "Accelerator", 1, 0, &doMainMenuButtons);
-
-    TouchButtonDraw = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Draw",
-            2, 0, &doMainMenuButtons);
-
-    //3. row
-    tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonDac = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "DAC", 2, 0,
-            &doMainMenuButtons);
-
-    TouchButtonDatalogger = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
-            "AccuCapacity", 1, 0, &doMainMenuButtons);
-
-    TouchButtonBob = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, 0, "Bob", 2, 0, &doMainMenuButtons);
-
-    //4. row
-    tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonFrequencyGenerator = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, 0, "Frequency", 1, 0, &doMainMenuButtons);
-
-    TouchButtonInfo = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
-            StringInfo, 2, 0, &doMainMenuButtons);
-
-    TouchButtonTest = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
-            StringTest, 2, 0, &doMainMenuButtons);
-
-#pragma GCC diagnostic pop
-
-    displayMainMenuPage();
-}
 
 void displayMainMenuPage(void) {
-    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
     // draw all buttons except last
     for (unsigned int i = 0; i < (sizeof(TouchButtonsMainMenu) / sizeof(TouchButtonsMainMenu[0]) - 1); ++i) {
         (*TouchButtonsMainMenu[i])->drawButton();
@@ -337,12 +271,82 @@ void initMainHomeButtonWithPosition(const uint16_t aPositionX, const uint16_t aP
     }
 }
 
+void initMainMenuPage(void) {
+}
+
+void startMainMenuPage(void) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+    /**
+     * create and position all buttons initially
+     */
+    TouchButton::setDefaultButtonColor(MAIN_MENU_COLOR);
+    // 1. row
+    int tPosY = 0;
+    TouchButtonDSO = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "DSO", TEXT_SIZE_22,
+            BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonMainSettings = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
+            StringSettings, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonDemo = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Demo",
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    // not visible on this page
+    TouchButtonMainHome = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_5, tPosY, BUTTON_WIDTH_5, BUTTON_HEIGHT_4,
+            MAIN_MENU_COLOR, StringHomeChar, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuHomeButton);
+
+    // 2. row
+    tPosY += BUTTON_HEIGHT_4_LINE_2;
+    TouchButtonIR = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "IR", TEXT_SIZE_22,
+            BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonAccelerator = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
+            "Accelerator", TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonDraw = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Draw",
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    //3. row
+    tPosY += BUTTON_HEIGHT_4_LINE_2;
+    TouchButtonDac = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "DAC", TEXT_SIZE_22,
+            BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonDatalogger = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
+            "AccuCapacity", TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonBob = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Bob",
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    //4. row
+    tPosY += BUTTON_HEIGHT_4_LINE_2;
+    TouchButtonFrequencyGenerator = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0, "Frequency",
+            TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonInfo = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
+            StringInfo, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+    TouchButtonTest = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4, 0,
+            StringTest, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doMainMenuButtons);
+
+#pragma GCC diagnostic pop
+    registerSimpleResizeAndReconnectCallback(&displayMainMenuPage);
+    registerTouchDownCallback(&simpleTouchDownHandler);
+    // for sub pages
+    registerTouchMoveCallback(&simpleTouchMoveHandlerForSlider);
+
+    displayMainMenuPage();
+}
+
 void loopMainMenuPage(void) {
-    CheckTouchGeneric(true);
-    showRTCTimeEverySecond(0, BUTTON_HEIGHT_4_LINE_4 - FONT_HEIGHT, COLOR_RED, COLOR_BACKGROUND_DEFAULT);
+    showRTCTimeEverySecond(0, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_11_DECEND, COLOR_RED, COLOR_BACKGROUND_DEFAULT);
+    checkAndHandleEvents();
 }
 
 void stopMainMenuPage(void) {
+    registerResizeAndReconnectCallback(NULL);
+    registerTouchDownCallback(NULL);
+    registerTouchMoveCallback(NULL);
     // free buttons
     for (unsigned int i = 0; i < sizeof(TouchButtonsMainMenu) / sizeof(TouchButtonsMainMenu[0]); ++i) {
         (*TouchButtonsMainMenu[i])->setFree();

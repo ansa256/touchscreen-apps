@@ -3,11 +3,11 @@
  *
  * @date 05.12.2012
  * @author Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  */
- 
+
 #include "stm32f30xPeripherals.h"
 #include "stm32f3_discovery_lsm303dlhc.h"
 #include "stm32f3_discovery_l3gd20.h"
@@ -15,7 +15,6 @@
 #include "stm32f30x_tim.h"
 #include "stm32f3_discovery.h"
 #include <stdio.h>
-
 /** @addtogroup Peripherals_Library
  * @{
  */
@@ -59,21 +58,21 @@ uint16_t sTempValueAtZeroDegreeShift3 = 0;
 void ADC_setRawToVoltFactor(void) {
 
 // use conservative sample time
-    ADC_RegularChannelConfig(ADC2, ADC_Channel_Vrefint, 1, ADC_SampleTime_61Cycles5);
+    ADC_RegularChannelConfig(ADC2, ADC_Channel_Vrefint, 1, ADC_SampleTime_61Cycles5 );
 
-    ADC_StartConversion(ADC2);
+    ADC_StartConversion(ADC2 );
 // get VREFINT_CAL (value of reading calibration input acquired at temperature of 30 °C and VDDA=3.3 V) - see chapter 3.12.2 of datasheet
     uint16_t tREFCalibrationValue = *((uint16_t*) 0x1FFFF7BA);
     /* Test EOC flag */
     setTimeoutMillis(10);
     bool tTimeout = false;
-    while (ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC) == RESET) {
+    while (ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC ) == RESET) {
         if (isTimeout(ADC2->ISR)) {
             tTimeout = true;
             break;
         }
     }
-    sRefintActualValue = ADC_GetConversionValue(ADC2);
+    sRefintActualValue = ADC_GetConversionValue(ADC2 );
     if (tTimeout) {
         sRefintActualValue = tREFCalibrationValue;
     }
@@ -88,7 +87,7 @@ void ADC_setRawToVoltFactor(void) {
 /**
  * Init the HY32D CS, Control/Data, WR, RD, and port D data pins
  */
-void HY32D_IO_initalize(void) {
+void MI0283QT2_IO_initalize(void) {
     GPIO_InitTypeDef GPIO_InitStructure;
 
     /* Enable the GPIO Clocks */
@@ -103,7 +102,7 @@ void HY32D_IO_initalize(void) {
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(HY32D_CS_GPIO_PORT, &GPIO_InitStructure);
     // set HIGH
-    GPIO_SetBits(HY32D_CS_GPIO_PORT, HY32D_CS_PIN | HY32D_WR_PIN | HY32D_RD_PIN);
+    GPIO_SetBits(HY32D_CS_GPIO_PORT, HY32D_CS_PIN | HY32D_WR_PIN | HY32D_RD_PIN );
 
     // 16 data pins
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_All;
@@ -142,7 +141,7 @@ void ADS7846_IO_initalize(void) {
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(ADS7846_CS_GPIO_PORT, &GPIO_InitStructure);
     // set HIGH
-    GPIO_SetBits(ADS7846_CS_GPIO_PORT, ADS7846_CS_PIN);
+    GPIO_SetBits(ADS7846_CS_GPIO_PORT, ADS7846_CS_PIN );
 
     /* Enable the Clock */
     RCC_AHBPeriphClockCmd(ADS7846_EXTI_GPIO_CLK, ENABLE);
@@ -155,7 +154,7 @@ void ADS7846_IO_initalize(void) {
     GPIO_Init(ADS7846_EXTI_GPIO_PORT, &GPIO_InitStructure);
 
     /* Connect EXTI Line to GPIO Pin */
-    SYSCFG_EXTILineConfig(ADS7846_EXTI_PORT_SOURCE, ADS7846_EXTI_PIN_SOURCE);
+    SYSCFG_EXTILineConfig(ADS7846_EXTI_PORT_SOURCE, ADS7846_EXTI_PIN_SOURCE );
 
     /* Configure EXTI line */
     EXTI_InitStructure.EXTI_Line = ADS7846_EXTI_LINE;
@@ -165,7 +164,6 @@ void ADS7846_IO_initalize(void) {
     EXTI_Init(&EXTI_InitStructure);
 
     /* 2 bit for pre-emption priority, 2 bits for subpriority */
-    /* Enable and set EXTI Interrupt to the lowest priority */
     NVIC_InitStructure.NVIC_IRQChannel = ADS7846_EXTI_IRQn;
     // priority 2/3
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
@@ -178,47 +176,47 @@ void ADS7846_IO_initalize(void) {
  * @return true if line is NOT active
  */
 inline bool ADS7846_getInteruptLineLevel(void) {
-    return GPIO_ReadInputDataBit(ADS7846_EXTI_GPIO_PORT, ADS7846_EXTI_PIN);
+    return GPIO_ReadInputDataBit(ADS7846_EXTI_GPIO_PORT, ADS7846_EXTI_PIN );
 }
 
 inline void ADS7846_ClearITPendingBit(void) {
-    EXTI_ClearITPendingBit(ADS7846_EXTI_LINE);
+    EXTI_ClearITPendingBit(ADS7846_EXTI_LINE );
 }
 /**
  * first clear pending interrupts
  */
 void ADS7846_clearAndEnableInterrupt(void) {
-//	// Enable  interrupt
-//	uint32_t tmp = (uint32_t) EXTI_BASE + EXTI_Mode_Interrupt
-//			+ (((STM32F3D_ADS7846_EXTI_LINE) >> 5) * 0x20);
-//	/* Enable the selected external lines */
-//	*(__IO uint32_t *) tmp |= (uint32_t) (1 << (STM32F3D_ADS7846_EXTI_LINE & 0x1F));
+//  // Enable  interrupt
+//  uint32_t tmp = (uint32_t) EXTI_BASE + EXTI_Mode_Interrupt
+//          + (((STM32F3D_ADS7846_EXTI_LINE) >> 5) * 0x20);
+//  /* Enable the selected external lines */
+//  *(__IO uint32_t *) tmp |= (uint32_t) (1 << (STM32F3D_ADS7846_EXTI_LINE & 0x1F));
 
-    EXTI_ClearITPendingBit(ADS7846_EXTI_LINE);
+    EXTI_ClearITPendingBit(ADS7846_EXTI_LINE );
     NVIC_ClearPendingIRQ(ADS7846_EXTI_IRQn);
     NVIC_EnableIRQ(ADS7846_EXTI_IRQn);
 }
 
 void ADS7846_disableInterrupt(void) {
-//	// Disable  interrupt
-//	uint32_t tmp = (uint32_t) EXTI_BASE + EXTI_Mode_Interrupt
-//			+ (((STM32F3D_ADS7846_EXTI_LINE) >> 5) * 0x20);
-//	/* Disable the selected external lines */
-//	*(__IO uint32_t *) tmp &= ~(uint32_t) (1 << (STM32F3D_ADS7846_EXTI_LINE & 0x1F));
+//  // Disable  interrupt
+//  uint32_t tmp = (uint32_t) EXTI_BASE + EXTI_Mode_Interrupt
+//          + (((STM32F3D_ADS7846_EXTI_LINE) >> 5) * 0x20);
+//  /* Disable the selected external lines */
+//  *(__IO uint32_t *) tmp &= ~(uint32_t) (1 << (STM32F3D_ADS7846_EXTI_LINE & 0x1F));
 //
 
-    EXTI_ClearITPendingBit(ADS7846_EXTI_LINE);
+    EXTI_ClearITPendingBit(ADS7846_EXTI_LINE );
     // Disable NVIC Int
     NVIC_DisableIRQ(ADS7846_EXTI_IRQn);
     NVIC_ClearPendingIRQ(ADS7846_EXTI_IRQn);
 }
 
 inline void ADS7846_CSEnable(void) {
-    GPIO_ResetBits(ADS7846_CS_GPIO_PORT, ADS7846_CS_PIN);
+    GPIO_ResetBits(ADS7846_CS_GPIO_PORT, ADS7846_CS_PIN );
 }
 
 inline void ADS7846_CSDisable(void) {
-    GPIO_SetBits(ADS7846_CS_GPIO_PORT, ADS7846_CS_PIN);
+    GPIO_SetBits(ADS7846_CS_GPIO_PORT, ADS7846_CS_PIN );
 }
 
 /**
@@ -246,7 +244,7 @@ void AccuCapacity_IO_initalize(void) {
     GPIO_Init(ACCUCAP_GPIO_PORT, &GPIO_InitStructure);
     // set LOW
     GPIO_ResetBits(ACCUCAP_GPIO_PORT,
-            ACCUCAP_DISCHARGE_1_PIN | ACCUCAP_DISCHARGE_2_PIN | ACCUCAP_CHARGE_1_PIN | ACCUCAP_CHARGE_2_PIN);
+            ACCUCAP_DISCHARGE_1_PIN | ACCUCAP_DISCHARGE_2_PIN | ACCUCAP_CHARGE_1_PIN | ACCUCAP_CHARGE_2_PIN );
 }
 
 void AccuCapacity_SwitchDischarge(unsigned int aChannelIndex, bool aActive) {
@@ -255,10 +253,10 @@ void AccuCapacity_SwitchDischarge(unsigned int aChannelIndex, bool aActive) {
         tPinNr = ACCUCAP_DISCHARGE_1_PIN;
     }
     if (aActive) {
-        ACCUCAP_GPIO_PORT->BSRR = tPinNr;
+        ACCUCAP_GPIO_PORT ->BSRR = tPinNr;
     } else {
         // Low
-        ACCUCAP_GPIO_PORT->BRR = tPinNr;
+        ACCUCAP_GPIO_PORT ->BRR = tPinNr;
     }
 }
 
@@ -268,17 +266,17 @@ void AccuCapacity_SwitchCharge(unsigned int aChannelIndex, bool aActive) {
         tPinNr = ACCUCAP_CHARGE_1_PIN;
     }
     if (aActive) {
-        ACCUCAP_GPIO_PORT->BSRR = tPinNr;
+        ACCUCAP_GPIO_PORT ->BSRR = tPinNr;
     } else {
         // Low
-        ACCUCAP_GPIO_PORT->BRR = tPinNr;
+        ACCUCAP_GPIO_PORT ->BRR = tPinNr;
     }
 }
 
 /**
  * ADC2 for AccuCapacity
  */
-#define ADC2_PERIPH_CLOCK                   	RCC_AHBPeriph_ADC12
+#define ADC2_PERIPH_CLOCK                       RCC_AHBPeriph_ADC12
 
 // Two input pins
 #define ADC2_INPUT1_CHANNEL                     ADC_Channel_6
@@ -320,9 +318,9 @@ void ADC2_init(void) {
     ADC_VoltageRegulatorCmd(ADC2, ENABLE);
     /* To settle reference voltage etc. */
     delayMillis(2);
-    ADC_SelectCalibrationMode(ADC2, ADC_CalibrationMode_Single);
-    ADC_StartCalibration(ADC2);
-    while (ADC_GetCalibrationStatus(ADC2) != RESET) {
+    ADC_SelectCalibrationMode(ADC2, ADC_CalibrationMode_Single );
+    ADC_StartCalibration(ADC2 );
+    while (ADC_GetCalibrationStatus(ADC2 ) != RESET) {
         ;
     }
 
@@ -339,7 +337,7 @@ void ADC2_init(void) {
 
     /* wait for ADRDY */
     setTimeoutMillis(20);
-    while (!ADC_GetFlagStatus(ADC2, ADC_FLAG_RDY)) {
+    while (!ADC_GetFlagStatus(ADC2, ADC_FLAG_RDY )) {
         if (isTimeout(ADC2->ISR)) {
             break;
         }
@@ -350,19 +348,19 @@ void ADC2_init(void) {
 
 unsigned int AccuCapacity_ADCRead(uint8_t aProbeNumber) {
     if (aProbeNumber == 0) {
-        ADC_RegularChannelConfig(ADC2, ADC2_INPUT1_CHANNEL, 1, ADC_SampleTime_61Cycles5);
+        ADC_RegularChannelConfig(ADC2, ADC2_INPUT1_CHANNEL, 1, ADC_SampleTime_61Cycles5 );
     } else {
-        ADC_RegularChannelConfig(ADC2, ADC2_INPUT2_CHANNEL, 1, ADC_SampleTime_61Cycles5);
+        ADC_RegularChannelConfig(ADC2, ADC2_INPUT2_CHANNEL, 1, ADC_SampleTime_61Cycles5 );
     }
-    ADC_StartConversion(ADC2);
+    ADC_StartConversion(ADC2 );
     /* Test EOC flag */
     setTimeoutMillis(ADC_DEFAULT_TIMEOUT);
-    while (ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC) == RESET) {
+    while (ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC ) == RESET) {
         if (isTimeout(ADC2->ISR)) {
             break;
         }
     }
-    return ADC_GetConversionValue(ADC2);
+    return ADC_GetConversionValue(ADC2 );
 }
 
 void Gyroscope_IO_initialize(void) {
@@ -377,7 +375,7 @@ void Gyroscope_IO_initialize(void) {
     GPIO_Init(L3GD20_SPI_CS_GPIO_PORT, &GPIO_InitStructure);
 
     /* Deselect : Chip Select high */
-    GPIO_SetBits(L3GD20_SPI_CS_GPIO_PORT, L3GD20_SPI_CS_PIN);
+    GPIO_SetBits(L3GD20_SPI_CS_GPIO_PORT, L3GD20_SPI_CS_PIN );
 
     /* Configure GPIO PINs to detect Interrupts */
     GPIO_InitStructure.GPIO_Pin = L3GD20_SPI_INT1_PIN | L3GD20_SPI_INT2_PIN;
@@ -409,14 +407,14 @@ void GyroscopeAndSPIInitialize(void) {
     L3GD20_FilterStructure.HighPassFilter_CutOff_Frequency = L3GD20_HPFCF_0;
     L3GD20_FilterConfig(&L3GD20_FilterStructure);
 
-    L3GD20_FilterCmd(L3GD20_HIGHPASSFILTER_ENABLE);
+    L3GD20_FilterCmd(L3GD20_HIGHPASSFILTER_ENABLE );
 }
 
 /**
  * @brief  Configure the Mems to compass application.
  */
 void initAcceleratorCompassChip(void) {
-    SPI1_setPrescaler(SPI_BaudRatePrescaler_8);
+    SPI1_setPrescaler(SPI_BaudRatePrescaler_8 );
     LSM303DLHCMag_InitTypeDef LSM303DLHC_InitStructure;
     LSM303DLHCAcc_InitTypeDef LSM303DLHCAcc_InitStructure;
     LSM303DLHCAcc_FilterConfigTypeDef LSM303DLHCFilter_InitStructure;
@@ -485,9 +483,9 @@ void SPI1_initialize(void) {
     /* Enable SCK, MOSI and MISO GPIO clocks */
     RCC_AHBPeriphClockCmd(STM32F3D_SPI1_SCK_GPIO_CLK | STM32F3D_SPI1_MISO_GPIO_CLK | STM32F3D_SPI1_MOSI_GPIO_CLK, ENABLE);
 
-    GPIO_PinAFConfig(STM32F3D_SPI1_GPIO_PORT, STM32F3D_SPI1_SCK_SOURCE, STM32F3D_SPI1_SCK_AF);
-    GPIO_PinAFConfig(STM32F3D_SPI1_MISO_GPIO_PORT, STM32F3D_SPI1_MISO_SOURCE, STM32F3D_SPI1_MISO_AF);
-    GPIO_PinAFConfig(STM32F3D_SPI1_MOSI_GPIO_PORT, STM32F3D_SPI1_MOSI_SOURCE, STM32F3D_SPI1_MOSI_AF);
+    GPIO_PinAFConfig(STM32F3D_SPI1_GPIO_PORT, STM32F3D_SPI1_SCK_SOURCE, STM32F3D_SPI1_SCK_AF );
+    GPIO_PinAFConfig(STM32F3D_SPI1_MISO_GPIO_PORT, STM32F3D_SPI1_MISO_SOURCE, STM32F3D_SPI1_MISO_AF );
+    GPIO_PinAFConfig(STM32F3D_SPI1_MOSI_GPIO_PORT, STM32F3D_SPI1_MOSI_SOURCE, STM32F3D_SPI1_MOSI_AF );
 
     /* SPI SCK, MOSI, MISO pin configuration */
     GPIO_InitStructure.GPIO_Pin = STM32F3D_SPI1_SCK_PIN | STM32F3D_SPI1_MOSI_PIN | STM32F3D_SPI1_MISO_PIN;
@@ -498,7 +496,7 @@ void SPI1_initialize(void) {
     GPIO_Init(STM32F3D_SPI1_GPIO_PORT, &GPIO_InitStructure);
 
     /* SPI configuration -------------------------------------------------------*/
-    SPI_I2S_DeInit(SPI1);
+    SPI_I2S_DeInit(SPI1 );
     SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
     SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
     SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
@@ -513,20 +511,20 @@ void SPI1_initialize(void) {
     SPI_Init(SPI1, &SPI_InitStructure);
 
     /* Configure the RX FIFO Threshold */
-    SPI_RxFIFOThresholdConfig(SPI1, SPI_RxFIFOThreshold_QF);
+    SPI_RxFIFOThresholdConfig(SPI1, SPI_RxFIFOThreshold_QF );
     /* Enable SPI1  */
     SPI_Cmd(SPI1, ENABLE);
 }
 
 void SPI1_setPrescaler(uint16_t aPrescaler) {
     // SPI_BaudRatePrescaler_256 is also prescaler mask
-    if (aPrescaler == (aPrescaler & SPI_BaudRatePrescaler_256) || aPrescaler == 0) {
-        uint16_t tmpreg = SPI1->CR1;
+    if (aPrescaler == (aPrescaler & SPI_BaudRatePrescaler_256 )|| aPrescaler == 0){
+        uint16_t tmpreg = SPI1 ->CR1;
         /* Clear BR[2:0] bits (Baud Rate Control)*/
         tmpreg &= ~SPI_CR1_BR;
         /* Configure SPIx: Data Size */
         tmpreg |= aPrescaler;
-        SPI1->CR1 = tmpreg;
+        SPI1 ->CR1 = tmpreg;
         actualPrescaler = aPrescaler;
     } else {
         assert_failed((uint8_t *) __FILE__, __LINE__);
@@ -548,12 +546,12 @@ uint8_t SPI1_sendReceiveOriginal(uint8_t byte) {
     uint32_t tLR14 = getLR14();
 
 // discard RX FIFO content
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) != RESET) {
-        SPI_ReceiveData8(SPI1);
+    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE ) != RESET) {
+        SPI_ReceiveData8(SPI1 );
     }
     setTimeoutMillis(SPI_TIMEOUT);
 // Wait if transmit FIFO buffer full
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) {
+    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE ) == RESET) {
         if (isTimeout(tLR14)) {
             return 0;
         }
@@ -564,13 +562,13 @@ uint8_t SPI1_sendReceiveOriginal(uint8_t byte) {
     setTimeoutMillis(SPI_TIMEOUT);
     /* Wait to receive a Byte */
     setTimeoutMillis(SPI_TIMEOUT);
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET) {
+    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE ) == RESET) {
         if (isTimeout(tLR14)) {
             return 0;
         }
     }
     /* Return the Byte read from the SPI bus */
-    return (uint8_t) SPI_ReceiveData8(SPI1);
+    return (uint8_t) SPI_ReceiveData8(SPI1 );
 }
 
 /**
@@ -579,12 +577,12 @@ uint8_t SPI1_sendReceiveOriginal(uint8_t byte) {
 static uint32_t inSendReceiveFast = 0; // 0 = not in function LR14 (!=0) already in function
 uint8_t SPI1_sendReceiveFast(uint8_t byte) {
     uint32_t tLR14 = getLR14();
-    if(inSendReceiveFast) {
-        failParamMessage(inSendReceiveFast,"inSendReceiveFast is already in use");
+    if (inSendReceiveFast) {
+        failParamMessage(inSendReceiveFast, "inSendReceiveFast is already in use");
     }
     inSendReceiveFast = tLR14; // set semaphore
 // wait for ongoing transfer to end
-    while ((SPI1->SR & SPI_I2S_FLAG_BSY) != RESET) {
+    while ((SPI1 ->SR & SPI_I2S_FLAG_BSY )!= RESET) {
         ;
     }
 // discard RX FIFO content
@@ -594,7 +592,7 @@ uint8_t SPI1_sendReceiveFast(uint8_t byte) {
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     uint8_t dummy;
 #pragma GCC diagnostic pop
-    while ((SPI1->SR & SPI_I2S_FLAG_RXNE) != RESET) {
+    while ((SPI1 ->SR & SPI_I2S_FLAG_RXNE )!= RESET) {
         /* fetch the Byte read from the SPI bus in order to empty RX fifo */
         dummy = *(__IO uint8_t *) spixbase;
     }
@@ -604,7 +602,7 @@ uint8_t SPI1_sendReceiveFast(uint8_t byte) {
 
     /* Wait to receive a Byte */
     setTimeoutMillis(SPI_TIMEOUT);
-    while ((SPI1->SR & SPI_I2S_FLAG_RXNE) == RESET) {
+    while ((SPI1 ->SR & SPI_I2S_FLAG_RXNE )== RESET) {
         if (isTimeoutVerbose((uint8_t *) __FILE__, __LINE__, tLR14, 2000)) {
             break;
         }
@@ -636,14 +634,14 @@ void RTC_initialize_LSE(void) {
     PWR_BackupAccessCmd(ENABLE);
 
 // Enable the LSE OSC
-    RCC_LSEConfig(RCC_LSE_ON);
+    RCC_LSEConfig(RCC_LSE_ON );
 
 // 40mVPP at RCC_LSEDrive_MediumLow
-    RCC_LSEDriveConfig(RCC_LSEDrive_MediumLow);
+    RCC_LSEDriveConfig(RCC_LSEDrive_MediumLow );
 
     // Wait till LSE is ready - it gives timeout if no hardware is attached
     setTimeoutMillis(10);
-    while (RCC_GetFlagStatus(RCC_FLAG_LSERDY) == RESET) {
+    while (RCC_GetFlagStatus(RCC_FLAG_LSERDY ) == RESET) {
         // use counter directly to avoid setting of timeout led
         if (TimeoutCounterForThread == 0) {
             break;
@@ -651,7 +649,7 @@ void RTC_initialize_LSE(void) {
     }
 
     /* Select the RTC Clock Source */
-    RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE);
+    RCC_RTCCLKConfig(RCC_RTCCLKSource_LSE );
 
     /* Enable the RTC Clock */
     RCC_RTCCLKCmd(ENABLE);
@@ -705,6 +703,11 @@ void fillTimeStructure(struct tm *aTimeStructurePtr) {
     aTimeStructurePtr->tm_sec = RTC_TimeStructure.RTC_Seconds;
 }
 
+uint8_t RTC_getSecond(void) {
+    uint8_t tSecond = (uint8_t) (RTC ->TR & (RTC_TR_ST | RTC_TR_SU ));
+    return tSecond;
+}
+
 #define CALIBRATION_MAGIC_NUMBER 0x5A5A5A5A
 void RTC_setMagicNumber(void) {
     PWR_BackupAccessCmd(ENABLE);
@@ -719,7 +722,7 @@ void RTC_setMagicNumber(void) {
  */bool RTC_checkMagicNumber(void) {
     PWR_BackupAccessCmd(ENABLE);
     // Read magic number
-    uint32_t tMagic = RTC_ReadBackupRegister(RTC_BKP_DR0);
+    uint32_t tMagic = RTC_ReadBackupRegister(RTC_BKP_DR0 );
     PWR_BackupAccessCmd(DISABLE);
     if (tMagic == CALIBRATION_MAGIC_NUMBER) {
         return true;
@@ -837,7 +840,7 @@ void RTC_setTime(uint8_t sec, uint8_t min, uint8_t hour, uint8_t dayOfWeek, uint
 #define STM32F3D_TONE1_GPIO_PIN                    GPIO_Pin_6
 #define STM32F3D_TONE1_GPIO_PORT                   GPIOC
 #define STM32F3D_TONE1_GPIO_CLK                    RCC_AHBPeriph_GPIOC
-#define STM32F3D_TONE1_SOURCE           		   GPIO_PinSource6
+#define STM32F3D_TONE1_SOURCE                      GPIO_PinSource6
 #define STM32F3D_TONE1_AF                          GPIO_AF_2
 
 #define TONE_TIMER_TICK_FREQ 1000000
@@ -865,7 +868,7 @@ void initalizeTone(void) {
     GPIO_InitStructure.GPIO_Pin = STM32F3D_TONE1_GPIO_PIN;
     GPIO_Init(STM32F3D_TONE1_GPIO_PORT, &GPIO_InitStructure);
 
-    GPIO_PinAFConfig(STM32F3D_TONE1_GPIO_PORT, STM32F3D_TONE1_SOURCE, STM32F3D_TONE1_AF);
+    GPIO_PinAFConfig(STM32F3D_TONE1_GPIO_PORT, STM32F3D_TONE1_SOURCE, STM32F3D_TONE1_AF );
 
 // Channel 1
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Inactive;
@@ -873,7 +876,7 @@ void initalizeTone(void) {
     TIM_OCInitStructure.TIM_Pulse = TIM_OPMode_Repetitive;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
     TIM_OC1Init(STM32F3D_TONE1_TIMER, &TIM_OCInitStructure);
-    TIM_OC1PreloadConfig(STM32F3D_TONE1_TIMER, TIM_OCPreload_Enable);
+    TIM_OC1PreloadConfig(STM32F3D_TONE1_TIMER, TIM_OCPreload_Enable );
 
     TIM_ARRPreloadConfig(STM32F3D_TONE1_TIMER, ENABLE);
     /* TIM3 enable counter */
@@ -886,7 +889,7 @@ int32_t ToneDuration = 0; //! signed because >0 means wait, == 0 means action an
 
 void tone(uint16_t aFreqHertz, uint16_t aDurationMillis) {
 // enable timer PWM output
-    TIM_SelectOCxM(STM32F3D_TONE1_TIMER, STM32F3D_TONE1_CHANNEL, TIM_OCMode_PWM1); // disables channel
+    TIM_SelectOCxM(STM32F3D_TONE1_TIMER, STM32F3D_TONE1_CHANNEL, TIM_OCMode_PWM1 ); // disables channel
 
 // compute reload value
     uint32_t tPeriod = TONE_TIMER_TICK_FREQ / aFreqHertz;
@@ -895,14 +898,14 @@ void tone(uint16_t aFreqHertz, uint16_t aDurationMillis) {
     }
     TIM_SetAutoreload(STM32F3D_TONE1_TIMER, tPeriod - 1);
     TIM_SetCompare1(STM32F3D_TONE1_TIMER, tPeriod / 2); // 50 % duty cycle
-    TIM_CCxCmd(STM32F3D_TONE1_TIMER, STM32F3D_TONE1_CHANNEL, TIM_CCx_Enable); // enable channel
+    TIM_CCxCmd(STM32F3D_TONE1_TIMER, STM32F3D_TONE1_CHANNEL, TIM_CCx_Enable ); // enable channel
     ToneDuration = aDurationMillis;
     changeDelayCallback(&noTone, aDurationMillis);
 }
 
 void noTone(void) {
 // disable timer PWM output
-    TIM_SelectOCxM(STM32F3D_TONE1_TIMER, STM32F3D_TONE1_CHANNEL, TIM_OCMode_Inactive); // disables also channel
+    TIM_SelectOCxM(STM32F3D_TONE1_TIMER, STM32F3D_TONE1_CHANNEL, TIM_OCMode_Inactive ); // disables also channel
 }
 
 void FeedbackToneOK(void) {
@@ -945,7 +948,7 @@ void EndTone(void) {
 #define STM32F3D_PWM_BL_GPIO_PIN                    GPIO_Pin_6
 #define STM32F3D_PWM_BL_GPIO_PORT                   GPIOF
 #define STM32F3D_PWM_BL_GPIO_CLK                    RCC_AHBPeriph_GPIOF
-#define STM32F3D_PWM_BL_SOURCE           			GPIO_PinSource6
+#define STM32F3D_PWM_BL_SOURCE                      GPIO_PinSource6
 #define STM32F3D_PWM_BL_AF                          GPIO_AF_2
 #define STM32F3D_PWM_BL_CHANNEL                     TIM_Channel_4
 #define STM32F3D_PWM_BL_CHANNEL_INIT_COMMAND        TIM_OC4Init
@@ -981,7 +984,7 @@ void PWM_BL_initalize(void) {
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStructure.GPIO_Pin = STM32F3D_PWM_BL_GPIO_PIN;
     GPIO_Init(STM32F3D_PWM_BL_GPIO_PORT, &GPIO_InitStructure);
-    GPIO_PinAFConfig(STM32F3D_PWM_BL_GPIO_PORT, STM32F3D_PWM_BL_SOURCE, STM32F3D_PWM_BL_AF);
+    GPIO_PinAFConfig(STM32F3D_PWM_BL_GPIO_PORT, STM32F3D_PWM_BL_SOURCE, STM32F3D_PWM_BL_AF );
 
 // Channel
     /* PWM1 Mode configuration */
@@ -991,14 +994,14 @@ void PWM_BL_initalize(void) {
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
     STM32F3D_PWM_BL_CHANNEL_INIT_COMMAND(STM32F3D_PWM_BL_TIMER, &TIM_OCInitStructure);
 
-    STM32F3D_PWM_BL_CHANNEL_PRELOAD_COMMAND(STM32F3D_PWM_BL_TIMER, TIM_OCPreload_Enable);
+    STM32F3D_PWM_BL_CHANNEL_PRELOAD_COMMAND(STM32F3D_PWM_BL_TIMER, TIM_OCPreload_Enable );
     TIM_ARRPreloadConfig(STM32F3D_PWM_BL_TIMER, ENABLE);
     /* TIM4 enable counter */
     TIM_Cmd(STM32F3D_PWM_BL_TIMER, ENABLE);
 
 // Set channel 4 value
     STM32F3D_PWM_BL_CHANNEL_SET_COMMAND(STM32F3D_PWM_BL_TIMER, PWM_RESOLUTION_BACKLIGHT / 2); // start with 50% duty cycle
-    TIM_CCxCmd(STM32F3D_PWM_BL_TIMER, STM32F3D_PWM_BL_CHANNEL, TIM_CCx_Enable); // enable channel
+    TIM_CCxCmd(STM32F3D_PWM_BL_TIMER, STM32F3D_PWM_BL_CHANNEL, TIM_CCx_Enable ); // enable channel
 }
 
 void PWM_BL_setOnRatio(uint32_t aOnTimePercent) {
@@ -1012,13 +1015,13 @@ void ADC12_init(void) {
     /**
      * Configure the ADC clock
      */
-    RCC_ADCCLKConfig(RCC_ADC12PLLCLK_Div8); // 9Mhz
+    RCC_ADCCLKConfig(RCC_ADC12PLLCLK_Div8 ); // 9Mhz
 }
 
 /**
  * ADC1
  */
-#define ADC1_PERIPH_CLOCK                   	RCC_AHBPeriph_ADC12
+#define ADC1_PERIPH_CLOCK                       RCC_AHBPeriph_ADC12
 
 #define ADC1_INPUT1_PIN                         GPIO_Pin_1
 #define ADC1_INPUT_GPIO_PORT                    GPIOA
@@ -1070,39 +1073,39 @@ void ADC_init(void) {
     ADC_VoltageRegulatorCmd(DSO_ADC_ID, ENABLE);
     /* To settle reference voltage etc. */
     delayMillis(2);
-    ADC_SelectCalibrationMode(DSO_ADC_ID, ADC_CalibrationMode_Single);
-    ADC_StartCalibration(DSO_ADC_ID);
-    while (ADC_GetCalibrationStatus(DSO_ADC_ID) != RESET) {
+    ADC_SelectCalibrationMode(DSO_ADC_ID, ADC_CalibrationMode_Single );
+    ADC_StartCalibration(DSO_ADC_ID );
+    while (ADC_GetCalibrationStatus(DSO_ADC_ID ) != RESET) {
         ;
     }
 
 // use defaults
     ADC_CommonStructInit(&ADC_CommonInitStructure);
-//	ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
-//	ADC_CommonInitStructure.ADC_Clock = ADC_Clock_AsynClkMode; // allows higher clock prescaler
-//	ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled; // multiple DMA mode disabled
-//	ADC_CommonInitStructure.ADC_DMAMode = ADC_DMAMode_OneShot;
-//	ADC_CommonInitStructure.ADC_TwoSamplingDelay = 0;
+//  ADC_CommonInitStructure.ADC_Mode = ADC_Mode_Independent;
+//  ADC_CommonInitStructure.ADC_Clock = ADC_Clock_AsynClkMode; // allows higher clock prescaler
+//  ADC_CommonInitStructure.ADC_DMAAccessMode = ADC_DMAAccessMode_Disabled; // multiple DMA mode disabled
+//  ADC_CommonInitStructure.ADC_DMAMode = ADC_DMAMode_OneShot;
+//  ADC_CommonInitStructure.ADC_TwoSamplingDelay = 0;
     ADC_CommonInit(DSO_ADC_ID, &ADC_CommonInitStructure);
 
     ADC_StructInit(&ADC_InitStructure);
-//	ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-//	ADC_InitStructure.ADC_ContinuousConvMode = ADC_ContinuousConvMode_Disable;
+//  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+//  ADC_InitStructure.ADC_ContinuousConvMode = ADC_ContinuousConvMode_Disable;
     ADC_InitStructure.ADC_ExternalTrigConvEvent = ADC_ExternalTrigConvEvent_13; //TIM6_TRGO event
     ADC_InitStructure.ADC_ExternalTrigEventEdge = ADC_ExternalTrigEventEdge_RisingEdge;
-//	ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+//  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
     ADC_InitStructure.ADC_OverrunMode = ADC_OverrunMode_Enable;
-//	ADC_InitStructure.ADC_AutoInjMode = ADC_AutoInjec_Disable;
-//	ADC_InitStructure.ADC_NbrOfRegChannel = 1;
+//  ADC_InitStructure.ADC_AutoInjMode = ADC_AutoInjec_Disable;
+//  ADC_InitStructure.ADC_NbrOfRegChannel = 1;
     ADC_Init(DSO_ADC_ID, &ADC_InitStructure);
     isADCInitializedForTimerEvents = true;
 
     ADC_DMACmd(DSO_ADC_ID, ENABLE);
 
-    ADC_DMAConfig(DSO_ADC_ID, ADC_DMAMode_OneShot);
+    ADC_DMAConfig(DSO_ADC_ID, ADC_DMAMode_OneShot );
 
     /* Enable ADC */
-    ADC_enableAndWait(DSO_ADC_ID);
+    ADC_enableAndWait(DSO_ADC_ID );
 
     NVIC_InitTypeDef NVIC_InitStructure;
     /* Enable the ADC1 global Interrupt */
@@ -1121,7 +1124,7 @@ void ADC_enableAndWait(ADC_TypeDef* aADCId) {
     ADC_Cmd(DSO_ADC_ID, ENABLE);
     /* wait for ADRDY */
     setTimeoutMillis(ADC_DEFAULT_TIMEOUT);
-    while (!ADC_GetFlagStatus(DSO_ADC_ID, ADC_FLAG_RDY)) {
+    while (!ADC_GetFlagStatus(DSO_ADC_ID, ADC_FLAG_RDY )) {
         if (isTimeout(DSO_ADC_ID->ISR)) {
             break;
         }
@@ -1157,15 +1160,15 @@ uint16_t ADC1_getChannelValue(uint8_t aChannel) {
     }
 // use conservative sample time (ADC Clocks!)
 // temperature needs 2.2 micro seconds
-    ADC_RegularChannelConfig(ADC1, aChannel, 1, ADC_SampleTime_4Cycles5);
+    ADC_RegularChannelConfig(ADC1, aChannel, 1, ADC_SampleTime_4Cycles5 );
 
 // use slow clock
-    RCC_ADCCLKConfig(RCC_ADC12PLLCLK_Div64); // 1,125 MHz
+    RCC_ADCCLKConfig(RCC_ADC12PLLCLK_Div64 ); // 1,125 MHz
 
-    ADC_StartConversion(ADC1);
+    ADC_StartConversion(ADC1 );
     /* Test EOC flag */
     setTimeoutMillis(ADC_DEFAULT_TIMEOUT);
-    while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET) {
+    while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC ) == RESET) {
         if (isTimeoutShowDelay(ADC1->CR, 600)) {
             return 2 * ADC_MAX_CONVERSION_VALUE;
         }
@@ -1180,27 +1183,27 @@ uint16_t ADC1_getChannelValue(uint8_t aChannel) {
         ADC_InitStructure.ADC_OverrunMode = ADC_OverrunMode_Enable;
         ADC_Init(DSO_ADC_ID, &ADC_InitStructure);
     }
-    return ADC_GetConversionValue(ADC1);
+    return ADC_GetConversionValue(ADC1 );
 }
 
 void ADC_SetChannelSampleTime(ADC_TypeDef* aADCId, uint8_t aChannelNumber, bool aFastMode) {
     uint8_t tSampleTime = ADC_SampleTime_1Cycles5;
     switch (aChannelNumber) {
-    case ADC_Channel_2: // fast channels
-    case ADC_Channel_3:
-    case ADC_Channel_4:
+    case ADC_Channel_2 : // fast channels
+    case ADC_Channel_3 :
+    case ADC_Channel_4 :
         if (!aFastMode) {
             tSampleTime = ADC_SampleTime_4Cycles5;
         }
         break;
-    case ADC_Channel_7: //slow channel
+    case ADC_Channel_7 : //slow channel
         if (!aFastMode) {
             tSampleTime = ADC_SampleTime_7Cycles5;
         }
         break;
-    case ADC_Channel_TempSensor:
-    case ADC_Channel_Vbat:
-    case ADC_Channel_Vrefint:
+    case ADC_Channel_TempSensor :
+    case ADC_Channel_Vbat :
+    case ADC_Channel_Vrefint :
         // TEMP + VBAT channel need 2.2 micro sec. sampling
         if (!aFastMode) {
             tSampleTime = ADC_SampleTime_61Cycles5;
@@ -1225,14 +1228,14 @@ inline void ADC_disableEOCInterrupt(ADC_TypeDef* aADCId) {
  * @return ADC configuration register
  */
 uint32_t ADC_getCFGR(void) {
-    return (DSO_ADC_ID->CFGR);
+    return (DSO_ADC_ID ->CFGR);
 }
 
 /**
  * Stub to pass right parameters
  */
 inline void ADC_clearITPendingBit(ADC_TypeDef* aADCId) {
-    ADC_ClearITPendingBit(DSO_ADC_ID, ADC_IT_EOC);
+    ADC_ClearITPendingBit(DSO_ADC_ID, ADC_IT_EOC );
 }
 
 /**
@@ -1266,10 +1269,10 @@ void ADC_initalizeTimer6(void) {
     TIM_TimeBaseStructure.TIM_RepetitionCounter = 0x00;
     TIM_TimeBaseInit(STM32F3D_ADC_TIMER, &TIM_TimeBaseStructure);
 
-    TIM_SelectOutputTrigger(STM32F3D_ADC_TIMER, TIM_TRGOSource_Update);
+    TIM_SelectOutputTrigger(STM32F3D_ADC_TIMER, TIM_TRGOSource_Update );
 
 // enable Interrupt for testing purposes
-//	ADC_Timer6EnableInterrupt();
+//  ADC_Timer6EnableInterrupt();
 }
 
 /**
@@ -1293,18 +1296,18 @@ void ADC_Timer6EnableInterrupt(void) {
  */
 void TIM6_DAC_IRQHandler(void) {
     STM_EVAL_LEDToggle(LED7); // GREEN RIGHT
-    TIM_ClearITPendingBit(STM32F3D_ADC_TIMER, TIM_IT_Update);
+    TIM_ClearITPendingBit(STM32F3D_ADC_TIMER, TIM_IT_Update );
 }
 
 void ADC_SetTimer6Period(uint16_t aDivider, uint16_t aPrescalerDivider) {
-    TIM_PrescalerConfig(STM32F3D_ADC_TIMER, aPrescalerDivider - 1, TIM_PSCReloadMode_Immediate);
+    TIM_PrescalerConfig(STM32F3D_ADC_TIMER, aPrescalerDivider - 1, TIM_PSCReloadMode_Immediate );
     TIM_SetAutoreload(STM32F3D_ADC_TIMER, aDivider - 1);
 }
 
 inline void ADC_startTimer6(void) {
 // Enable the TIM Counter
     // TIM_Cmd(STM32F3D_ADC_TIMER, ENABLE);
-    STM32F3D_ADC_TIMER->CR1 |= TIM_CR1_CEN;
+    STM32F3D_ADC_TIMER ->CR1 |= TIM_CR1_CEN;
 }
 
 inline void ADC_stopTimer6(void) {
@@ -1319,8 +1322,8 @@ void ADC_DMA_initialize(void) {
 
     DMA_InitTypeDef DMA_InitStructure;
 // DMA1 channel1 configuration
-    DMA_DeInit(DSO_DMA_CHANNEL);
-    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &(DSO_ADC_ID->DR);
+    DMA_DeInit(DSO_DMA_CHANNEL );
+    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t) &(DSO_ADC_ID ->DR);
     DMA_InitStructure.DMA_MemoryBaseAddr = 0;
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
     DMA_InitStructure.DMA_BufferSize = 1;
@@ -1328,7 +1331,7 @@ void ADC_DMA_initialize(void) {
     DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
     DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
     DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-//	DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+//  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
     DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
     DMA_InitStructure.DMA_Priority = DMA_Priority_High;
     DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
@@ -1345,38 +1348,38 @@ void ADC_DMA_initialize(void) {
 
 //TC -> transfer complete interrupt
 // Enable DMA1 channel1
-//	DMA_ITConfig(DSO_DMA_CHANNEL, DMA_IT_TC | DMA_IT_HT | DMA_IT_TE, ENABLE);
+//  DMA_ITConfig(DSO_DMA_CHANNEL, DMA_IT_TC | DMA_IT_HT | DMA_IT_TE, ENABLE);
     DMA_ITConfig(DSO_DMA_CHANNEL, DMA_IT_TC | DMA_IT_TE, ENABLE);
 }
 
 void ADC_DMA_start(uint32_t aMemoryBaseAddr, uint16_t aBufferSize) {
 // Disable DMA1 channel1 - is really needed here!
-    DSO_DMA_CHANNEL->CCR &= ~DMA_CCR_EN;
+    DSO_DMA_CHANNEL ->CCR &= ~DMA_CCR_EN;
 
 // Write to DMA Channel1 CMAR
-    DSO_DMA_CHANNEL->CMAR = aMemoryBaseAddr;
+    DSO_DMA_CHANNEL ->CMAR = aMemoryBaseAddr;
 // Write to DMA1 Channel1 CNDTR
-    DSO_DMA_CHANNEL->CNDTR = aBufferSize;
+    DSO_DMA_CHANNEL ->CNDTR = aBufferSize;
 
-//	DMA_Cmd(DSO_DMA_CHANNEL, ENABLE);
+//  DMA_Cmd(DSO_DMA_CHANNEL, ENABLE);
 // enable channel and all interrupts too
-    DSO_DMA_CHANNEL->CCR |= (DMA_CCR_EN | DMA_CCR_TCIE | DMA_CCR_HTIE | DMA_CCR_TEIE);
+    DSO_DMA_CHANNEL ->CCR |= (DMA_CCR_EN | DMA_CCR_TCIE | DMA_CCR_HTIE | DMA_CCR_TEIE );
 // starts conversion at next timer edge - is definitely needed to start dma transfer!
-    DSO_ADC_ID->CR |= ADC_CR_ADSTART;
+    DSO_ADC_ID ->CR |= ADC_CR_ADSTART;
 
 }
 
 uint16_t ADC_DMA_GetCurrDataCounter(void) {
-    return ((uint16_t) (DSO_DMA_CHANNEL->CNDTR));
+    return ((uint16_t) (DSO_DMA_CHANNEL ->CNDTR));
 }
 
 void ADC_DMA_stop(void) {
 // Disable DMA1 channel1
-    DSO_DMA_CHANNEL->CCR &= (uint16_t) (~DMA_CCR_EN);
+    DSO_DMA_CHANNEL ->CCR &= (uint16_t) (~DMA_CCR_EN );
 // Disable ADC DMA
     ADC_DMACmd(DSO_ADC_ID, DISABLE);
 // reset all bits
-    DMA_ClearITPendingBit(DMA1_IT_GL1);
+    DMA_ClearITPendingBit(DMA1_IT_GL1 );
 //TC -> transfer complete interrupt
     DMA_ITConfig(DSO_DMA_CHANNEL, DMA1_IT_TC1, DISABLE);
 }
@@ -1386,7 +1389,7 @@ void ADC_DMA_stop(void) {
  */
 int ADC_getTemperatureMilligrades(void) {
 
-    int tADCTempShift3 = ADC1_getChannelValue(ADC_Channel_TempSensor);
+    int tADCTempShift3 = ADC1_getChannelValue(ADC_Channel_TempSensor );
     // convert it to value at 3.3 V
     tADCTempShift3 = ((tADCTempShift3 * (*((uint16_t*) 0x1FFFF7BA))) << 3) / sRefintActualValue;
 
@@ -1423,7 +1426,7 @@ void DSO_initializeAttenuatorAndAC(void) {
     GPIO_Init(ADC1_ATTENUATOR_GPIO_PORT, &GPIO_InitStructure);
 // set LOW
     GPIO_ResetBits(ADC1_ATTENUATOR_GPIO_PORT,
-            ADC1_ATTENUATOR_0_PIN | ADC1_ATTENUATOR_1_PIN | ADC1_ATTENUATOR_2_PIN | ADC1_AC_RANGE_PIN);
+            ADC1_ATTENUATOR_0_PIN | ADC1_ATTENUATOR_1_PIN | ADC1_ATTENUATOR_2_PIN | ADC1_AC_RANGE_PIN );
 }
 
 void DSO_setAttenuator(uint8_t aValue) {
@@ -1431,18 +1434,18 @@ void DSO_setAttenuator(uint8_t aValue) {
     uint16_t tValue = aValue << 7;
 
     tValue = tValue & 0x380;
-    uint16_t tPort = GPIO_ReadOutputData(ADC1_ATTENUATOR_GPIO_PORT);
+    uint16_t tPort = GPIO_ReadOutputData(ADC1_ATTENUATOR_GPIO_PORT );
     tPort &= ~0x380;
     tPort |= tValue;
     GPIO_Write(ADC1_ATTENUATOR_GPIO_PORT, tPort);
 }
 
-void DSO_setACRange(bool aValue) {
+void DSO_setACMode(bool aValue) {
     GPIO_WriteBit(ADC1_ATTENUATOR_GPIO_PORT, ADC1_AC_RANGE_PIN, aValue);
 }
 
-bool DSO_getACRange(void) {
-    return GPIO_ReadOutputDataBit(ADC1_ATTENUATOR_GPIO_PORT, ADC1_AC_RANGE_PIN);
+bool DSO_getACMode(void) {
+    return GPIO_ReadOutputDataBit(ADC1_ATTENUATOR_GPIO_PORT, ADC1_AC_RANGE_PIN );
 }
 
 #define MICROSD_CS_PIN                         GPIO_Pin_5
@@ -1476,7 +1479,7 @@ void MICROSD_IO_initalize(void) {
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(MICROSD_CS_GPIO_PORT, &GPIO_InitStructure);
 // set High
-    GPIO_SetBits(MICROSD_CS_GPIO_PORT, MICROSD_CS_PIN);
+    GPIO_SetBits(MICROSD_CS_GPIO_PORT, MICROSD_CS_PIN );
 
 // CardDetect pin
     GPIO_InitStructure.GPIO_Pin = MICROSD_CARD_DETECT_PIN;
@@ -1487,7 +1490,7 @@ void MICROSD_IO_initalize(void) {
 // Connect EXTI Line to GPIO Pin
 // Enable the Sysycfg Clock
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-    SYSCFG_EXTILineConfig(MICROSD_CARD_DETECT_EXTI_PORT_SOURCE, MICROSD_CARD_DETECT_EXTI_PIN_SOURCE);
+    SYSCFG_EXTILineConfig(MICROSD_CARD_DETECT_EXTI_PORT_SOURCE, MICROSD_CARD_DETECT_EXTI_PIN_SOURCE );
 
     /* Configure EXTI line */
     EXTI_InitStructure.EXTI_Line = MICROSD_CARD_DETECT_EXTI_LINE;
@@ -1513,21 +1516,21 @@ void MICROSD_IO_initalize(void) {
 }
 
 inline bool MICROSD_isCardInserted(void) {
-    return GPIO_ReadInputDataBit(MICROSD_CARD_DETECT_GPIO_PORT, MICROSD_CARD_DETECT_PIN);
+    return GPIO_ReadInputDataBit(MICROSD_CARD_DETECT_GPIO_PORT, MICROSD_CARD_DETECT_PIN );
 }
 
 inline void MICROSD_CSEnable(void) {
 // set to LOW
-    MICROSD_CARD_DETECT_GPIO_PORT->BRR = MICROSD_CS_PIN;
+    MICROSD_CARD_DETECT_GPIO_PORT ->BRR = MICROSD_CS_PIN;
 }
 
 inline void MICROSD_CSDisable(void) {
 // set to HIGH
-    MICROSD_CARD_DETECT_GPIO_PORT->BSRR = MICROSD_CS_PIN;
+    MICROSD_CARD_DETECT_GPIO_PORT ->BSRR = MICROSD_CS_PIN;
 }
 
 inline void MICROSD_ClearITPendingBit(void) {
-    EXTI_ClearITPendingBit(MICROSD_CARD_DETECT_EXTI_LINE);
+    EXTI_ClearITPendingBit(MICROSD_CARD_DETECT_EXTI_LINE );
 }
 
 #define DAC_OUTPUT_PIN                       GPIO_Pin_4
@@ -1542,7 +1545,7 @@ void DAC_init(void) {
     GPIO_InitTypeDef GPIO_InitStructure;
 
     /* DMA2 clock enable (to be used with DAC) */
-//	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
+//  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA2, ENABLE);
     /* DAC Periph clock enable */
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
 
@@ -1572,14 +1575,14 @@ void DAC_Timer_initialize(uint32_t aAutoreload) {
 
     /* Time base configuration */
     TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-//	TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
+//  TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Down; // to easily change reload value
     TIM_TimeBaseStructure.TIM_Period = aAutoreload;
-//	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+//  TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInit(TIM7, &TIM_TimeBaseStructure);
 
 // TIM7 TRGO selection - trigger on each update
-    TIM_SelectOutputTrigger(TIM7, TIM_TRGOSource_Update);
+    TIM_SelectOutputTrigger(TIM7, TIM_TRGOSource_Update );
 
     /* TIM7 enable counter */
     TIM_Cmd(TIM7, ENABLE);
@@ -1602,7 +1605,7 @@ inline void DAC_Timer_SetReloadValue(uint32_t aReloadValue) {
         tPrescalerValue <<= tShiftCount;
         tReloadValue = aReloadValue >> tShiftCount;
     }
-    TIM_PrescalerConfig(TIM7, tPrescalerValue - 1, TIM_PSCReloadMode_Update);
+    TIM_PrescalerConfig(TIM7, tPrescalerValue - 1, TIM_PSCReloadMode_Update );
     TIM_SetAutoreload(TIM7, tReloadValue - 1);
 }
 
@@ -1667,10 +1670,10 @@ void DAC_TriangleAmplitude(unsigned int aAmplitude) {
     if (aAmplitude > 0x0B) {
         aAmplitude = 0x0B;
     }
-    uint32_t tTemp = DAC->CR;
+    uint32_t tTemp = DAC ->CR;
     tTemp &= ~0xF00;
     tTemp |= aAmplitude << 8;
-    DAC->CR = tTemp;
+    DAC ->CR = tTemp;
 }
 
 /*
@@ -1710,7 +1713,7 @@ void IR_Timer_Stop(void) {
 #define FREQ_SYNTH_OUTPUT_PIN                       GPIO_Pin_9
 #define FREQ_SYNTH_OUTPUT_GPIO_PORT                 GPIOA
 #define FREQ_SYNTH_OUTPUT_GPIO_CLK                  RCC_AHBPeriph_GPIOA
-#define FREQ_SYNTH_OUTPUT_SOURCE           			GPIO_PinSource9
+#define FREQ_SYNTH_OUTPUT_SOURCE                    GPIO_PinSource9
 #define FREQ_SYNTH_OUTPUT_AF                        GPIO_AF_10
 
 /* TIM2 configuration for frequency synthesizer */
@@ -1722,10 +1725,10 @@ void HIRES_Timer_initialize(uint32_t aAutoreload) {
 
     /* Time base configuration */
     TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-//	TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
+//  TIM_TimeBaseStructure.TIM_Prescaler = 0x0; // no prescaler
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Down; // to easily change reload value
     TIM_TimeBaseStructure.TIM_Period = aAutoreload;
-//	TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+//  TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
 
     TIM_OCInitTypeDef TIM_OCInitStructure;
@@ -1751,10 +1754,10 @@ void HIRES_Timer_initialize(uint32_t aAutoreload) {
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(FREQ_SYNTH_OUTPUT_GPIO_PORT, &GPIO_InitStructure);
-    GPIO_PinAFConfig(FREQ_SYNTH_OUTPUT_GPIO_PORT, FREQ_SYNTH_OUTPUT_SOURCE, FREQ_SYNTH_OUTPUT_AF);
+    GPIO_PinAFConfig(FREQ_SYNTH_OUTPUT_GPIO_PORT, FREQ_SYNTH_OUTPUT_SOURCE, FREQ_SYNTH_OUTPUT_AF );
 
 // set Low
-//	GPIO_ResetBits(FREQ_SYNTH_OUTPUT_GPIO_PORT, FREQ_SYNTH_OUTPUT_PIN);
+//  GPIO_ResetBits(FREQ_SYNTH_OUTPUT_GPIO_PORT, FREQ_SYNTH_OUTPUT_PIN);
 }
 
 /**
@@ -1779,14 +1782,18 @@ void HIRES_Timer_Start(void) {
  * @return actual counter before stop
  */
 uint32_t HIRES_Timer_Stop(void) {
-    uint32_t tCount = TIM_GetCounter(TIM2);
+    uint32_t tCount = TIM_GetCounter(TIM2 );
     TIM_Cmd(TIM2, DISABLE);
     return tCount;
 }
 
 uint32_t HIRES_Timer_GetCounter(void) {
-    return TIM_GetCounter(TIM2);
+    return TIM_GetCounter(TIM2 );
 }
+
+
+
+
 
 /**
  * Init the Debug pin E7
@@ -1805,10 +1812,11 @@ void Debug_IO_initalize(void) {
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(DEBUG_GPIO_PORT, &GPIO_InitStructure);
 // set Low
-    GPIO_ResetBits(DEBUG_GPIO_PORT, DEBUG_PIN);
+    GPIO_ResetBits(DEBUG_GPIO_PORT, DEBUG_PIN );
 }
 
 inline void Default_IRQHandler(void) {
     STM_EVAL_LEDToggle(LED10); // RED FRONT
 }
+
 /** @} */

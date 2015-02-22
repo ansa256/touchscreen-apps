@@ -369,7 +369,7 @@
 #define A1TVBOX_BIT_PAUSE_LEN_MIN               ((uint8_t)(F_INTERRUPTS * A1TVBOX_BIT_PAUSE_TIME * MIN_TOLERANCE_30 + 0.5) - 1)
 #define A1TVBOX_BIT_PAUSE_LEN_MAX               ((uint8_t)(F_INTERRUPTS * A1TVBOX_BIT_PAUSE_TIME * MAX_TOLERANCE_30 + 0.5) + 1)
 
-                                                                                                                    // values for F_INTERRUPTS=15000 and manually tuned
+// values for F_INTERRUPTS=15000 and manually tuned
 #define IHELICOPTER_START_BIT_PULSE_LEN_MIN        ((uint8_t)(F_INTERRUPTS * IHELICOPTER_START_BIT_PULSE_TIME * MIN_TOLERANCE_00 + 0.5) - 1 + 1) // 12
 #define IHELICOPTER_START_BIT_PULSE_LEN_MAX        ((uint8_t)(F_INTERRUPTS * IHELICOPTER_START_BIT_PULSE_TIME * MAX_TOLERANCE_20 + 0.5) + 1 + 1) // 17
 #define IHELICOPTER_START_BIT_PAUSE_LEN_MIN        ((uint8_t)(F_INTERRUPTS * IHELICOPTER_START_BIT_PAUSE_TIME * MIN_TOLERANCE_40 + 0.5) - 1)     // 1
@@ -540,7 +540,7 @@ irmp_log (uint8_t val)
     static uint8_t buf[DATALEN];                                           // logging buffer
     static uint16_t buf_idx;// number of written bits
     static uint8_t startcycles;// current number of start-zeros
-    static uint16_t cnt;// counts sequenced highbits - to detect end
+    static uint16_t cnt;    // counts sequenced highbits - to detect end
 
     if (! val && (startcycles < STARTCYCLES) && !buf_idx)// prevent that single random zeros init logging
     {
@@ -610,7 +610,7 @@ irmp_log (uint8_t val)
     static uint8_t buf[DATALEN];                                           // logging buffer
     static uint16_t buf_idx;// index
     static uint8_t startcycles;// current number of start-zeros
-    static uint16_t cnt;// counts sequenced highbits - to detect end
+    static uint16_t cnt;    // counts sequenced highbits - to detect end
     static uint8_t last_val = 1;
 
     if (! val && (startcycles < STARTCYCLES) && !buf_idx)// prevent that single random zeros init logging
@@ -724,20 +724,20 @@ static const PROGMEM IRMP_PARAMETER sircs_param =
     IRMP_SIRCS_PROTOCOL,                                                // protocol:        ir protocol
     SIRCS_1_PULSE_LEN_MIN,// pulse_1_len_min: minimum length of pulse with bit value 1
     SIRCS_1_PULSE_LEN_MAX,// pulse_1_len_max: maximum length of pulse with bit value 1
-    SIRCS_PAUSE_LEN_MIN,// pause_1_len_min: minimum length of pause with bit value 1
-    SIRCS_PAUSE_LEN_MAX,// pause_1_len_max: maximum length of pause with bit value 1
+    SIRCS_PAUSE_LEN_MIN,  // pause_1_len_min: minimum length of pause with bit value 1
+    SIRCS_PAUSE_LEN_MAX,  // pause_1_len_max: maximum length of pause with bit value 1
     SIRCS_0_PULSE_LEN_MIN,// pulse_0_len_min: minimum length of pulse with bit value 0
     SIRCS_0_PULSE_LEN_MAX,// pulse_0_len_max: maximum length of pulse with bit value 0
-    SIRCS_PAUSE_LEN_MIN,// pause_0_len_min: minimum length of pause with bit value 0
-    SIRCS_PAUSE_LEN_MAX,// pause_0_len_max: maximum length of pause with bit value 0
-    SIRCS_ADDRESS_OFFSET,// address_offset:  address offset
+    SIRCS_PAUSE_LEN_MIN,  // pause_0_len_min: minimum length of pause with bit value 0
+    SIRCS_PAUSE_LEN_MAX,  // pause_0_len_max: maximum length of pause with bit value 0
+    SIRCS_ADDRESS_OFFSET, // address_offset:  address offset
     SIRCS_ADDRESS_OFFSET + SIRCS_ADDRESS_LEN,// address_end:     end of address
-    SIRCS_COMMAND_OFFSET,// command_offset:  command offset
+    SIRCS_COMMAND_OFFSET, // command_offset:  command offset
     SIRCS_COMMAND_OFFSET + SIRCS_COMMAND_LEN,// command_end:     end of command
     SIRCS_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    SIRCS_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    SIRCS_LSB,// lsb_first:       flag: LSB first
-    SIRCS_FLAGS// flags:           some flags
+    SIRCS_STOP_BIT,       // stop_bit:        flag: frame has stop bit
+    SIRCS_LSB,            // lsb_first:       flag: LSB first
+    SIRCS_FLAGS           // flags:           some flags
 };
 
 #endif
@@ -760,9 +760,9 @@ static const PROGMEM IRMP_PARAMETER nec_param =
     NEC_COMMAND_OFFSET,// command_offset:  command offset
     NEC_COMMAND_OFFSET + NEC_COMMAND_LEN,// command_end:     end of command
     NEC_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    NEC_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    NEC_LSB,// lsb_first:       flag: LSB first
-    NEC_FLAGS// flags:           some flags
+    NEC_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    NEC_LSB,          // lsb_first:       flag: LSB first
+    NEC_FLAGS         // flags:           some flags
 };
 
 static const PROGMEM IRMP_PARAMETER nec_rep_param =
@@ -776,14 +776,14 @@ static const PROGMEM IRMP_PARAMETER nec_rep_param =
     NEC_PULSE_LEN_MAX,// pulse_0_len_max: maximum length of pulse with bit value 0
     NEC_0_PAUSE_LEN_MIN,// pause_0_len_min: minimum length of pause with bit value 0
     NEC_0_PAUSE_LEN_MAX,// pause_0_len_max: maximum length of pause with bit value 0
-    0,// address_offset:  address offset
-    0,// address_end:     end of address
-    0,// command_offset:  command offset
-    0,// command_end:     end of command
-    0,// complete_len:    complete length of frame
-    NEC_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    NEC_LSB,// lsb_first:       flag: LSB first
-    NEC_FLAGS// flags:           some flags
+    0,                // address_offset:  address offset
+    0,                // address_end:     end of address
+    0,                // command_offset:  command offset
+    0,                // command_end:     end of command
+    0,                // complete_len:    complete length of frame
+    NEC_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    NEC_LSB,          // lsb_first:       flag: LSB first
+    NEC_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -806,9 +806,9 @@ static const PROGMEM IRMP_PARAMETER nec42_param =
     NEC42_COMMAND_OFFSET,// command_offset:  command offset
     NEC42_COMMAND_OFFSET + NEC42_COMMAND_LEN,// command_end:     end of command
     NEC42_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    NEC_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    NEC_LSB,// lsb_first:       flag: LSB first
-    NEC_FLAGS// flags:           some flags
+    NEC_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    NEC_LSB,          // lsb_first:       flag: LSB first
+    NEC_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -831,9 +831,9 @@ static const PROGMEM IRMP_PARAMETER samsung_param =
     SAMSUNG_COMMAND_OFFSET,// command_offset:  command offset
     SAMSUNG_COMMAND_OFFSET + SAMSUNG_COMMAND_LEN,// command_end:     end of command
     SAMSUNG_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    SAMSUNG_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    SAMSUNG_LSB,// lsb_first:       flag: LSB first
-    SAMSUNG_FLAGS// flags:           some flags
+    SAMSUNG_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    SAMSUNG_LSB,          // lsb_first:       flag: LSB first
+    SAMSUNG_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -856,9 +856,9 @@ static const PROGMEM IRMP_PARAMETER matsushita_param =
     MATSUSHITA_COMMAND_OFFSET,// command_offset:  command offset
     MATSUSHITA_COMMAND_OFFSET + MATSUSHITA_COMMAND_LEN,// command_end:     end of command
     MATSUSHITA_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    MATSUSHITA_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    MATSUSHITA_LSB,// lsb_first:       flag: LSB first
-    MATSUSHITA_FLAGS// flags:           some flags
+    MATSUSHITA_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    MATSUSHITA_LSB,              // lsb_first:       flag: LSB first
+    MATSUSHITA_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -881,9 +881,9 @@ static const PROGMEM IRMP_PARAMETER kaseikyo_param =
     KASEIKYO_COMMAND_OFFSET,// command_offset:  command offset
     KASEIKYO_COMMAND_OFFSET + KASEIKYO_COMMAND_LEN,// command_end:     end of command
     KASEIKYO_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    KASEIKYO_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    KASEIKYO_LSB,// lsb_first:       flag: LSB first
-    KASEIKYO_FLAGS// flags:           some flags
+    KASEIKYO_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    KASEIKYO_LSB,              // lsb_first:       flag: LSB first
+    KASEIKYO_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -906,9 +906,9 @@ static const PROGMEM IRMP_PARAMETER recs80_param =
     RECS80_COMMAND_OFFSET,// command_offset:  command offset
     RECS80_COMMAND_OFFSET + RECS80_COMMAND_LEN,// command_end:     end of command
     RECS80_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    RECS80_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    RECS80_LSB,// lsb_first:       flag: LSB first
-    RECS80_FLAGS// flags:           some flags
+    RECS80_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    RECS80_LSB,          // lsb_first:       flag: LSB first
+    RECS80_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -922,18 +922,18 @@ static const PROGMEM IRMP_PARAMETER rc5_param =
     RC5_BIT_LEN_MAX,// pulse_1_len_max: here: maximum length of short pulse
     RC5_BIT_LEN_MIN,// pause_1_len_min: here: minimum length of short pause
     RC5_BIT_LEN_MAX,// pause_1_len_max: here: maximum length of short pause
-    0,// pulse_0_len_min: here: not used
-    0,// pulse_0_len_max: here: not used
-    0,// pause_0_len_min: here: not used
-    0,// pause_0_len_max: here: not used
+    0,              // pulse_0_len_min: here: not used
+    0,              // pulse_0_len_max: here: not used
+    0,              // pause_0_len_min: here: not used
+    0,              // pause_0_len_max: here: not used
     RC5_ADDRESS_OFFSET,// address_offset:  address offset
     RC5_ADDRESS_OFFSET + RC5_ADDRESS_LEN,// address_end:     end of address
     RC5_COMMAND_OFFSET,// command_offset:  command offset
     RC5_COMMAND_OFFSET + RC5_COMMAND_LEN,// command_end:     end of command
     RC5_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    RC5_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    RC5_LSB,// lsb_first:       flag: LSB first
-    RC5_FLAGS// flags:           some flags
+    RC5_STOP_BIT,   // stop_bit:        flag: frame has stop bit
+    RC5_LSB,        // lsb_first:       flag: LSB first
+    RC5_FLAGS       // flags:           some flags
 };
 
 #endif
@@ -956,9 +956,9 @@ static const PROGMEM IRMP_PARAMETER denon_param =
     DENON_COMMAND_OFFSET,// command_offset:  command offset
     DENON_COMMAND_OFFSET + DENON_COMMAND_LEN,// command_end:     end of command
     DENON_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    DENON_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    DENON_LSB,// lsb_first:       flag: LSB first
-    DENON_FLAGS// flags:           some flags
+    DENON_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    DENON_LSB,          // lsb_first:       flag: LSB first
+    DENON_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -973,18 +973,18 @@ static const PROGMEM IRMP_PARAMETER rc6_param =
     RC6_BIT_PULSE_LEN_MAX,// pulse_1_len_max: here: maximum length of short pulse
     RC6_BIT_PAUSE_LEN_MIN,// pause_1_len_min: here: minimum length of short pause
     RC6_BIT_PAUSE_LEN_MAX,// pause_1_len_max: here: maximum length of short pause
-    0,// pulse_0_len_min: here: not used
-    0,// pulse_0_len_max: here: not used
-    0,// pause_0_len_min: here: not used
-    0,// pause_0_len_max: here: not used
-    RC6_ADDRESS_OFFSET,// address_offset:  address offset
+    0,                    // pulse_0_len_min: here: not used
+    0,                    // pulse_0_len_max: here: not used
+    0,                    // pause_0_len_min: here: not used
+    0,                    // pause_0_len_max: here: not used
+    RC6_ADDRESS_OFFSET,   // address_offset:  address offset
     RC6_ADDRESS_OFFSET + RC6_ADDRESS_LEN,// address_end:     end of address
-    RC6_COMMAND_OFFSET,// command_offset:  command offset
+    RC6_COMMAND_OFFSET,   // command_offset:  command offset
     RC6_COMMAND_OFFSET + RC6_COMMAND_LEN,// command_end:     end of command
     RC6_COMPLETE_DATA_LEN_SHORT,// complete_len:    complete length of frame
-    RC6_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    RC6_LSB,// lsb_first:       flag: LSB first
-    RC6_FLAGS// flags:           some flags
+    RC6_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    RC6_LSB,              // lsb_first:       flag: LSB first
+    RC6_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -1007,9 +1007,9 @@ static const PROGMEM IRMP_PARAMETER recs80ext_param =
     RECS80EXT_COMMAND_OFFSET,// command_offset:  command offset
     RECS80EXT_COMMAND_OFFSET + RECS80EXT_COMMAND_LEN,// command_end:     end of command
     RECS80EXT_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    RECS80EXT_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    RECS80EXT_LSB,// lsb_first:       flag: LSB first
-    RECS80EXT_FLAGS// flags:           some flags
+    RECS80EXT_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    RECS80EXT_LSB,              // lsb_first:       flag: LSB first
+    RECS80EXT_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -1027,14 +1027,14 @@ static const PROGMEM IRMP_PARAMETER nubert_param =
     NUBERT_0_PULSE_LEN_MAX,// pulse_0_len_max: maximum length of pulse with bit value 0
     NUBERT_0_PAUSE_LEN_MIN,// pause_0_len_min: minimum length of pause with bit value 0
     NUBERT_0_PAUSE_LEN_MAX,// pause_0_len_max: maximum length of pause with bit value 0
-    NUBERT_ADDRESS_OFFSET,// address_offset:  address offset
+    NUBERT_ADDRESS_OFFSET, // address_offset:  address offset
     NUBERT_ADDRESS_OFFSET + NUBERT_ADDRESS_LEN,// address_end:     end of address
-    NUBERT_COMMAND_OFFSET,// command_offset:  command offset
+    NUBERT_COMMAND_OFFSET, // command_offset:  command offset
     NUBERT_COMMAND_OFFSET + NUBERT_COMMAND_LEN,// command_end:     end of command
     NUBERT_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    NUBERT_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    NUBERT_LSB,// lsb_first:       flag: LSB first
-    NUBERT_FLAGS// flags:           some flags
+    NUBERT_STOP_BIT,       // stop_bit:        flag: frame has stop bit
+    NUBERT_LSB,            // lsb_first:       flag: LSB first
+    NUBERT_FLAGS           // flags:           some flags
 };
 
 #endif
@@ -1057,9 +1057,9 @@ static const PROGMEM IRMP_PARAMETER bang_olufsen_param =
     BANG_OLUFSEN_COMMAND_OFFSET,// command_offset:  command offset
     BANG_OLUFSEN_COMMAND_OFFSET + BANG_OLUFSEN_COMMAND_LEN,// command_end:     end of command
     BANG_OLUFSEN_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    BANG_OLUFSEN_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    BANG_OLUFSEN_LSB,// lsb_first:       flag: LSB first
-    BANG_OLUFSEN_FLAGS// flags:           some flags
+    BANG_OLUFSEN_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    BANG_OLUFSEN_LSB,              // lsb_first:       flag: LSB first
+    BANG_OLUFSEN_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -1076,17 +1076,17 @@ static const PROGMEM IRMP_PARAMETER grundig_param =
     GRUNDIG_NOKIA_IR60_BIT_LEN_MAX,// pulse_1_len_max: here: maximum length of short pulse
     GRUNDIG_NOKIA_IR60_BIT_LEN_MIN,// pause_1_len_min: here: minimum length of short pause
     GRUNDIG_NOKIA_IR60_BIT_LEN_MAX,// pause_1_len_max: here: maximum length of short pause
-    0,// pulse_0_len_min: here: not used
-    0,// pulse_0_len_max: here: not used
-    0,// pause_0_len_min: here: not used
-    0,// pause_0_len_max: here: not used
-    GRUNDIG_ADDRESS_OFFSET,// address_offset:  address offset
+    0,                             // pulse_0_len_min: here: not used
+    0,                             // pulse_0_len_max: here: not used
+    0,                             // pause_0_len_min: here: not used
+    0,                             // pause_0_len_max: here: not used
+    GRUNDIG_ADDRESS_OFFSET,        // address_offset:  address offset
     GRUNDIG_ADDRESS_OFFSET + GRUNDIG_ADDRESS_LEN,// address_end:     end of address
-    GRUNDIG_COMMAND_OFFSET,// command_offset:  command offset
+    GRUNDIG_COMMAND_OFFSET,        // command_offset:  command offset
     GRUNDIG_COMMAND_OFFSET + GRUNDIG_COMMAND_LEN + 1,// command_end:     end of command (USE 1 bit MORE to STORE NOKIA DATA!)
     NOKIA_COMPLETE_DATA_LEN,// complete_len:    complete length of frame, here: NOKIA instead of GRUNDIG!
     GRUNDIG_NOKIA_IR60_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    GRUNDIG_NOKIA_IR60_LSB,// lsb_first:       flag: LSB first
+    GRUNDIG_NOKIA_IR60_LSB, // lsb_first:       flag: LSB first
     GRUNDIG_NOKIA_IR60_FLAGS// flags:           some flags
 };
 
@@ -1101,18 +1101,18 @@ static const PROGMEM IRMP_PARAMETER ruwido_param =
     SIEMENS_OR_RUWIDO_BIT_PULSE_LEN_MAX,// pulse_1_len_max: here: maximum length of short pulse
     SIEMENS_OR_RUWIDO_BIT_PAUSE_LEN_MIN,// pause_1_len_min: here: minimum length of short pause
     SIEMENS_OR_RUWIDO_BIT_PAUSE_LEN_MAX,// pause_1_len_max: here: maximum length of short pause
-    0,// pulse_0_len_min: here: not used
-    0,// pulse_0_len_max: here: not used
-    0,// pause_0_len_min: here: not used
-    0,// pause_0_len_max: here: not used
-    RUWIDO_ADDRESS_OFFSET,// address_offset:  address offset
+    0,                                  // pulse_0_len_min: here: not used
+    0,                                  // pulse_0_len_max: here: not used
+    0,                                  // pause_0_len_min: here: not used
+    0,                                  // pause_0_len_max: here: not used
+    RUWIDO_ADDRESS_OFFSET,              // address_offset:  address offset
     RUWIDO_ADDRESS_OFFSET + RUWIDO_ADDRESS_LEN,// address_end:     end of address
-    RUWIDO_COMMAND_OFFSET,// command_offset:  command offset
+    RUWIDO_COMMAND_OFFSET,              // command_offset:  command offset
     RUWIDO_COMMAND_OFFSET + RUWIDO_COMMAND_LEN,// command_end:     end of command
-    SIEMENS_COMPLETE_DATA_LEN,// complete_len:    complete length of frame, here: SIEMENS instead of RUWIDO!
-    SIEMENS_OR_RUWIDO_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    SIEMENS_OR_RUWIDO_LSB,// lsb_first:       flag: LSB first
-    SIEMENS_OR_RUWIDO_FLAGS// flags:           some flags
+    SIEMENS_COMPLETE_DATA_LEN,          // complete_len:    complete length of frame, here: SIEMENS instead of RUWIDO!
+    SIEMENS_OR_RUWIDO_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    SIEMENS_OR_RUWIDO_LSB,              // lsb_first:       flag: LSB first
+    SIEMENS_OR_RUWIDO_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -1135,9 +1135,9 @@ static const PROGMEM IRMP_PARAMETER fdc_param =
     FDC_COMMAND_OFFSET,// command_offset:  command offset
     FDC_COMMAND_OFFSET + FDC_COMMAND_LEN,// command_end:     end of command
     FDC_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    FDC_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    FDC_LSB,// lsb_first:       flag: LSB first
-    FDC_FLAGS// flags:           some flags
+    FDC_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    FDC_LSB,          // lsb_first:       flag: LSB first
+    FDC_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -1160,9 +1160,9 @@ static const PROGMEM IRMP_PARAMETER rccar_param =
     RCCAR_COMMAND_OFFSET,// command_offset:  command offset
     RCCAR_COMMAND_OFFSET + RCCAR_COMMAND_LEN,// command_end:     end of command
     RCCAR_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    RCCAR_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    RCCAR_LSB,// lsb_first:       flag: LSB first
-    RCCAR_FLAGS// flags:           some flags
+    RCCAR_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    RCCAR_LSB,          // lsb_first:       flag: LSB first
+    RCCAR_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -1185,9 +1185,9 @@ static const PROGMEM IRMP_PARAMETER nikon_param =
     NIKON_COMMAND_OFFSET,// command_offset:  command offset
     NIKON_COMMAND_OFFSET + NIKON_COMMAND_LEN,// command_end:     end of command
     NIKON_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    NIKON_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    NIKON_LSB,// lsb_first:       flag: LSB first
-    NIKON_FLAGS// flags:           some flags
+    NIKON_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    NIKON_LSB,          // lsb_first:       flag: LSB first
+    NIKON_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -1205,14 +1205,14 @@ static const PROGMEM IRMP_PARAMETER kathrein_param =
     KATHREIN_0_PULSE_LEN_MAX,// pulse_0_len_max: maximum length of pulse with bit value 0
     KATHREIN_0_PAUSE_LEN_MIN,// pause_0_len_min: minimum length of pause with bit value 0
     KATHREIN_0_PAUSE_LEN_MAX,// pause_0_len_max: maximum length of pause with bit value 0
-    KATHREIN_ADDRESS_OFFSET,// address_offset:  address offset
+    KATHREIN_ADDRESS_OFFSET, // address_offset:  address offset
     KATHREIN_ADDRESS_OFFSET + KATHREIN_ADDRESS_LEN,// address_end:     end of address
     KATHREIN_COMMAND_OFFSET,// command_offset:  command offset
     KATHREIN_COMMAND_OFFSET + KATHREIN_COMMAND_LEN,// command_end:     end of command
     KATHREIN_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    KATHREIN_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    KATHREIN_LSB,// lsb_first:       flag: LSB first
-    KATHREIN_FLAGS// flags:           some flags
+    KATHREIN_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    KATHREIN_LSB,              // lsb_first:       flag: LSB first
+    KATHREIN_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -1235,9 +1235,9 @@ static const PROGMEM IRMP_PARAMETER netbox_param =
     NETBOX_COMMAND_OFFSET,// command_offset:  command offset
     NETBOX_COMMAND_OFFSET + NETBOX_COMMAND_LEN,// command_end:     end of command
     NETBOX_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    NETBOX_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    NETBOX_LSB,// lsb_first:       flag: LSB first
-    NETBOX_FLAGS// flags:           some flags
+    NETBOX_STOP_BIT, // stop_bit:        flag: frame has stop bit
+    NETBOX_LSB,      // lsb_first:       flag: LSB first
+    NETBOX_FLAGS     // flags:           some flags
 };
 
 #endif
@@ -1260,9 +1260,9 @@ static const PROGMEM IRMP_PARAMETER lego_param =
     LEGO_COMMAND_OFFSET,// command_offset:  command offset
     LEGO_COMMAND_OFFSET + LEGO_COMMAND_LEN,// command_end:     end of command
     LEGO_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    LEGO_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    LEGO_LSB,// lsb_first:       flag: LSB first
-    LEGO_FLAGS// flags:           some flags
+    LEGO_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    LEGO_LSB,          // lsb_first:       flag: LSB first
+    LEGO_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -1285,9 +1285,9 @@ static const PROGMEM IRMP_PARAMETER thomson_param =
     THOMSON_COMMAND_OFFSET,// command_offset:  command offset
     THOMSON_COMMAND_OFFSET + THOMSON_COMMAND_LEN,// command_end:     end of command
     THOMSON_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    THOMSON_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    THOMSON_LSB,// lsb_first:       flag: LSB first
-    THOMSON_FLAGS// flags:           some flags
+    THOMSON_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    THOMSON_LSB,          // lsb_first:       flag: LSB first
+    THOMSON_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -1310,9 +1310,9 @@ static const PROGMEM IRMP_PARAMETER bose_param =
     BOSE_COMMAND_OFFSET,// command_offset:  command offset
     BOSE_COMMAND_OFFSET + BOSE_COMMAND_LEN,// command_end:     end of command
     BOSE_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    BOSE_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    BOSE_LSB,// lsb_first:       flag: LSB first
-    BOSE_FLAGS// flags:           some flags
+    BOSE_STOP_BIT,     // stop_bit:        flag: frame has stop bit
+    BOSE_LSB,          // lsb_first:       flag: LSB first
+    BOSE_FLAGS         // flags:           some flags
 };
 
 #endif
@@ -1327,18 +1327,18 @@ static const PROGMEM IRMP_PARAMETER a1tvbox_param =
     A1TVBOX_BIT_PULSE_LEN_MAX,// pulse_1_len_max: here: maximum length of short pulse
     A1TVBOX_BIT_PAUSE_LEN_MIN,// pause_1_len_min: here: minimum length of short pause
     A1TVBOX_BIT_PAUSE_LEN_MAX,// pause_1_len_max: here: maximum length of short pause
-    0,// pulse_0_len_min: here: not used
-    0,// pulse_0_len_max: here: not used
-    0,// pause_0_len_min: here: not used
-    0,// pause_0_len_max: here: not used
-    A1TVBOX_ADDRESS_OFFSET,// address_offset:  address offset
+    0,                        // pulse_0_len_min: here: not used
+    0,                        // pulse_0_len_max: here: not used
+    0,                        // pause_0_len_min: here: not used
+    0,                        // pause_0_len_max: here: not used
+    A1TVBOX_ADDRESS_OFFSET,   // address_offset:  address offset
     A1TVBOX_ADDRESS_OFFSET + A1TVBOX_ADDRESS_LEN,// address_end:     end of address
-    A1TVBOX_COMMAND_OFFSET,// command_offset:  command offset
+    A1TVBOX_COMMAND_OFFSET,   // command_offset:  command offset
     A1TVBOX_COMMAND_OFFSET + A1TVBOX_COMMAND_LEN,// command_end:     end of command
     A1TVBOX_COMPLETE_DATA_LEN,// complete_len:    complete length of frame
-    A1TVBOX_STOP_BIT,// stop_bit:        flag: frame has stop bit
-    A1TVBOX_LSB,// lsb_first:       flag: LSB first
-    A1TVBOX_FLAGS// flags:           some flags
+    A1TVBOX_STOP_BIT,         // stop_bit:        flag: frame has stop bit
+    A1TVBOX_LSB,              // lsb_first:       flag: LSB first
+    A1TVBOX_FLAGS             // flags:           some flags
 };
 
 #endif
@@ -2291,7 +2291,7 @@ uint8_t irmp_ISR(void) {
                             && irmp_pause_time <= IHELICOPTER_START_BIT_PAUSE_LEN_MAX) {        // it's IHELICOPTER
                         start_bit_counter--;
                         if (start_bit_counter != 0) {
-                            irmp_start_bit_detected = 0;                                        // reset flags, let's wait for second start bit
+                            irmp_start_bit_detected = 0;                             // reset flags, let's wait for second start bit
                             irmp_pulse_time = 0;
                             irmp_pause_time = 0;
                         } else {
@@ -2468,7 +2468,7 @@ uint8_t irmp_ISR(void) {
 #if IRMP_SUPPORT_IHELICOPTER_PROTOCOL == 1
                         (irmp_pulse_time >= irmp_param.pulse_1_len_min && irmp_pulse_time <= irmp_param.pulse_1_len_max)) {
 #else
-                        (irmp_pulse_time >= irmp_param.pulse_0_len_min && irmp_pulse_time <= irmp_param.pulse_0_len_max)) {
+                            (irmp_pulse_time >= irmp_param.pulse_0_len_min && irmp_pulse_time <= irmp_param.pulse_0_len_max)) {
 #endif
 #ifdef ANALYZE
                             if (! (irmp_param.flags & IRMP_PARAM_FLAG_IS_MANCHESTER))
@@ -2496,7 +2496,7 @@ uint8_t irmp_ISR(void) {
                                 irmp_bit >= 12 - 1)// pause too long?
                         {                                                                         // yes, break and close this frame
                             irmp_param.complete_len = irmp_bit + 1;// set new complete length
-                            got_light = TRUE;// this is a lie, but helps (generates stop bit)
+                            got_light = TRUE;                      // this is a lie, but helps (generates stop bit)
                             irmp_tmp_address |= (irmp_bit - SIRCS_MINIMUM_DATA_LEN + 1) << 8;// new: store number of additional bits in upper byte of address!
                             irmp_param.command_end = irmp_param.command_offset + irmp_bit + 1;// correct command length
                             irmp_pause_time = SIRCS_PAUSE_LEN_MAX - 1;// correct pause length
@@ -3167,7 +3167,7 @@ uint8_t irmp_ISR(void) {
 #if IRMP_SUPPORT_DENON_PROTOCOL == 1
                     if (irmp_param.protocol == IRMP_DENON_PROTOCOL)
                     {                                                               // check for repetition frame
-                        if ((~irmp_tmp_command & 0x3FF) == last_irmp_denon_command) // command bits must be inverted
+                        if ((~irmp_tmp_command & 0x3FF) == last_irmp_denon_command)// command bits must be inverted
                         {
                             irmp_tmp_command = last_irmp_denon_command;             // use command received before!
                             last_irmp_denon_command = 0;
@@ -3220,7 +3220,7 @@ uint8_t irmp_ISR(void) {
                                 ANALYZE_PRINTF ("Detected NEC repetition frame, key_repetition_len = %d\n", key_repetition_len);
                                 ANALYZE_ONLY_NORMAL_PRINTF("REPETETION FRAME                ");
                                 irmp_tmp_address = last_irmp_address;                   // address is last address
-                                irmp_tmp_command = last_irmp_command;                   // command is last command
+                                irmp_tmp_command = last_irmp_command;// command is last command
                                 irmp_flags |= IRMP_FLAG_REPETITION;
                                 key_repetition_len = 0;
                             }

@@ -17,14 +17,14 @@
 
 #if IRMP_EXT_LOGGING == 1
 #if defined(ARM_STM32F30X)
-#include "HY32D.h"
+#include "MI0283QT2.h"
 void initextlog(void) {
-	printEnable();
+    printEnable();
 }
 static char tCharbuf[] = " "; // to convert chars to string
 void sendextlog(unsigned char data) {
-	tCharbuf[0] = data;
-	print((const char*)&tCharbuf, false);
+    tCharbuf[0] = data;
+    print((const char*)&tCharbuf, false);
 }
 #else
 #include "irmpextlog.h"
@@ -45,16 +45,16 @@ static unsigned int bitcount;
 void
 initextlog (void)                                               // reset all data to default, only during init
 {
-	unsigned char i;
+    unsigned char i;
 
-	for (i = 0; i < loglen; i++)
-	{
-		logdata[i] = 0;
-	}
+    for (i = 0; i < loglen; i++)
+    {
+        logdata[i] = 0;
+    }
 
-	bitcount = 0;
-	logindex = 3;
-	bitindex = 7;
+    bitcount = 0;
+    logindex = 3;
+    bitindex = 7;
 }
 
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -64,52 +64,51 @@ initextlog (void)                                               // reset all dat
 void
 sendextlog (unsigned char data)
 {
-	if (logindex == loglen || data == '\n')                     // buffer full or \n  -->  send to application
-	{
-		if (mUSBUSARTIsTxTrfReady())                            // check USB, if ready send
-		{
-			logdata[0] = 0x01;                                  // indicator for logging, depends on your application
-			logdata[1] = logindex;// save how much bytes are send from irmp.c
-			logdata[2] = 0;// set \n Index to 0;  0=buffer full;  0xA=\n received
+    if (logindex == loglen || data == '\n')                     // buffer full or \n  -->  send to application
+    {
+        if (mUSBUSARTIsTxTrfReady())                            // check USB, if ready send
+        {
+            logdata[0] = 0x01;                                  // indicator for logging, depends on your application
+            logdata[1] = logindex;// save how much bytes are send from irmp.c
+            logdata[2] = 0;       // set \n Index to 0;  0=buffer full;  0xA=\n received
 
-			if (data == '\n')
-			{
-				logdata[2] = data;                              // \n --> save \n=0xA in to check in app that \n was received
-			}
+            if (data == '\n')
+            {
+                logdata[2] = data;                              // \n --> save \n=0xA in to check in app that \n was received
+            }
 
-			mUSBUSARTTxRam((unsigned char *) &logdata, loglen); // send all Data to main Seoftware
+            mUSBUSARTTxRam((unsigned char *) &logdata, loglen); // send all Data to main Seoftware
 
-			logindex = 3;// reset index
-			bitindex = 7;// reset bit position
-			logdata[logindex] = 0;// reset value of new logindex to 0
-		}
-	}
-	else
-	{
-		bitcount++;
+            logindex = 3;// reset index
+            bitindex = 7;// reset bit position
+            logdata[logindex] = 0;// reset value of new logindex to 0
+        }
+    }
+    else
+    {
+        bitcount++;
 
-		if (data == '1')
-		{
-			bit_set(logdata[logindex], bitindex);               // all logdata[logindex] on start = 0 --> only 1 must be set
-		}
+        if (data == '1')
+        {
+            bit_set(logdata[logindex], bitindex);               // all logdata[logindex] on start = 0 --> only 1 must be set
+        }
 
-		bitindex--;                                             // decrease bitposition, wirte from left to right
+        bitindex--;                                             // decrease bitposition, wirte from left to right
 
-		if (bitindex == -1)// byte complete Bit 7->0 --> next one
-		{
-			bitindex = 7;
-			logindex++;
+        if (bitindex == -1)// byte complete Bit 7->0 --> next one
+        {
+            bitindex = 7;
+            logindex++;
 
-			if (logindex < loglen)
-			{
-				logdata[logindex] = 0;                          // set next byte to 0
-			}
-		}
-	}
+            if (logindex < loglen)
+            {
+                logdata[logindex] = 0;                          // set next byte to 0
+            }
+        }
+    }
 }
 #endif //defined(ARM_STM32F30X)
 #endif //IRMP_EXT_LOGGING
-
 //static void dummy(void) {
 //	// Only to avoid C18 compiler error
 //}

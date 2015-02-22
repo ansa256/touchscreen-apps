@@ -3,7 +3,7 @@
  *
  * @date 27.03.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  *      Source based on STM code samples
  * @version 1.0.0

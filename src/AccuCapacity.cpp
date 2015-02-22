@@ -3,7 +3,7 @@
  *
  *  @date 23.02.2012
  *  @author Armin Joachimsmeyer
- *  armin.joachimsmeyer@gmx.de
+ *  armin.joachimsmeyer@gmail.com
  *  @brief measures the capacity of 1,2V rechargeable batteries while charging or discharging
  *  and shows the voltage and internal resistance graph on LCD screen.
  *
@@ -63,6 +63,7 @@ void printSamplePeriod(void);
 void drawAccuCapacityMainPage(void);
 void drawAccuCapacitySettingsPage(void);
 void redrawAccuCapacityChartPage(void);
+void redrawAccuCapacityPages(void);
 
 void doStartStopAccuCap(TouchButton * const aTheTouchedButton, int16_t aProbeIndex);
 void doAccuCapMainMenuHomeButton(TouchButton * const aTheTouchedButton, int16_t aValue);
@@ -78,7 +79,7 @@ void callbackTimerSampleChannel0(void);
 void callbackTimerSampleChannel1(void);
 void callbackTimerMinMaxSampleChannel0(void);
 void callbackTimerMinMaxSampleChannel1(void);
-void callbackTimerDisplayRefresh(void);
+void callbackDisplayRefreshDelay(void);
 
 /**
  * Color scheme
@@ -185,10 +186,10 @@ Chart ResistanceChart_1; // Xlabel not used, Xlabel of VoltageChart used instead
 static Chart * VoltageCharts[NUMBER_OF_PROBES] = { &VoltageChart_0, &VoltageChart_1 };
 static Chart * ResistanceCharts[NUMBER_OF_PROBES] = { &ResistanceChart_0, &ResistanceChart_1 };
 
-#define CHART_START_X  (4 * FONT_WIDTH)
-#define CHART_WIDTH    (DISPLAY_WIDTH - CHART_START_X)
-#define CHART_START_Y  (DISPLAY_HEIGHT - FONT_HEIGHT - 6)
-#define CHART_HEIGHT   CHART_START_Y
+#define CHART_START_X  (4 * TEXT_SIZE_11_WIDTH)
+#define CHART_WIDTH    (BlueDisplay1.getDisplayWidth() - CHART_START_X)
+#define CHART_START_Y  (BlueDisplay1.getDisplayHeight() - TEXT_SIZE_11_HEIGHT - 6)
+#define CHART_HEIGHT   (CHART_START_Y + 1)
 #define CHART_GRID_X_SIZE   22
 #define CHART_GRID_Y_SIZE   40
 #define CHART_GRID_Y_COUNT   (CHART_HEIGHT / CHART_GRID_Y_SIZE)
@@ -242,7 +243,11 @@ struct DataloggerMeasurementControlStruct {
     uint8_t Mode;
 
     uint16_t SamplePeriodSeconds;
+    uint16_t SampleCount; // number of samples just taken for measurement
+    uint32_t SampleSumRawReadings; // sum of raw adc readings
+
     uint16_t ActualReading;
+
     uint16_t Min;
     uint16_t Max;
 
@@ -250,12 +255,9 @@ struct DataloggerMeasurementControlStruct {
 
     uint16_t StopMilliampereHour; // if Capacity > StopMilliampereHour then stop - used for charging - 0 means no stop
 
-    uint16_t ReadingChargeVoltage; // is persistent stored in RTC backup register 8
+    uint16_t ChargeVoltageRaw; // is stored in RTC backup register 8 - Maximum is 48 (16*3) Volt at 3 Volt reference
 
-    // ID number of probe under measurement
-    uint16_t ProbeNumber;
-    uint16_t SampleCount;
-    long SampleSum;
+    uint16_t ProbeNumber; // ID number of actual probe
 
     float OhmLoadResistor;
     float Volt;
@@ -300,9 +302,9 @@ void setOutputLines(int16_t aProbeIndex) {
 /**
  * Callback for Timer
  */
-void callbackTimerDisplayRefresh(void) {
-    registerDelayCallback(&callbackTimerDisplayRefresh, SHOW_PERIOD);
-    // no drawing here!!! because it can interfere with drawing done in tread
+void callbackDisplayRefreshDelay(void) {
+    registerDelayCallback(&callbackDisplayRefreshDelay, SHOW_PERIOD);
+    // no drawing here!!! because it can interfere with drawing in tread
     doDisplayRefresh = true;
 }
 
@@ -340,7 +342,7 @@ void handleTimerCallback(int aProbeIndex) {
         DataloggerMeasurementControl[aProbeIndex].VoltageDatabuffer[DataloggerMeasurementControl[aProbeIndex].SampleCount] =
                 DataloggerMeasurementControl[aProbeIndex].Max;
         // assume extern charging
-        DataloggerMeasurementControl[aProbeIndex].SampleSum += DataloggerMeasurementControl[aProbeIndex].ReadingChargeVoltage
+        DataloggerMeasurementControl[aProbeIndex].SampleSumRawReadings += DataloggerMeasurementControl[aProbeIndex].ChargeVoltageRaw
                 - DataloggerMeasurementControl[aProbeIndex].Max;
 
         // store minimum
@@ -355,16 +357,17 @@ void handleTimerCallback(int aProbeIndex) {
         DataloggerMeasurementControl[aProbeIndex].VoltageDatabuffer[DataloggerMeasurementControl[aProbeIndex].SampleCount] =
                 tAccuReading;
         if (DataloggerMeasurementControl[aProbeIndex].Mode == MODE_DISCHARGING) {
-            DataloggerMeasurementControl[aProbeIndex].SampleSum += tAccuReading;
+            DataloggerMeasurementControl[aProbeIndex].SampleSumRawReadings += tAccuReading;
         } else {
-            DataloggerMeasurementControl[aProbeIndex].SampleSum += DataloggerMeasurementControl[aProbeIndex].ReadingChargeVoltage
-                    - tAccuReading;
+            DataloggerMeasurementControl[aProbeIndex].SampleSumRawReadings +=
+                    DataloggerMeasurementControl[aProbeIndex].ChargeVoltageRaw - tAccuReading;
         }
     }
 
-    long tCap = (DataloggerMeasurementControl[aProbeIndex].SampleSum * 10
-            * DataloggerMeasurementControl[aProbeIndex].SamplePeriodSeconds) / 36;
-    DataloggerMeasurementControl[aProbeIndex].Capacity = tCap * ADCToVoltFactor * 1000.0
+    uint32_t tCap = DataloggerMeasurementControl[aProbeIndex].SampleSumRawReadings
+            * DataloggerMeasurementControl[aProbeIndex].SamplePeriodSeconds;
+    // 277.777 = 1000 *(10/36)
+    DataloggerMeasurementControl[aProbeIndex].Capacity = tCap * ADCToVoltFactor * 277.777
             / DataloggerMeasurementControl[aProbeIndex].OhmLoadResistor;
 
 // stop detection here, because it uses actual reading which is changed by getInternalResistance() :-(
@@ -472,6 +475,17 @@ uint16_t getInternalResistanceMilliohm(unsigned int aProbeIndex) {
     return (DataloggerMeasurementControl[aProbeIndex].OhmAccuResistance * 1000);
 }
 
+void TouchUpHandlerAccuCapacity(struct XYPosition * const aTouchPosition) {
+    // first check for buttons
+    if (!TouchButton::checkAllButtons(aTouchPosition->PosX, aTouchPosition->PosY, true)) {
+        if (ActualPage == PAGE_CHART) {
+            //touch press but no gui element matched?
+            // switch chart overlay;
+            doSwitchChartOverlay();
+        }
+    }
+}
+
 /**
  * Shows gui on long touch
  * @param aTouchPositionX
@@ -480,7 +494,7 @@ uint16_t getInternalResistanceMilliohm(unsigned int aProbeIndex) {
  * @return
  */
 
-bool longTouchHandlerAccuCapacity(const int aTouchPositionX, const int aTouchPositionY) {
+void longTouchHandlerAccuCapacity(struct XYPosition * const aTouchPosition) {
     // show gui
     if (ActualPage == PAGE_CHART) {
         if (AccuCapDisplayControl[ActualProbe].ChartShowMode == SHOW_MODE_DATA) {
@@ -489,8 +503,6 @@ bool longTouchHandlerAccuCapacity(const int aTouchPositionX, const int aTouchPos
         AccuCapDisplayControl[ActualProbe].ChartShowMode = SHOW_MODE_GUI;
         activateOrShowChartGui();
     }
-    sDisableEndTouchOnce = true;
-    return true;
 }
 
 /**
@@ -499,46 +511,37 @@ bool longTouchHandlerAccuCapacity(const int aTouchPositionX, const int aTouchPos
  * @param aTouchDeltaX
  * @param aTouchDeltaY
  * @return
- */ //
-bool endTouchHandlerAccuCapacity(SWIPE_INFO const aSwipeInfo) {
+ */
+void swipeEndHandlerAccuCapacity(struct Swipe * const aSwipeInfo) {
 
-    if (sAutorepeatButtonTouched) {
-        return false;
-    }
-    if (aSwipeInfo.TouchDeltaAbsMax < CHART_GRID_Y_SIZE) {
-        // no swipe, no long touch action -> let loop check gui
-        sCheckButtonsForEndTouch = true;
-    } else {
-        int tFeedbackType;
-        if (ActualPage == PAGE_CHART) {
-            if (aSwipeInfo.SwipeMainDirectionIsX) {
-                int tTouchDeltaGrid = aSwipeInfo.TouchDeltaX / CHART_GRID_X_SIZE;
-                // Horizontal swipe
-                if (TouchPanel.getYFirst() > BUTTON_HEIGHT_4_LINE_4) {
-                    // scroll
-                    tFeedbackType = changeXOffset(tTouchDeltaGrid);
-                } else {
-                    // scale
-                    tFeedbackType = changeXScaleFactor(-(tTouchDeltaGrid / 2));
-                }
+    int tFeedbackType;
+    if (ActualPage == PAGE_CHART) {
+        if (aSwipeInfo->SwipeMainDirectionIsX) {
+            int tTouchDeltaGrid = aSwipeInfo->TouchDeltaX / CHART_GRID_X_SIZE;
+            // Horizontal swipe
+            if (aSwipeInfo->TouchStartY > BUTTON_HEIGHT_4_LINE_4) {
+                // scroll
+                tFeedbackType = changeXOffset(-tTouchDeltaGrid);
             } else {
-                int tTouchDeltaGrid = aSwipeInfo.TouchDeltaY / CHART_GRID_Y_SIZE;
-                // Vertical swipe
-                if (TouchPanel.getXFirst() < BUTTON_WIDTH_5) {
-                    //offset
-                    tFeedbackType = changeYOffset(-tTouchDeltaGrid);
-                } else {
-                    //range
-                    tFeedbackType = changeYScaleFactor(tTouchDeltaGrid);
-                }
+                // scale
+                tFeedbackType = changeXScaleFactor(tTouchDeltaGrid / 2);
             }
         } else {
-            // swipe on start page
-            tFeedbackType = FEEDBACK_TONE_SHORT_ERROR;
+            int tTouchDeltaGrid = aSwipeInfo->TouchDeltaY / CHART_GRID_Y_SIZE;
+            // Vertical swipe
+            if (aSwipeInfo->TouchStartX < BUTTON_WIDTH_5) {
+                //offset
+                tFeedbackType = changeYOffset(tTouchDeltaGrid);
+            } else {
+                //range
+                tFeedbackType = changeYScaleFactor(-tTouchDeltaGrid);
+            }
         }
-        FeedbackTone(tFeedbackType);
+    } else {
+        // swipe on start page
+        tFeedbackType = FEEDBACK_TONE_SHORT_ERROR;
     }
-    return true;
+    FeedbackTone(tFeedbackType);
 }
 
 void initAccuCapacity(void) {
@@ -562,7 +565,7 @@ void initAccuCapacity(void) {
         DataloggerMeasurementControl[i].ExternalAttenuatorFactor = 1.0;
         VoltageCharts[i]->initYLabelFloat(START_Y_OFFSET, CHART_MIN_Y_INCREMENT_VOLT, ADCToVoltFactor, 3, 1);
         VoltageCharts[i]->setYTitleText(StringVolt);
-        AccuCapDisplayControl[i].VoltYScaleFactor = 0; // 0=identity
+        AccuCapDisplayControl[i].VoltYScaleFactor = 0;            // 0=identity
 
         ResistanceCharts[i]->initChart(CHART_START_X, CHART_START_Y, CHART_WIDTH, CHART_HEIGHT, 2, true, CHART_GRID_X_SIZE,
                 CHART_GRID_Y_SIZE);
@@ -571,7 +574,7 @@ void initAccuCapacity(void) {
         // y axis
         ResistanceCharts[i]->initYLabelInt(0, CHART_MIN_Y_INCREMENT_RESISTANCE, 1, 3);
         ResistanceCharts[i]->setYTitleText(StringMilliOhm);
-        AccuCapDisplayControl[i].ResistorYScaleFactor = 0; // 0=identity
+        AccuCapDisplayControl[i].ResistorYScaleFactor = 0;            // 0=identity
 
         // x axis for both charts
         adjustXAxisToSamplePeriod(i, SAMPLE_PERIOD_START);
@@ -580,7 +583,7 @@ void initAccuCapacity(void) {
         DataloggerMeasurementControl[i].IsStarted = false;
         DataloggerMeasurementControl[i].Mode = MODE_DISCHARGING;
         DataloggerMeasurementControl[i].Capacity = 0;
-        DataloggerMeasurementControl[i].SampleSum = 0;
+        DataloggerMeasurementControl[i].SampleSumRawReadings = 0;
         DataloggerMeasurementControl[i].SamplePeriodSeconds = SAMPLE_PERIOD_START;
         DataloggerMeasurementControl[i].OhmLoadResistor = 5.0;
         DataloggerMeasurementControl[i].StopThreshold = sReading3Volt * STOP_VOLTAGE_TIMES_TEN / 30;
@@ -592,9 +595,9 @@ void initAccuCapacity(void) {
         AccuCapDisplayControl[i].ActualDataChart = CHART_DATA_BOTH;
         // load from cmos ram
         if (RTC_checkMagicNumber()) {
-            DataloggerMeasurementControl[i].ReadingChargeVoltage = RTC_ReadBackupRegister(RTC_BKP_DR8 ) & 0xFFFF;
+            DataloggerMeasurementControl[i].ChargeVoltageRaw = RTC_ReadBackupRegister(RTC_BKP_DR8 ) & 0xFFFF;
         } else {
-            DataloggerMeasurementControl[i].ReadingChargeVoltage = READING_CHARGE_VOLTAGE_DEFAULT;
+            DataloggerMeasurementControl[i].ChargeVoltageRaw = READING_CHARGE_VOLTAGE_DEFAULT;
         }
     }
 }
@@ -602,15 +605,21 @@ void initAccuCapacity(void) {
 void startAccuCapacity(void) {
     initGUIAccuCapacity();
     drawAccuCapacityMainPage();
+    registerSimpleResizeAndReconnectCallback(&redrawAccuCapacityPages);
+
     TouchButtonMainHome->setTouchHandler(&doAccuCapMainMenuHomeButton);
     // start display refresh
-    registerDelayCallback(&callbackTimerDisplayRefresh, SHOW_PERIOD);
-    TouchPanel.registerLongTouchCallback(&longTouchHandlerAccuCapacity, TOUCH_STANDARD_LONG_TOUCH_TIMEOUT_MILLIS);
-    TouchPanel.registerEndTouchCallback(&endTouchHandlerAccuCapacity);
+    registerDelayCallback(&callbackDisplayRefreshDelay, SHOW_PERIOD);
+
+    registerLongTouchDownCallback(&longTouchHandlerAccuCapacity, TOUCH_STANDARD_LONG_TOUCH_TIMEOUT_MILLIS);
+    // use touch up for buttons in order not to interfere with long touch
+    registerTouchUpCallback(&TouchUpHandlerAccuCapacity);
+    registerSwipeEndCallback(&swipeEndHandlerAccuCapacity);
+    registerTouchDownCallback(NULL);
 }
 
 void stopAccuCapacity(void) {
-    // Stop display refresh is done in button handler
+// Stop display refresh is done in button handler
 
 // free buttons
     for (unsigned int i = 0; i < sizeof(ButtonsChart) / sizeof(ButtonsChart[0]); ++i) {
@@ -630,24 +639,15 @@ void stopAccuCapacity(void) {
     TouchButtonAutorepeatSamplePeriodPlus->setFree();
     TouchButtonAutorepeatSamplePeriodMinus->setFree();
 
-    TouchPanel.registerLongTouchCallback(NULL, 0);
-    TouchPanel.registerEndTouchCallback(NULL);
+    registerLongTouchDownCallback(NULL, 0);
+    registerSwipeEndCallback(NULL);
+    registerTouchUpCallback(NULL);
+    // restore old touch down handler
+    registerTouchDownCallback(&simpleTouchDownHandler);
 }
 
 void loopAccuCapacity(void) {
-    // check only if sCheckButtonsForEndTouch is set by EndTouch handler
-    CheckTouchGeneric(false);
-
-    if (sEndTouchProcessed) {
-        //touch press but no gui element matched?
-        if (sLastGuiTouchState == GUI_NO_TOUCH && ActualPage == PAGE_CHART) {
-            // switch chart overlay;
-            doSwitchChartOverlay();
-        }
-        sEndTouchProcessed = false;
-    }
-
-    // check Flags from ISR
+// check Flags from ISR
     if (doDisplayRefresh == true) {
         for (int i = 0; i < NUMBER_OF_PROBES; ++i) {
             readSample(i);
@@ -659,6 +659,8 @@ void loopAccuCapacity(void) {
         doEndTone = false;
         EndTone();
     }
+    // check only if sCheckButtonsForEndTouch is set by EndTouch handler
+    checkAndHandleEvents();
 }
 
 /************************************************************************
@@ -745,7 +747,7 @@ void doSetProbeNumber(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
 
     float tNumber = getNumberFromNumberPad(NUMBERPAD_DEFAULT_X, 0, ProbeColors[ActualProbe]);
-    // check for cancel
+// check for cancel
     if (!isnan(tNumber)) {
         DataloggerMeasurementControl[ActualProbe].ProbeNumber = tNumber;
     }
@@ -756,11 +758,11 @@ void doSetStopValue(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
 
     float tNumber = getNumberFromNumberPad(NUMBERPAD_DEFAULT_X, 0, ProbeColors[ActualProbe]);
-    // check for cancel
+// check for cancel
     if (!isnan(tNumber)) {
         if (DataloggerMeasurementControl[ActualProbe].Mode == MODE_CHARGING) {
             // set capacity
-            DataloggerMeasurementControl[ActualProbe].StopMilliampereHour = (tNumber * 11) / 8; // for loading factor of 1,375
+            DataloggerMeasurementControl[ActualProbe].StopMilliampereHour = (tNumber * 11) / 8;       // for loading factor of 1,375
         } else {
             DataloggerMeasurementControl[ActualProbe].StopThreshold = tNumber / ADCToVoltFactor;
         }
@@ -771,7 +773,7 @@ void doSetStopValue(TouchButton * const aTheTouchedButton, int16_t aValue) {
 void doSetLoadResistorValue(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
     float tNumber = getNumberFromNumberPad(NUMBERPAD_DEFAULT_X, 0, ProbeColors[ActualProbe]);
-    // check for cancel
+// check for cancel
     if (!isnan(tNumber)) {
         DataloggerMeasurementControl[ActualProbe].OhmLoadResistor = tNumber;
     }
@@ -781,7 +783,7 @@ void doSetLoadResistorValue(TouchButton * const aTheTouchedButton, int16_t aValu
 void doSetExternalAttenuatorFactor(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
     float tNumber = getNumberFromNumberPad(NUMBERPAD_DEFAULT_X, 0, ProbeColors[ActualProbe]);
-    // check for cancel
+// check for cancel
     if (!isnan(tNumber)) {
         DataloggerMeasurementControl[ActualProbe].ExternalAttenuatorFactor = tNumber;
     }
@@ -812,7 +814,7 @@ void doSetReadingChargeVoltage(TouchButton * const aTheTouchedButton, int16_t aV
         RTC_WriteBackupRegister(RTC_BKP_DR8, tAccuReading);
         PWR_BackupAccessCmd(DISABLE);
     }
-    DataloggerMeasurementControl[ActualProbe].ReadingChargeVoltage = tAccuReading;
+    DataloggerMeasurementControl[ActualProbe].ChargeVoltageRaw = tAccuReading;
     drawAccuCapacitySettingsPage();
 }
 
@@ -852,7 +854,7 @@ void doSwitchChartOverlay(void) {
 
         TouchButton::deactivateAllButtons();
         // only chart no gui
-        drawData(true); // calls activateOrShowChartGui()
+        drawData(true);            // calls activateOrShowChartGui()
     } else {
         //  delete basic data and show full data
         clearBasicInfo();
@@ -945,7 +947,7 @@ void doChargeMode(TouchButton * const aTheTouchedButton, int16_t aProbeIndex) {
     DataloggerMeasurementControl[aProbeIndex].Mode = tNewState;
     setOutputLines(aProbeIndex);
     setModeCaption(ActualProbe);
-    // start min max detection
+// start min max detection
     if (tNewState == MODE_EXTERN) {
         DataloggerMeasurementControl[0].Max = 0;
         DataloggerMeasurementControl[0].Min = 0xFFFF;
@@ -967,7 +969,7 @@ void doClearDataBuffer(TouchButton * const aTheTouchedButton, int16_t aProbeInde
 
     DataloggerMeasurementControl[aProbeIndex].Capacity = 0;
     DataloggerMeasurementControl[aProbeIndex].SampleCount = 0;
-    DataloggerMeasurementControl[aProbeIndex].SampleSum = 0;
+    DataloggerMeasurementControl[aProbeIndex].SampleSumRawReadings = 0;
 // Clear data buffer
     memset(&DataloggerMeasurementControl[aProbeIndex].VoltageDatabuffer[0], 0, RAM_DATABUFFER_MAX_LENGTH);
     memset(&DataloggerMeasurementControl[aProbeIndex].MinVoltageDatabuffer[0], 0, RAM_DATABUFFER_MAX_LENGTH);
@@ -1104,11 +1106,11 @@ static void doExportChart(TouchButton * const aTheTouchedButton, int16_t aProbeI
  * switch back to main menu
  */
 void doAccuCapMainMenuHomeButton(TouchButton * const aTheTouchedButton, int16_t aValue) {
-    // Stop display refresh - must be done before drawing main menu
-    changeDelayCallback(&callbackTimerDisplayRefresh, DISABLE_TIMER_DELAY_VALUE);
-    // restore handler
+// Stop display refresh - must be done before drawing main menu
+    changeDelayCallback(&callbackDisplayRefreshDelay, DISABLE_TIMER_DELAY_VALUE);
+// restore handler
     TouchButtonMainHome->setTouchHandler(&doMainMenuHomeButton);
-    // call original handler
+// call original handler
     doMainMenuHomeButton(aTheTouchedButton, aValue);
 }
 
@@ -1126,9 +1128,9 @@ void initGUIAccuCapacity(void) {
 
 // for main screen
     TouchButtonsMain[0] = TouchButton::allocAndInitSimpleButton(0, 0, BUTTON_WIDTH_2_5, BUTTON_HEIGHT_4, ProbeColors[0], "Probe 1",
-            2, 0, &doShowChartScreen);
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doShowChartScreen);
     TouchButtonsMain[1] = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_2_5_POS_2, 0, BUTTON_WIDTH_2_5, BUTTON_HEIGHT_4,
-            ProbeColors[1], "Probe 2", 2, 1, &doShowChartScreen);
+            ProbeColors[1], "Probe 2", TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 1, &doShowChartScreen);
 
     /*
      * chart buttons from left to right
@@ -1138,75 +1140,77 @@ void initGUIAccuCapacity(void) {
      * 1. column
      */
     TouchButtonProbeSettings = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_2, 0, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_CONTROL, "Sett.", 1, 0, &doShowSettings);
+            COLOR_GUI_CONTROL, "Sett.", TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doShowSettings);
     TouchButtonClearDataBuffer = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_2, PosY, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_VALUES, StringClear, 1, 0, &doClearDataBuffer);
+            COLOR_GUI_VALUES, StringClear, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doClearDataBuffer);
     TouchButtonChartSwitchData = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_2,
             2 * (BUTTON_HEIGHT_5 + (BUTTON_DEFAULT_SPACING / 2)), BUTTON_WIDTH_5, BUTTON_HEIGHT_5, COLOR_GUI_DISPLAY_CONTROL,
-            StringVolt, 1, 0, &doSwitchChartData);
+            StringVolt, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doSwitchChartData);
 
     /*
      * 2. column
      */
     TouchButtonStartStopCapacityMeasurement = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_3, 0, BUTTON_WIDTH_5,
-            BUTTON_HEIGHT_5, COLOR_GUI_CONTROL, StringEmpty, 1, 0, &doStartStopAccuCap);
+            BUTTON_HEIGHT_5, COLOR_GUI_CONTROL, StringEmpty, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doStartStopAccuCap);
     TouchButtonMode = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_3, PosY, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_VALUES, StringEmpty, 1, 0, &doChargeMode);
+            COLOR_GUI_VALUES, StringEmpty, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doChargeMode);
 
     /*
      * 3. column
      */
     TouchButtonNext = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_4, 0, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_CONTROL, StringNext, 1, 0, &doShowChartScreen);
+            COLOR_GUI_CONTROL, StringNext, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doShowChartScreen);
     TouchButtonLoadStore = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_4, PosY, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_VALUES, StringEmpty, 1, 0, &doStoreLoadChart);
+            COLOR_GUI_VALUES, StringEmpty, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doStoreLoadChart);
 
     /*
      * 4. column
      */
     TouchButtonMain = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_5, 0, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_CONTROL, StringBack, 1, 0, &doShowMainScreen);
+            COLOR_GUI_CONTROL, StringBack, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doShowMainScreen);
     TouchButtonExport = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_5_POS_5, PosY, BUTTON_WIDTH_5, BUTTON_HEIGHT_5,
-            COLOR_GUI_VALUES, StringExport, 1, 0, &doExportChart);
+            COLOR_GUI_VALUES, StringExport, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doExportChart);
 
     /*
      * Settings page buttons
      */
-    // 1. row
+// 1. row
     int tPosY = 0;
     TouchButtonSetProbeNumber = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, COLOR_GUI_VALUES,
-            StringProbeNumber, 1, 0, &doSetProbeNumber);
+            StringProbeNumber, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doSetProbeNumber);
 
     TouchButtonBack = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, 0, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-            COLOR_GUI_CONTROL, StringBack, 2, 0, &doShowChartScreen);
+            COLOR_GUI_CONTROL, StringBack, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doShowChartScreen);
 
-    // 2. row
+// 2. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
     TouchButtonSetLoadResistor = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, COLOR_GUI_VALUES,
-            StringLoadResistor, 1, 0, &doSetLoadResistorValue);
+            StringLoadResistor, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doSetLoadResistorValue);
 
-    // Value settings buttons
-    TouchButtonAutorepeatSamplePeriodPlus = TouchButtonAutorepeat::allocAndInitSimpleButton(BUTTON_WIDTH_2_POS_2,
-            tPosY, BUTTON_WIDTH_6, BUTTON_HEIGHT_4, COLOR_GUI_CONTROL, StringPlus, 2, 1, &doSetSamplePeriod);
+// Value settings buttons
+    TouchButtonAutorepeatSamplePeriodPlus = TouchButtonAutorepeat::allocAndInitSimpleButton(BUTTON_WIDTH_2_POS_2, tPosY,
+            BUTTON_WIDTH_6, BUTTON_HEIGHT_4, COLOR_GUI_CONTROL, StringPlus, TEXT_SIZE_22, 1, &doSetSamplePeriod);
 
-    TouchButtonAutorepeatSamplePeriodMinus = TouchButtonAutorepeat::allocAndInitSimpleButton(BUTTON_WIDTH_6_POS_6,
-            tPosY, BUTTON_WIDTH_6, BUTTON_HEIGHT_4, COLOR_GUI_CONTROL, StringMinus, 2, -1, &doSetSamplePeriod);
+    TouchButtonAutorepeatSamplePeriodMinus = TouchButtonAutorepeat::allocAndInitSimpleButton(BUTTON_WIDTH_6_POS_6, tPosY,
+            BUTTON_WIDTH_6, BUTTON_HEIGHT_4, COLOR_GUI_CONTROL, StringMinus, TEXT_SIZE_22, -1, &doSetSamplePeriod);
 
     TouchButtonAutorepeatSamplePeriodPlus->setButtonAutorepeatTiming(600, 100, 10, 20);
     TouchButtonAutorepeatSamplePeriodMinus->setButtonAutorepeatTiming(600, 100, 10, 20);
 
-    // 3. row
+// 3. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
     TouchButtonSetExternalAttenuatorFactor = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4,
-            COLOR_GUI_VALUES, StringExternalAttenuatorFactor, 1, 0, &doSetExternalAttenuatorFactor);
+            COLOR_GUI_VALUES, StringExternalAttenuatorFactor, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0,
+            &doSetExternalAttenuatorFactor);
 
-    // 4. row
+// 4. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
     TouchButtonSetStopValue = TouchButton::allocAndInitSimpleButton(0, tPosY, BUTTON_WIDTH_2, BUTTON_HEIGHT_4, COLOR_GUI_VALUES,
-            StringStopVoltage, 1, 0, &doSetStopValue);
+            StringStopVoltage, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doSetStopValue);
 
     TouchButtonSetChargeVoltage = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_2_POS_2, tPosY, BUTTON_WIDTH_2,
-            BUTTON_HEIGHT_4, COLOR_GUI_VALUES, StringStoreChargeVoltage, 1, 0, &doSetReadingChargeVoltage);
+            BUTTON_HEIGHT_4, COLOR_GUI_VALUES, StringStoreChargeVoltage, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0,
+            &doSetReadingChargeVoltage);
 
 #pragma GCC diagnostic pop
 
@@ -1246,7 +1250,8 @@ void printSamplePeriod(void) {
     int tMinutes = tSeconds / 60;
     tSeconds %= 60;
     snprintf(StringBuffer, sizeof StringBuffer, "Sample period %u:%02u", tMinutes, tSeconds);
-    drawText(BUTTON_WIDTH_2_POS_2, BUTTON_HEIGHT_4_LINE_3, StringBuffer, 1, COLOR_BLACK, COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.drawText(BUTTON_WIDTH_2_POS_2, BUTTON_HEIGHT_4_LINE_3, StringBuffer, TEXT_SIZE_11, COLOR_BLACK,
+            COLOR_BACKGROUND_DEFAULT);
 }
 
 void setBasicMeasurementValues(uint8_t aProbeIndex, unsigned int aRawReading) {
@@ -1256,7 +1261,7 @@ void setBasicMeasurementValues(uint8_t aProbeIndex, unsigned int aRawReading) {
         int tAccuEffectiveReading = aRawReading;
         if (DataloggerMeasurementControl[aProbeIndex].Mode != MODE_DISCHARGING) {
             // assume charging for extern
-            tAccuEffectiveReading = DataloggerMeasurementControl[aProbeIndex].ReadingChargeVoltage - aRawReading;
+            tAccuEffectiveReading = DataloggerMeasurementControl[aProbeIndex].ChargeVoltageRaw - aRawReading;
         }
         DataloggerMeasurementControl[aProbeIndex].Milliampere = (ADCToVoltFactor * tAccuEffectiveReading * 1000)
                 / DataloggerMeasurementControl[aProbeIndex].OhmLoadResistor;
@@ -1281,7 +1286,7 @@ unsigned int readSample(uint8_t aProbeIndex) {
     inReadSample = false;
 
     tAccuReading /= 2;
-    // compensate for external attenuator
+// compensate for external attenuator
     tAccuReading = tAccuReading * DataloggerMeasurementControl[aProbeIndex].ExternalAttenuatorFactor;
 
     setBasicMeasurementValues(aProbeIndex, tAccuReading);
@@ -1294,14 +1299,19 @@ unsigned int readSample(uint8_t aProbeIndex) {
  * @param aADCReadingToAutorange Raw reading
  */
 void setYAutorange(int16_t aProbeIndex, uint16_t aADCReadingToAutorange) {
-    float tNumberOfYIncrementsPerChartHalf =
-            (CHART_HEIGHT * AccuCapDisplayControl[ActualProbe].VoltYScaleFactor / CHART_GRID_Y_SIZE) / 2;
+    float tNumberOfMinYIncrementsPerChart = CHART_HEIGHT / CHART_GRID_Y_SIZE;
+    adjustFloatWithScaleFactor(tNumberOfMinYIncrementsPerChart, AccuCapDisplayControl[ActualProbe].VoltYScaleFactor);
+// let start voltage = readingVoltage - half of actual chart range
     float tYLabelStartVoltage = (aADCReadingToAutorange * ADCToVoltFactor)
-            - (tNumberOfYIncrementsPerChartHalf * CHART_MIN_Y_INCREMENT_VOLT);
+            - (tNumberOfMinYIncrementsPerChart * (CHART_MIN_Y_INCREMENT_VOLT / 2));
 // round to 0.1
     tYLabelStartVoltage = roundf(10 * tYLabelStartVoltage) * CHART_MIN_Y_INCREMENT_VOLT;
     VoltageCharts[ActualProbe]->setYLabelStartValueFloat(tYLabelStartVoltage);
     VoltageCharts[ActualProbe]->drawYAxis(true);
+    if (AccuCapDisplayControl[ActualProbe].ChartShowMode == SHOW_MODE_GUI) {
+        // show Symbol for vertical swipe
+        BlueDisplay1.drawChar(0, BUTTON_HEIGHT_5_LINE_4, '\xE0', TEXT_SIZE_22, COLOR_BLUE, COLOR_BACKGROUND_DEFAULT);
+    }
 }
 
 /*
@@ -1309,7 +1319,8 @@ void setYAutorange(int16_t aProbeIndex, uint16_t aADCReadingToAutorange) {
  */
 void clearBasicInfo(void) {
 // values correspond to drawText above
-    fillRect(BASIC_INFO_X, BASIC_INFO_Y, DISPLAY_WIDTH - 1, BASIC_INFO_Y + (2 * FONT_HEIGHT)+ 1, COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.fillRectRel(BASIC_INFO_X, BASIC_INFO_Y, BlueDisplay1.getDisplayWidth() - BASIC_INFO_X, 2 * TEXT_SIZE_11_HEIGHT,
+            COLOR_BACKGROUND_DEFAULT);
 }
 
 //show A/D data on LCD screen
@@ -1326,50 +1337,52 @@ void printMeasurementValues(void) {
          */
         tPosX = 0;
         for (uint8_t i = 0; i < NUMBER_OF_PROBES; ++i) {
-            tPosY = BUTTON_HEIGHT_4 + FONT_HEIGHT;
+            tPosY = BUTTON_HEIGHT_4 + TEXT_SIZE_11_HEIGHT + TEXT_SIZE_22_ASCEND;
             snprintf(StringBuffer, sizeof StringBuffer, "%4u", DataloggerMeasurementControl[i].ActualReading);
-            drawText(tPosX + 2 * FONT_WIDTH, tPosY, StringBuffer, 2, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX + TEXT_SIZE_22_WIDTH, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[i],
+                    COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 4 + 2 * FONT_HEIGHT;
+            tPosY += 4 + TEXT_SIZE_22_HEIGHT;
             snprintf(StringBuffer, sizeof StringBuffer, "%4.3fV", DataloggerMeasurementControl[i].Volt);
 
-            drawText(tPosX, tPosY, StringBuffer, 2, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 4 + 2 * FONT_HEIGHT;
+            tPosY += 4 + TEXT_SIZE_22_HEIGHT;
             snprintf(StringBuffer, sizeof StringBuffer, "%4.0fmA", DataloggerMeasurementControl[i].Milliampere);
-            drawText(tPosX + 2 * FONT_WIDTH, tPosY, StringBuffer, 2, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX + TEXT_SIZE_22_WIDTH, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[i],
+                    COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 4 + 2 * FONT_HEIGHT;
+            tPosY += 4 + TEXT_SIZE_22_HEIGHT;
             // capacity is micro Ampere hour
             snprintf(StringBuffer, sizeof StringBuffer, "%5.0fmAh", DataloggerMeasurementControl[i].Capacity / 1000);
-            drawText(tPosX, tPosY, StringBuffer, 2, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 4 + 2 * FONT_HEIGHT;
+            tPosY += 4 + TEXT_SIZE_22_HEIGHT;
             if (DataloggerMeasurementControl[ActualProbe].Mode != MODE_EXTERN) {
-                snprintf(StringBuffer, sizeof StringBuffer, "%4.3f\xD0", DataloggerMeasurementControl[i].OhmAccuResistance);
+                snprintf(StringBuffer, sizeof StringBuffer, "%4.3f\x81", DataloggerMeasurementControl[i].OhmAccuResistance);
             } else {
                 snprintf(StringBuffer, sizeof StringBuffer, "%4.3fV",
                         DataloggerMeasurementControl[ActualProbe].Min * ADCToVoltFactor);
             }
-            drawText(tPosX, tPosY, StringBuffer, 2, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 4 + 2 * FONT_HEIGHT;
+            tPosY += 4 + TEXT_SIZE_22_HEIGHT;
             tSeconds = DataloggerMeasurementControl[i].SamplePeriodSeconds;
             tMinutes = tSeconds / 60;
             tSeconds %= 60;
             snprintf(StringBuffer, sizeof StringBuffer, "Nr.%d - %u:%02u", DataloggerMeasurementControl[i].ProbeNumber, tMinutes,
                     tSeconds);
-            drawText(tPosX, tPosY, StringBuffer, 1, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_11, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
 
             if (DataloggerMeasurementControl[i].Mode != MODE_EXTERN) {
-                tPosY += 2 + FONT_HEIGHT;
+                tPosY += 2 + TEXT_SIZE_11_HEIGHT;
                 if (DataloggerMeasurementControl[i].Mode == MODE_DISCHARGING) {
                     snprintf(StringBuffer, sizeof StringBuffer, "stop %4.2fV  ",
                             DataloggerMeasurementControl[i].StopThreshold * ADCToVoltFactor);
                 } else if (DataloggerMeasurementControl[i].Mode == MODE_CHARGING) {
                     snprintf(StringBuffer, sizeof StringBuffer, "stop %4dmAh", DataloggerMeasurementControl[i].StopMilliampereHour);
                 }
-                drawText(tPosX, tPosY, StringBuffer, 1, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
+                BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_11, ProbeColors[i], COLOR_BACKGROUND_DEFAULT);
             }
             tPosX = BUTTON_WIDTH_2_5_POS_2;
         }
@@ -1379,7 +1392,7 @@ void printMeasurementValues(void) {
              * basic info on 2 lines on top of screen
              */
             if (DataloggerMeasurementControl[ActualProbe].Mode != MODE_EXTERN) {
-                snprintf(StringBuffer, sizeof StringBuffer, "Probe %d %.0fmAh Rint. %4.2f\xD0",
+                snprintf(StringBuffer, sizeof StringBuffer, "Probe %d %.0fmAh Rint. %4.2f\x81",
                         DataloggerMeasurementControl[ActualProbe].ProbeNumber,
                         DataloggerMeasurementControl[ActualProbe].Capacity / 1000,
                         DataloggerMeasurementControl[ActualProbe].OhmAccuResistance);
@@ -1388,55 +1401,57 @@ void printMeasurementValues(void) {
                         DataloggerMeasurementControl[ActualProbe].ProbeNumber,
                         DataloggerMeasurementControl[ActualProbe].Capacity / 1000);
             }
-            drawText(BASIC_INFO_X, BASIC_INFO_Y, StringBuffer, 1, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(BASIC_INFO_X, BASIC_INFO_Y + TEXT_SIZE_11_ASCEND, StringBuffer, TEXT_SIZE_11,
+                    ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
             tSeconds = DataloggerMeasurementControl[ActualProbe].SamplePeriodSeconds;
             tMinutes = tSeconds / 60;
             tSeconds %= 60;
-            int tCount = (snprintf(StringBuffer, sizeof StringBuffer, "%u:%02u %2.1f\xD0", tMinutes, tSeconds,
-                    DataloggerMeasurementControl[ActualProbe].OhmLoadResistor) + 1) * FONT_WIDTH;
-            drawText(BASIC_INFO_X, BASIC_INFO_Y + FONT_HEIGHT + 2, StringBuffer, 1, ProbeColors[ActualProbe],
-                    COLOR_BACKGROUND_DEFAULT);
-            showRTCTime(BASIC_INFO_X + tCount, BASIC_INFO_Y + FONT_HEIGHT + 2, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT,
-                    false);
+            int tCount = (snprintf(StringBuffer, sizeof StringBuffer, "%u:%02u %2.1f\x81", tMinutes, tSeconds,
+                    DataloggerMeasurementControl[ActualProbe].OhmLoadResistor) + 1) * TEXT_SIZE_11_WIDTH;
+            BlueDisplay1.drawText(BASIC_INFO_X, BASIC_INFO_Y + TEXT_SIZE_11_HEIGHT + 2 + TEXT_SIZE_11_ASCEND, StringBuffer,
+                    TEXT_SIZE_11, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            showRTCTime(BASIC_INFO_X + tCount, BASIC_INFO_Y + TEXT_SIZE_11_HEIGHT + 2 + TEXT_SIZE_11_ASCEND,
+                    ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT, false);
         } else {
             /*
              * version of one data set for chart screen
              */
-            tPosY = (2 * BUTTON_HEIGHT_5) + BUTTON_DEFAULT_SPACING/2 + 2;
-            tPosX = DISPLAY_WIDTH - (8 * 2 * FONT_WIDTH) - 4;
+            tPosY = (2 * BUTTON_HEIGHT_5) + BUTTON_DEFAULT_SPACING / 2 + 2 + TEXT_SIZE_22_ASCEND;
+            tPosX = TouchButtonMode->getPositionXRight();
 
             snprintf(StringBuffer, sizeof StringBuffer, "%5.3fV", DataloggerMeasurementControl[ActualProbe].Volt);
-            drawText(tPosX, tPosY, StringBuffer, 2, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 2 + 2 * FONT_HEIGHT;
+            tPosY += 2 + TEXT_SIZE_22_HEIGHT;
             snprintf(StringBuffer, sizeof StringBuffer, "%4.0fmA", DataloggerMeasurementControl[ActualProbe].Milliampere);
-            drawText(tPosX + 2 * FONT_WIDTH, tPosY, StringBuffer, 2, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX + TEXT_SIZE_22_WIDTH, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[ActualProbe],
+                    COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 2 + 2 * FONT_HEIGHT;
+            tPosY += 2 + TEXT_SIZE_22_HEIGHT;
             snprintf(StringBuffer, sizeof StringBuffer, "%5.0fmAh", DataloggerMeasurementControl[ActualProbe].Capacity / 1000);
-            drawText(tPosX, tPosY, StringBuffer, 2, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 2 + 2 * FONT_HEIGHT;
+            tPosY += 2 + TEXT_SIZE_22_HEIGHT;
             if (DataloggerMeasurementControl[ActualProbe].Mode != MODE_EXTERN) {
-                snprintf(StringBuffer, sizeof StringBuffer, "%5.3f\xD0",
+                snprintf(StringBuffer, sizeof StringBuffer, "%5.3f\x81",
                         DataloggerMeasurementControl[ActualProbe].OhmAccuResistance);
             } else {
                 snprintf(StringBuffer, sizeof StringBuffer, "%5.3fV",
                         DataloggerMeasurementControl[ActualProbe].Min * ADCToVoltFactor);
             }
-            drawText(tPosX, tPosY, StringBuffer, 2, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_22, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
 
-            tPosY += 2 + 2 * FONT_HEIGHT;
+            tPosY += 2 + TEXT_SIZE_22_HEIGHT;
             tSeconds = DataloggerMeasurementControl[ActualProbe].SamplePeriodSeconds;
             tMinutes = tSeconds / 60;
             tSeconds %= 60;
-            snprintf(StringBuffer, sizeof StringBuffer, "%d %2.1f\xD0 %u:%02umin",
+            snprintf(StringBuffer, sizeof StringBuffer, "%d %2.1f\x81 %u:%02umin",
                     DataloggerMeasurementControl[ActualProbe].ProbeNumber,
                     DataloggerMeasurementControl[ActualProbe].OhmLoadResistor, tMinutes, tSeconds);
-            drawText(tPosX, tPosY, StringBuffer, 1, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+            BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_11, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
 
             if (DataloggerMeasurementControl[ActualProbe].Mode != MODE_EXTERN) {
-                tPosY += 1 + FONT_HEIGHT;
+                tPosY += 1 + TEXT_SIZE_11_HEIGHT;
                 if (DataloggerMeasurementControl[ActualProbe].Mode == MODE_DISCHARGING) {
                     snprintf(StringBuffer, sizeof StringBuffer, "stop %4.2fV  ",
                             DataloggerMeasurementControl[ActualProbe].StopThreshold * ADCToVoltFactor);
@@ -1444,14 +1459,14 @@ void printMeasurementValues(void) {
                     snprintf(StringBuffer, sizeof StringBuffer, "stop %4dmAh",
                             DataloggerMeasurementControl[ActualProbe].StopMilliampereHour);
                 }
-                drawText(tPosX, tPosY, StringBuffer, 1, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
+                BlueDisplay1.drawText(tPosX, tPosY, StringBuffer, TEXT_SIZE_11, ProbeColors[ActualProbe], COLOR_BACKGROUND_DEFAULT);
             }
         }
     }
 }
 
 void drawAccuCapacityMainPage(void) {
-    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
 // display buttons
     for (int i = 0; i < NUMBER_OF_PROBES; ++i) {
         TouchButtonsMain[i]->drawButton();
@@ -1464,7 +1479,7 @@ void drawAccuCapacityMainPage(void) {
 
 void drawAccuCapacitySettingsPage(void) {
     TouchButton::deactivateAllButtons();
-    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
     TouchButtonBack->drawButton();
     TouchButtonAutorepeatSamplePeriodPlus->drawButton();
     TouchButtonAutorepeatSamplePeriodMinus->drawButton();
@@ -1506,7 +1521,7 @@ void drawAccuCapacitySettingsPage(void) {
 
 void setChargeVoltageCaption(int16_t aProbeIndex) {
     snprintf(&StringStoreChargeVoltage[STRING_STORE_CHARGE_VOLTAGE_NUMBER_INDEX], 6, "%5.2f",
-            DataloggerMeasurementControl[ActualProbe].ReadingChargeVoltage * ADCToVoltFactor);
+            DataloggerMeasurementControl[ActualProbe].ChargeVoltageRaw * ADCToVoltFactor);
     TouchButtonSetChargeVoltage->setCaption(StringStoreChargeVoltage);
 }
 
@@ -1520,6 +1535,15 @@ void setModeCaption(int16_t aProbeIndex) {
     }
 }
 
+void redrawAccuCapacityPages(void) {
+    if (ActualPage == PAGE_CHART) {
+        redrawAccuCapacityChartPage();
+    } else if (ActualPage == PAGE_MAIN) {
+        drawAccuCapacityMainPage();
+    } else {
+        drawAccuCapacitySettingsPage();
+    }
+}
 /**
  * Used to draw the chart screen completely new.
  * Clears display
@@ -1527,7 +1551,7 @@ void setModeCaption(int16_t aProbeIndex) {
  */
 void redrawAccuCapacityChartPage(void) {
     ActualPage = PAGE_CHART;
-    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
     TouchButton::deactivateAllButtons();
 
 // set button colors and values
@@ -1647,13 +1671,14 @@ void activateOrShowChartGui(void) {
             (*ButtonsChart[i])->drawButton();
         }
         // show Symbols for horizontal swipe
-        drawText(BUTTON_WIDTH_5_POS_3, BUTTON_HEIGHT_4_LINE_4 - (2 * FONT_HEIGHT)- BUTTON_DEFAULT_SPACING,
-        StringDoubleHorizontalArrow, 2, COLOR_BLUE, COLOR_BACKGROUND_DEFAULT);
-        drawText(BUTTON_WIDTH_5_POS_3, BUTTON_HEIGHT_4_LINE_4, StringDoubleHorizontalArrow, 2, COLOR_BLUE,
+        BlueDisplay1.drawText(BUTTON_WIDTH_5_POS_3, BUTTON_HEIGHT_4_LINE_4 - TEXT_SIZE_22_HEIGHT - BUTTON_DEFAULT_SPACING,
+                StringDoubleHorizontalArrow, TEXT_SIZE_22, COLOR_BLUE, COLOR_BACKGROUND_DEFAULT);
+        BlueDisplay1.drawText(BUTTON_WIDTH_5_POS_3, BUTTON_HEIGHT_4_LINE_4, StringDoubleHorizontalArrow, TEXT_SIZE_22, COLOR_BLUE,
                 COLOR_BACKGROUND_DEFAULT);
         // show Symbols for vertical swipe
-        drawChar(0, BUTTON_HEIGHT_5_LINE_4, '\xE0', 2, COLOR_BLUE, COLOR_BACKGROUND_DEFAULT);
-        drawChar(BUTTON_WIDTH_5 + BUTTON_DEFAULT_SPACING, BUTTON_HEIGHT_5_LINE_4, '\xE0', 2, COLOR_BLUE, COLOR_BACKGROUND_DEFAULT);
+        BlueDisplay1.drawChar(0, BUTTON_HEIGHT_5_LINE_4, '\xE0', TEXT_SIZE_22, COLOR_BLUE, COLOR_BACKGROUND_DEFAULT);
+        BlueDisplay1.drawChar(BUTTON_WIDTH_5 + BUTTON_DEFAULT_SPACING, BUTTON_HEIGHT_5_LINE_4, '\xE0', TEXT_SIZE_22, COLOR_BLUE,
+                COLOR_BACKGROUND_DEFAULT);
 
     } else {
         // activate buttons

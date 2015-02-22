@@ -9,29 +9,29 @@
  *
  * @date  14.02.2012
  * @author  Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
  *  LCD interface used:
  * 		- getHeight()
  * 		- getWidth()
- * 		- fillRect()
- * 		- drawText()
- * 		- drawPixel()
- * 		- drawLine()
- * 		- FONT_WIDTH
- * 		- FONT_HEIGHT
+ *      - mDisplay->fillRect()
+ *      - mDisplay->fillRectRel()
+ * 		- mDisplay->drawText()
+ * 		- mDisplay->drawPixel()
+ *      - mDisplay->drawLineFastOneX()
+ * 		- TEXT_SIZE_11_WIDTH
+ * 		- TEXT_SIZE_11_HEIGHT
  *
  */
 
-#include "HY32D.h"
+#include "Chart.h"
 
 #include "stm32f30x.h"
-#include "Chart.h"
 #include <stdio.h>
 #include <string.h>
-
+#include <stdlib.h> // for srand
 /** @addtogroup Graphic_Library
  * @{
  */
@@ -39,12 +39,15 @@
  * @{
  */
 Chart::Chart(void) {
+    mDisplay = &BlueDisplay1;
     mChartBackgroundColor = CHART_DEFAULT_BACKGROUND_COLOR;
     mAxesColor = CHART_DEFAULT_AXES_COLOR;
     mGridColor = CHART_DEFAULT_GRID_COLOR;
     mLabelColor = CHART_DEFAULT_LABEL_COLOR;
     mFlags = 0;
     mXScaleFactor = 0;
+    mXTitleText = NULL;
+    mYTitleText = NULL;
 }
 
 void Chart::initChartColors(const uint16_t aDataColor, const uint16_t aAxesColor, const uint16_t aGridColor,
@@ -94,11 +97,11 @@ uint8_t Chart::checkParameterValues(void) {
         mWidthX = 100;
         tRetValue = CHART_ERROR_POS_X;
     }
-    if (mPositionY > DISPLAY_HEIGHT - t2AxesSize) {
-        mPositionY = DISPLAY_HEIGHT - t2AxesSize;
+    if (mPositionY > mDisplay->getDisplayHeight() - t2AxesSize) {
+        mPositionY = mDisplay->getDisplayHeight() - t2AxesSize;
         tRetValue = CHART_ERROR_POS_Y;
     }
-    if (mPositionX + mWidthX > DISPLAY_WIDTH) {
+    if (mPositionX + mWidthX > mDisplay->getDisplayWidth()) {
         mPositionX = 0;
         mWidthX = 100;
         tRetValue = CHART_ERROR_WIDTH;
@@ -221,11 +224,11 @@ void Chart::drawGrid(void) {
     uint16_t tOffset;
 // draw vertical lines
     for (tOffset = mGridXSpacing; tOffset <= mWidthX; tOffset += mGridXSpacing) {
-        fillRect(mPositionX + tOffset, mPositionY - 1, mPositionX + tOffset, mPositionY - mHeightY + 1, mGridColor);
+        mDisplay->drawLineRel(mPositionX + tOffset, mPositionY - (mHeightY - 1), 0, mHeightY - 1, mGridColor);
     }
 // draw horizontal lines
     for (tOffset = mGridYSpacing; tOffset <= mHeightY; tOffset += mGridYSpacing) {
-        fillRect(mPositionX + 1, mPositionY - tOffset, mPositionX + mWidthX - 1, mPositionY - tOffset, mGridColor);
+        mDisplay->drawLineRel(mPositionX + 1, mPositionY - tOffset, mWidthX - 1, 0, mGridColor);
     }
 
 }
@@ -249,9 +252,9 @@ void Chart::drawXAxisTitle(void) const {
         /**
          * draw axis title
          */
-        uint16_t tTextLenPixel = strlen(mXTitleText) * FONT_WIDTH;
-        drawText(mPositionX + mWidthX - tTextLenPixel - 1, mPositionY - FONT_HEIGHT, mXTitleText, 1, mLabelColor,
-                mChartBackgroundColor);
+        uint16_t tTextLenPixel = strlen(mXTitleText) * TEXT_SIZE_11_WIDTH;
+        mDisplay->drawText(mPositionX + mWidthX - tTextLenPixel - 1, mPositionY - TEXT_SIZE_11_DECEND, mXTitleText, TEXT_SIZE_11,
+                mLabelColor, mChartBackgroundColor);
     }
 }
 
@@ -271,18 +274,15 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
     char tLabelStringBuffer[32];
 
 // draw X line
-    fillRect(mPositionX - mAxesSize + 1, mPositionY, mPositionX + mWidthX - 1, mPositionY + mAxesSize - 1, mAxesColor);
-
+    mDisplay->fillRectRel(mPositionX - (mAxesSize - 1), mPositionY, mWidthX + (mAxesSize - 1), mAxesSize, mAxesColor);
     if (mFlags & CHART_X_LABEL_USED) {
         uint16_t tOffset;
         if (!(mFlags & CHART_HAS_GRID)) {
             /*
              * draw indicators with the same size the axis has
              */
-            uint16_t tIndicatorYBottom = mPositionY + (2 * mAxesSize) - 1;
-            // draw indicators with the same size the axis has
             for (tOffset = 0; tOffset <= mWidthX; tOffset += mGridXSpacing) {
-                fillRect(mPositionX + tOffset, mPositionY + mAxesSize, mPositionX + tOffset, tIndicatorYBottom, mGridColor);
+                mDisplay->fillRectRel(mPositionX + tOffset, mPositionY + mAxesSize, 1, mAxesSize, mGridColor);
             }
         }
 
@@ -290,13 +290,13 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
          * draw labels (numbers)
          */
         uint16_t tNumberYTop = mPositionY + 2 * mAxesSize;
-        assertParamMessage((tNumberYTop <= (DISPLAY_HEIGHT - FONT_HEIGHT)), tNumberYTop, "no space for x labels");
+        assertParamMessage((tNumberYTop <= (mDisplay->getDisplayHeight() - TEXT_SIZE_11_DECEND)), tNumberYTop, "no space for x labels");
 
         // first offset is negative
-        tOffset = 1 - ((FONT_WIDTH * mXMinStringWidth) / 2);
+        tOffset = 1 - ((TEXT_SIZE_11_WIDTH * mXMinStringWidth) / 2);
         if (aClearLabelsBefore) {
             // clear label space before
-            fillRect(mPositionX + tOffset, tNumberYTop, mPositionX + mWidthX - 1, tNumberYTop + FONT_HEIGHT - 1,
+            mDisplay->fillRect(mPositionX + tOffset, tNumberYTop, mPositionX + mWidthX, tNumberYTop + TEXT_SIZE_11_HEIGHT,
                     mChartBackgroundColor);
         }
 
@@ -307,7 +307,7 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
         float tIncrementValueFloat = adjustFloatWithXScaleFactor(mXLabelBaseIncrementValue.FloatValue);
 
         /*
-         * draw loop
+         * draw loop for labels
          */
         do {
             if (mFlags & CHART_X_LABEL_INT) {
@@ -318,7 +318,8 @@ void Chart::drawXAxis(bool aClearLabelsBefore) {
                         tValueFloat);
                 tValueFloat += tIncrementValueFloat;
             }
-            drawText(mPositionX + tOffset, tNumberYTop, tLabelStringBuffer, 1, mLabelColor, mChartBackgroundColor);
+            mDisplay->drawText(mPositionX + tOffset, tNumberYTop + TEXT_SIZE_11_ASCEND, tLabelStringBuffer, TEXT_SIZE_11,
+                    mLabelColor, mChartBackgroundColor);
             tOffset += mGridXSpacing;
         } while (tOffset <= mWidthX);
     }
@@ -385,7 +386,8 @@ void Chart::drawYAxisTitle(const int aYOffset) const {
         /**
          * draw axis title - use data color
          */
-        drawText(mPositionX + mAxesSize + 1, mPositionY - mHeightY + aYOffset, mYTitleText, 1, mDataColor, mChartBackgroundColor);
+        mDisplay->drawText(mPositionX + mAxesSize + 1, mPositionY - mHeightY + aYOffset + TEXT_SIZE_11_ASCEND, mYTitleText,
+                TEXT_SIZE_11, mDataColor, mChartBackgroundColor);
     }
 }
 
@@ -396,7 +398,7 @@ void Chart::drawYAxis(const bool aClearLabelsBefore) {
 
     char tLabelStringBuffer[32];
 
-    fillRect(mPositionX - mAxesSize + 1, mPositionY - mHeightY + 1, mPositionX, mPositionY - 1, mAxesColor);
+    mDisplay->fillRectRel(mPositionX - (mAxesSize - 1), mPositionY - (mHeightY - 1), mAxesSize, (mHeightY - 1), mAxesColor);
 
     if (mFlags & CHART_Y_LABEL_USED) {
         uint16_t tOffset;
@@ -404,25 +406,23 @@ void Chart::drawYAxis(const bool aClearLabelsBefore) {
             /*
              * draw indicators with the same size the axis has
              */
-            uint16_t tIndicatorXLeft = mPositionX - (2 * mAxesSize) + 1;
-
             for (tOffset = 0; tOffset <= mHeightY; tOffset += mGridYSpacing) {
-                fillRect(tIndicatorXLeft, mPositionY - tOffset, mPositionX - mAxesSize, mPositionY - tOffset, mGridColor);
+                mDisplay->fillRectRel(mPositionX - (2 * mAxesSize) + 1, mPositionY - tOffset, mAxesSize, 1, mGridColor);
             }
         }
 
         /*
          * draw labels (numbers)
          */
-        int16_t tNumberXLeft = mPositionX - 2 * mAxesSize - 1 - (mYMinStringWidth * FONT_WIDTH);
+        int16_t tNumberXLeft = mPositionX - 2 * mAxesSize - 1 - (mYMinStringWidth * TEXT_SIZE_11_WIDTH);
         assertParamMessage((tNumberXLeft >= 0), tNumberXLeft, "no space for y labels");
 
         // first offset is half of character height
-        tOffset = FONT_HEIGHT / 2;
+        tOffset = TEXT_SIZE_11_HEIGHT / 2;
         if (aClearLabelsBefore) {
             // clear label space before
-            fillRect(tNumberXLeft, mPositionY - mHeightY + 1, mPositionX - mAxesSize - 1, mPositionY - tOffset + FONT_HEIGHT,
-                    mChartBackgroundColor);
+            mDisplay->fillRect(tNumberXLeft, mPositionY - mHeightY + 1, mPositionX - mAxesSize,
+                    mPositionY - tOffset + TEXT_SIZE_11_HEIGHT + 1, mChartBackgroundColor);
         }
 
         // convert to string
@@ -441,9 +441,10 @@ void Chart::drawYAxis(const bool aClearLabelsBefore) {
                         tValueFloat);
                 tValueFloat += mYLabelIncrementValue.FloatValue;
             }
-            drawText(tNumberXLeft, mPositionY - tOffset, tLabelStringBuffer, 1, mLabelColor, mChartBackgroundColor);
+            mDisplay->drawText(tNumberXLeft, mPositionY - tOffset + TEXT_SIZE_11_ASCEND, tLabelStringBuffer, TEXT_SIZE_11,
+                    mLabelColor, mChartBackgroundColor);
             tOffset += mGridYSpacing;
-        } while (tOffset <= (mHeightY + FONT_HEIGHT / 2));
+        } while (tOffset <= (mHeightY + TEXT_SIZE_11_HEIGHT / 2));
     }
 }
 
@@ -484,11 +485,11 @@ float Chart::stepYLabelStartValueFloat(const int aSteps) {
  * Clears chart area and redraws axes lines
  */
 void Chart::clear(void) {
-    fillRect(mPositionX + 1, mPositionY - 1, mPositionX + mWidthX - 1, mPositionY - mHeightY + 1, mChartBackgroundColor);
+    mDisplay->fillRectRel(mPositionX + 1, mPositionY - (mHeightY - 1), mWidthX, mHeightY - 1, mChartBackgroundColor);
     // draw X line
-    fillRect(mPositionX - mAxesSize + 1, mPositionY, mPositionX + mWidthX - 1, mPositionY + mAxesSize - 1, mAxesColor);
+    mDisplay->fillRectRel(mPositionX - (mAxesSize - 1), mPositionY, mWidthX + (mAxesSize - 1), mAxesSize, mAxesColor);
     //draw y line
-    fillRect(mPositionX - mAxesSize + 1, mPositionY - mHeightY + 1, mPositionX, mPositionY - 1, mAxesColor);
+    mDisplay->fillRectRel(mPositionX - (mAxesSize - 1), mPositionY - (mHeightY - 1), mAxesSize, mHeightY - 1, mAxesColor);
 }
 
 /**
@@ -583,12 +584,14 @@ void Chart::clear(void) {
             tRetValue = false;
         }
         if (aMode == CHART_MODE_AREA) {
-            fillRect(tXpos, mPositionY, tXpos, mPositionY - tDisplayValue, mDataColor);
+            //since we draw a 1 pixel line for value 0
+            tDisplayValue += 1;
+            mDisplay->fillRectRel(tXpos, mPositionY - tDisplayValue, 1, tDisplayValue, mDataColor);
         } else if (aMode == CHART_MODE_PIXEL || tFirstValue) { // even for line draw first value as pixel only
             tFirstValue = false;
-            drawPixel(tXpos, mPositionY - tDisplayValue, mDataColor);
+            mDisplay->drawPixel(tXpos, mPositionY - tDisplayValue, mDataColor);
         } else if (aMode == CHART_MODE_LINE) {
-            drawLineFastOneX(tXpos - 1, mPositionY - tLastValue, mPositionY - tDisplayValue, mDataColor);
+            mDisplay->drawLineFastOneX(tXpos - 1, mPositionY - tLastValue, mPositionY - tDisplayValue, mDataColor);
         }
         tLastValue = tDisplayValue;
         tXpos++;
@@ -690,11 +693,13 @@ void Chart::clear(void) {
         // draw first value as pixel only
         if (aMode == CHART_MODE_PIXEL || tFirstValue) {
             tFirstValue = false;
-            drawPixel(tXpos, mPositionY - tDisplayValue, mDataColor);
+            mDisplay->drawPixel(tXpos, mPositionY - tDisplayValue, mDataColor);
         } else if (aMode == CHART_MODE_LINE) {
-            drawLineFastOneX(tXpos - 1, mPositionY - tLastValue, mPositionY - tDisplayValue, mDataColor);
+            mDisplay->drawLineFastOneX(tXpos - 1, mPositionY - tLastValue, mPositionY - tDisplayValue, mDataColor);
         } else if (aMode == CHART_MODE_AREA) {
-            fillRect(tXpos, mPositionY, tXpos, mPositionY - tDisplayValue, mDataColor);
+            //since we draw a 1 pixel line for value 0
+            tDisplayValue += 1;
+            mDisplay->fillRectRel(tXpos, mPositionY - tDisplayValue, 1, tDisplayValue, mDataColor);
         }
         tLastValue = tDisplayValue;
         tXpos++;
@@ -703,7 +708,7 @@ void Chart::clear(void) {
 }
 
 /**
- *
+ * Draws a chart of values of the uint8_t data array pointed to by aDataPointer
  * @param aDataPointer
  * @param aDataLength
  * @param aMode
@@ -735,16 +740,18 @@ void Chart::clear(void) {
         }
         if (aMode == CHART_MODE_PIXEL) {
             tXpos++;
-            drawPixel(tXpos, mPositionY - tValue, mDataColor);
+            mDisplay->drawPixel(tXpos, mPositionY - tValue, mDataColor);
         } else if (aMode == CHART_MODE_LINE) {
-            drawLineFastOneX(tXpos, mPositionY - tLastValue, mPositionY - tValue, mDataColor);
+            mDisplay->drawLineFastOneX(tXpos, mPositionY - tLastValue, mPositionY - tValue, mDataColor);
 //			drawLine(tXpos, mPositionY - tLastValue, tXpos + 1, mPositionY - tValue,
 //					aDataColor);
             tXpos++;
             tLastValue = tValue;
         } else if (aMode == CHART_MODE_AREA) {
             tXpos++;
-            fillRect(tXpos, mPositionY, tXpos, mPositionY - tValue, mDataColor);
+            //since we draw a 1 pixel line for value 0
+            tValue += 1;
+            mDisplay->fillRectRel(tXpos, mPositionY - tValue, 1, tValue, mDataColor);
         }
     }
     return tRetValue;
@@ -933,5 +940,62 @@ float adjustFloatWithScaleFactor(float aValue, int aScaleFactor) {
     }
     return tRetValue;
 }
+
+#/*
+ * Show charts features
+ */
+void showChartDemo(void) {
+    Chart ChartExample;
+
+    unsigned int i;
+
+    /*
+     * 1. Chart: pixel with grid and no labels, 120 values
+     */
+    ChartExample.disableXLabel();
+    ChartExample.disableYLabel();
+    ChartExample.initChartColors(COLOR_RED, COLOR_RED, CHART_DEFAULT_GRID_COLOR, COLOR_RED, COLOR_WHITE);
+    ChartExample.initChart(5, BlueDisplay1.getDisplayHeight() - 20, 120, 90, 2, true, 20, 20);
+    ChartExample.drawAxesAndGrid();
+
+//generate random data
+    srand(120);
+    char * tPtr = StringBuffer;
+    for (i = 0; i < sizeof StringBuffer; i++) {
+        *tPtr++ = 30 + (rand() >> 27);
+    }
+    ChartExample.drawChartDataDirect((uint8_t *) &StringBuffer, sizeof StringBuffer, CHART_MODE_PIXEL);
+
+    /*
+     * 2. Chart: with grid with (negative) integer labels, 140 values
+     */
+    ChartExample.initXLabelInt(0, 12, 1, 2);
+    ChartExample.initYLabelInt(-20, 20, 20 / 15, 3);
+    ChartExample.initChart(170, BlueDisplay1.getDisplayHeight() - 20, 140, 88, 2, true, 30, 15);
+    ChartExample.drawAxesAndGrid();
+// new data
+    uint16_t * tPtr2 = FourDisplayLinesBuffer;
+    uint16_t tVal = 0;
+    for (i = 0; i < sizeof FourDisplayLinesBuffer / 2; i++) {
+        tVal += rand() >> 30;
+        *tPtr2++ = tVal;
+    }
+    tPtr2--;
+    *tPtr2 = 30;
+    ChartExample.initChartColors(COLOR_RED, COLOR_BLUE, COLOR_GREEN, COLOR_BLACK, COLOR_WHITE);
+    ChartExample.drawChartData((int16_t *) FourDisplayLinesBuffer, (int16_t *) &FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER],
+            CHART_MODE_LINE);
+
+    /*
+     * 3. Chart: without grid with float labels, 140 values area mode
+     */
+    ChartExample.initXLabelFloat(0, 0.5, 1, 3, 1);
+    ChartExample.initYLabelFloat(0, 0.3, 1.3 / 60, 3, 1); // display 1.3 for raw value of 60
+    ChartExample.initChart(30, 100, 180, 90, 2, false, 30, 16);
+    ChartExample.drawAxesAndGrid();
+    ChartExample.drawChartData((int16_t *) FourDisplayLinesBuffer, (int16_t *) &FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER],
+            CHART_MODE_AREA);
+}
+
 /** @} */
 /** @} */

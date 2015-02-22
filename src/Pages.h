@@ -3,7 +3,7 @@
  *
  * @date 16.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  */
@@ -11,19 +11,17 @@
 #ifndef PAGES_H_
 #define PAGES_H_
 
-#include "HY32D.h"
-
-#include <stdio.h> /* for sprintf */
-
-#ifdef __cplusplus
+#include "BlueDisplay.h"
+#include "USART_DMA.h" // for checkAndHandleMessagesReceived()
 
 #include "utils.h"
-#include "ADS7846.h"
+#include "TouchLib.h"
 #include "TouchSlider.h"
 #include "TouchButton.h"
 #include "TouchButtonAutorepeat.h"
 // for NAN in numberpad
 #include <math.h>
+#include <stdio.h> /* for sprintf */
 
 extern "C" {
 #include "timing.h"
@@ -62,6 +60,9 @@ void doClearScreen(TouchButton * const aTheTouchedButton, int16_t aValue);
 void initMainHomeButtonWithPosition(const uint16_t aPositionX, const uint16_t aPositionY, bool doDraw);
 void initMainHomeButton(bool doDraw);
 
+#define COLOR_PAGE_INFO COLOR_RED
+
+#ifdef LOCAL_DISPLAY_EXISTS
 /**
  * from SettingsPage
  */
@@ -69,7 +70,6 @@ extern TouchSlider TouchSliderBacklight;
 
 #define BACKLIGHT_CONTROL_X 30
 #define BACKLIGHT_CONTROL_Y 4
-#define COLOR_PAGE_INFO COLOR_RED
 
 void initBacklightElements(void);
 void deinitBacklightElements(void);
@@ -77,6 +77,7 @@ void drawBacklightElements(void);
 uint16_t doBacklightSlider(TouchSlider * const aTheTouchedSlider, const uint16_t aBrightness);
 uint8_t getBacklightValue(void);
 void setBacklightValue(uint8_t aBacklightValue);
+#endif
 
 void initClockSettingElements(void);
 void deinitClockSettingElements(void);
@@ -85,9 +86,6 @@ void drawClockSettingElements(void);
 void startSettingsPage(void);
 void loopSettingsPage(void);
 void stopSettingsPage(void);
-
-void setActualBacklightValue(uint8_t aBacklightValue, bool aDoDraw);
-extern "C" uint8_t getActualBacklightValue(void);
 
 /**
  * from  numberpad page
@@ -100,6 +98,7 @@ float getNumberFromNumberPad(uint16_t aXStart, uint16_t aYStart, uint16_t aButto
  */
 void initDACPage(void);
 void startDACPage(void);
+void loopDACPage(void);
 void stopDACPage(void);
 
 /**
@@ -138,6 +137,7 @@ void stopBobsDemo(void);
  */
 void initInfoPage(void);
 void startTestsPage(void);
+void loopTestsPage(void);
 void stopTestsPage(void);
 
 /**
@@ -145,6 +145,7 @@ void stopTestsPage(void);
  */
 void initInfoPage(void);
 void startInfoPage(void);
+void loopInfoPage(void);
 void stopInfoPage(void);
 
 /**
@@ -154,10 +155,12 @@ void startDrawPage(void);
 void loopDrawPage(void);
 void stopDrawPage(void);
 
-#else //cplusplus
-// for timing.c
+#ifdef __cplusplus
+extern "C" {
+#endif
 void setActualBacklightValue(uint8_t aBacklightValue, bool aDoDraw);
-uint8_t getActualBacklightValue(void);
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* PAGES_H_ */

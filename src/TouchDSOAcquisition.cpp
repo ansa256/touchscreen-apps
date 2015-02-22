@@ -3,7 +3,7 @@
  *
  * @date 29.03.2012
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
@@ -41,6 +41,7 @@
  */
 
 #include "Pages.h"
+
 #include "Chart.h" // for adjustIntWithScaleFactor()
 #include "TouchDSO.h"
 #include "stdlib.h"
@@ -119,19 +120,12 @@ FFTInfoStruct FFTInfo;
  * 0x06 -> 1MOhm - 5kOhm
  * 0x07 -> 1MOhm - NC
  */bool isAttenuatorAvailable = true; // attenuator is only attached to channel 2 + 3
-float RawAttenuationFactor[NUMBER_OF_HARDWARE_RANGES] = { 0.5, 1, 4.05837, 41.6666, 100 };
-const uint8_t RangeToRawAttenuationIndexMapping[NUMBER_OF_RANGES] = { 0, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 4 };
-float getRawAttenuationFactor(int rangeIndex) {
-    return RawAttenuationFactor[RangeToRawAttenuationIndexMapping[rangeIndex]];
-}
-
+float RawAttenuationFactor[NUMBER_OF_RANGES] = { 0.5, 1, 1, 1, 1, 1, 4.05837, 4.05837, 41.6666, 41.6666, 41.6666, 100 };
 // Mapping for external attenuator hardware
 #define ATTENUATOR_INFINITE_VALUE 0 // value for which attenuator shortens the input
 const uint8_t AttenuatorHardwareValue[NUMBER_OF_RANGES] = { 0x01, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03, 0x03, 0x04, 0x04, 0x04, 0x05 };
 // reasonable minimal display range until we see the native ADC resolution (12bit->8bit gives factor 16 gives 4 ranges less (which are factor20-25))
 const uint8_t PossibleMinimumRange[NUMBER_OF_RANGES] = { 0, 1, 1, 1, 1, 1, 3, 3, 6, 6, 6, 7 };
-
-uint16_t RawDSOReadingACZero;
 
 /**
  * Virtual ADC values for full scale (DisplayHeight) - used for SetAutoRange() and computeAutoDisplayRange()
@@ -176,7 +170,7 @@ void initAcquisition(void) {
     DSO_setAttenuator(AttenuatorHardwareValue[NUMBER_OF_RANGES - 1]);
 
     // AC range on
-    setACRange(true);
+    setACMode(true);
 
     // Timebase
     MeasurementControl.TimebaseFastDMAMode = false;
@@ -190,7 +184,9 @@ void initAcquisition(void) {
 void resetAcquisition(void) {
     MeasurementControl.isRunning = false;
     MeasurementControl.isSingleShotMode = false;
+#ifdef LOCAL_DISPLAY_EXISTS
     MeasurementControl.ADS7846ChannelsAsDatasource = false;
+#endif
 
     // Calibration
     ADC_setRawToVoltFactor();
@@ -210,7 +206,7 @@ void resetAcquisition(void) {
     MeasurementControl.TriggerSlopeRising = true;
     MeasurementControl.TriggerMode = TRIGGER_MODE_AUTOMATIC;
 
-    setLevelAndHysteresis(10, 5); // must be initialized to enable auto triggering
+    setTriggerLevelAndHysteresis(10, 5); // must be initialized to enable auto triggering
 
     // Set attenuator / range
     MeasurementControl.InputRangeIndex = NUMBER_OF_RANGES - 1; // max attenuation
@@ -222,7 +218,7 @@ void resetAcquisition(void) {
     MeasurementControl.OffsetMode = OFFSET_MODE_0_VOLT;
 
     // init variables etc. uses IndexDisplayRange
-    setACRange(MeasurementControl.ACRange);
+    setACMode(MeasurementControl.isACMode);
 }
 
 /*
@@ -252,9 +248,10 @@ void startAcquisition(void) {
     }
 
     // start and end pointer
+    // end pointer should be computed here because of trigger mode
     DataBufferControl.DataBufferDisplayStart = &DataBufferControl.DataBuffer[DATABUFFER_DISPLAY_START];
     DataBufferControl.DataBufferEndPointer = &DataBufferControl.DataBuffer[DATABUFFER_DISPLAY_END];
-    DataBufferControl.DataBufferWritePointer = &DataBufferControl.DataBuffer[0];
+    DataBufferControl.DataBufferNextInPointer = &DataBufferControl.DataBuffer[0];
 
     if (MeasurementControl.TriggerMode == TRIGGER_MODE_OFF) {
         MeasurementControl.TriggerActualPhase = PHASE_POST_TRIGGER;
@@ -272,13 +269,15 @@ void startAcquisition(void) {
         DataBufferControl.DataBufferEndPointer = &DataBufferControl.DataBuffer[DATABUFFER_SIZE - 1];
     }
 
+#ifdef LOCAL_DISPLAY_EXISTS
     if (MeasurementControl.ADS7846ChannelsAsDatasource) {
         // to skip pretrigger and avoid pre trigger buffer adjustment
-        DataBufferControl.DataBufferWritePointer = DataBufferControl.DataBufferDisplayStart;
+        DataBufferControl.DataBufferNextInPointer = DataBufferControl.DataBufferDisplayStart;
         DataBufferControl.DataBufferPreTriggerNextPointer = &DataBufferControl.DataBuffer[0];
         // return here because of no interrupt handling for ADS7846Channels
         return;
     }
+#endif
 
     MeasurementControl.StopAcknowledged = false;
     DataBufferControl.InputRangeIndexUsed = MeasurementControl.InputRangeIndex;
@@ -317,7 +316,7 @@ void startAcquisition(void) {
  * @param aTimebaseIndex
  * @return
  */
-uint16_t computeNumberOfSamplesToTimeout(uint16_t aTimebaseIndex) {
+uint16_t computeNumberOfSamplesToTimeout(int8_t aTimebaseIndex) {
     uint32_t tCount = DSO_DISPLAY_WIDTH * 225 * TRIGGER_TIMEOUT_MILLIS
             / (TimebaseTimerDividerValues[aTimebaseIndex] * TimebaseTimerPrescalerDividerValues[aTimebaseIndex]);
     if (tCount < TRIGGER_TIMEOUT_MIN_SAMPLES) {
@@ -333,13 +332,14 @@ uint16_t computeNumberOfSamplesToTimeout(uint16_t aTimebaseIndex) {
     return tCount;
 }
 
+#ifdef LOCAL_DISPLAY_EXISTS
 /*
  * read ADS7846 channels
  */
 void readADS7846Channels(void) {
 
     uint16_t tValue;
-    uint16_t *DataPointer = DataBufferControl.DataBufferWritePointer;
+    uint16_t *DataPointer = DataBufferControl.DataBufferNextInPointer;
     tValue = TouchPanel.readChannel(ADS7846ChannelMapping[MeasurementControl.ADCInputMUXChannelIndex], true, false, 0x1);
     while (DataPointer <= DataBufferControl.DataBufferEndPointer) {
         tValue = TouchPanel.readChannel(ADS7846ChannelMapping[MeasurementControl.ADCInputMUXChannelIndex], true, false, 0x1);
@@ -347,6 +347,7 @@ void readADS7846Channels(void) {
     }
     DataBufferControl.DataBufferFull = true;
 }
+#endif
 
 /*
  * called by half transfer interrupt
@@ -493,7 +494,7 @@ extern "C" void ADC1_2_IRQHandler(void) {
      */
     if (MeasurementControl.TriggerActualPhase == PHASE_PRE_TRIGGER) {
         // store value
-        *DataBufferControl.DataBufferWritePointer++ = tValue;
+        *DataBufferControl.DataBufferNextInPointer++ = tValue;
         MeasurementControl.TriggerSampleCount++;
         if (MeasurementControl.TriggerSampleCount >= DATABUFFER_PRE_TRIGGER_SIZE) {
             // now we have read at least DATABUFFER_PRE_TRIGGER_SIZE values => start search for trigger
@@ -504,7 +505,7 @@ extern "C" void ADC1_2_IRQHandler(void) {
                 MeasurementControl.TriggerActualPhase = PHASE_SEARCH_TRIGGER;
             }
             MeasurementControl.TriggerSampleCount = 0;
-            DataBufferControl.DataBufferWritePointer = &DataBufferControl.DataBuffer[0];
+            DataBufferControl.DataBufferNextInPointer = &DataBufferControl.DataBuffer[0];
         }
         return;
     }
@@ -545,7 +546,7 @@ extern "C" void ADC1_2_IRQHandler(void) {
             }
         }
 
-        uint16_t * tDataBufferPointer = DataBufferControl.DataBufferWritePointer;
+        uint16_t * tDataBufferPointer = DataBufferControl.DataBufferNextInPointer;
         if (!tTriggerFound) {
             /*
              * store value - check for wrap around in pre trigger area
@@ -560,7 +561,7 @@ extern "C" void ADC1_2_IRQHandler(void) {
                 tDataBufferPointer = &DataBufferControl.DataBuffer[0];
             }
             // prepare for next
-            DataBufferControl.DataBufferWritePointer = tDataBufferPointer;
+            DataBufferControl.DataBufferNextInPointer = tDataBufferPointer;
 
             if (MeasurementControl.isSingleShotMode) {
                 // No timeout in single shot mode
@@ -588,19 +589,19 @@ extern "C" void ADC1_2_IRQHandler(void) {
         tDataBufferPointer = &DataBufferControl.DataBuffer[DATABUFFER_PRE_TRIGGER_SIZE];
         // store value
         *tDataBufferPointer++ = tValue;
-        DataBufferControl.DataBufferWritePointer = tDataBufferPointer;
+        DataBufferControl.DataBufferNextInPointer = tDataBufferPointer;
         return;
     }
 
     /*
      * detect end of buffer
      */
-    uint16_t * tDataBufferPointer = DataBufferControl.DataBufferWritePointer;
+    uint16_t * tDataBufferPointer = DataBufferControl.DataBufferNextInPointer;
     if (tDataBufferPointer <= DataBufferControl.DataBufferEndPointer) {
         // store display value
         *tDataBufferPointer++ = tValue;
         // prepare for next
-        DataBufferControl.DataBufferWritePointer = tDataBufferPointer;
+        DataBufferControl.DataBufferNextInPointer = tDataBufferPointer;
     } else {
         // stop acquisition
         // End of conversion => stop ADC in order to make it reconfigurable (change timebase)
@@ -617,8 +618,8 @@ extern "C" void ADC1_2_IRQHandler(void) {
  * set attenuator to infinite and AC Pin active, read n samples and store it in MeasurementControl.DSOReadingACZero
  */
 void autoACZeroCalibration(void) {
-    bool tState = DSO_getACRange();
-    DSO_setACRange(true);
+    bool tState = DSO_getACMode();
+    DSO_setACMode(true);
     DSO_setAttenuator(ATTENUATOR_INFINITE_VALUE);
     ADC1_getChannelValue(ADCInputMUXChannels[START_ADC_CHANNEL_INDEX]);
     // wait to settle
@@ -628,13 +629,13 @@ void autoACZeroCalibration(void) {
         uint16_t tVal = ADC1_getChannelValue(ADCInputMUXChannels[START_ADC_CHANNEL_INDEX]);
         if (tVal > ADC_MAX_CONVERSION_VALUE) {
             // conversion impossible -> set fallback value
-            RawDSOReadingACZero = ADC_MAX_CONVERSION_VALUE / 2;
+            MeasurementControl.RawDSOReadingACZero = ADC_MAX_CONVERSION_VALUE / 2;
             return;
         }
         tSum += ADC1_getChannelValue(ADCInputMUXChannels[START_ADC_CHANNEL_INDEX]);
     }
-    RawDSOReadingACZero = tSum >> 4;
-    DSO_setACRange(tState);
+    MeasurementControl.RawDSOReadingACZero = tSum >> 4;
+    DSO_setACMode(tState);
 }
 /**
  * Get period and frequency and average for display
@@ -722,7 +723,7 @@ void computeMinMaxAverageAndPeriodFrequency(void) {
          * allow delta of periods to be at least 1/8 period + 3
          */
         tPeriodDelta = tPeriodMax - tPeriodMin;
-        if ((((tLastFoundPosition + 1) / (8 * tCount)) + 3) < tPeriodDelta) {
+        if (((tLastFoundPosition / (8 * tCount)) + 3) < tPeriodDelta) {
             tReliableValue = false;
         }
 
@@ -735,7 +736,7 @@ void computeMinMaxAverageAndPeriodFrequency(void) {
             MeasurementControl.RawValueAverage = (tIntegrateValueForTotalPeriods + (tLastFoundPosition / 2)) / tLastFoundPosition;
 
             // compute microseconds per period
-            tPeriodMicros = tLastFoundPosition + 1;
+            tPeriodMicros = tLastFoundPosition;
             if (MeasurementControl.TimebaseIndex < TIMEBASE_NUMBER_OF_EXCACT_ENTRIES) {
                 // use exact value where needed
                 tPeriodMicros = tPeriodMicros * TimebaseExactDivValuesMicros[MeasurementControl.TimebaseIndex];
@@ -751,64 +752,62 @@ void computeMinMaxAverageAndPeriodFrequency(void) {
                 tPeriodMicros = tPeriodMicros * 1000;
             }
             // frequency
-            tHertz = (1000000.0 / tPeriodMicros) + 0.5;
+            tHertz = 1000000.0 / tPeriodMicros;
         } else {
             MeasurementControl.RawValueAverage = (tIntegrateValue + (tAcquisitionSize / 2)) / tAcquisitionSize;
         }
-        MeasurementControl.FrequencyHertz = tHertz;
-        MeasurementControl.PeriodMicros = tPeriodMicros;
+        MeasurementControl.FrequencyHertz = tHertz  + 0.5;
+        MeasurementControl.PeriodMicros = tPeriodMicros  + 0.5;
         return;
     }
 }
+
 /**
- * compute hysteresis, shift and offset such that graph are from bottom to DISPLAY_USAGE
+ * compute new trigger value and hysteresis
  * If old values are reasonable don't change them to avoid jitter
  */
 void computeAutoTrigger(void) {
 
-    int tPeakToPeak = MeasurementControl.RawValueMax;
     if (MeasurementControl.TriggerMode == TRIGGER_MODE_AUTOMATIC) {
         /*
          * Set auto trigger in middle between min and max
          */
-        tPeakToPeak -= MeasurementControl.RawValueMin;
+        int tPeakToPeak = MeasurementControl.RawValueMax - MeasurementControl.RawValueMin;
         int tTriggerValue = MeasurementControl.RawValueMin + (tPeakToPeak / 2);
 
         /*
-         * set effective hysteresis to quarter delta
+         * set effective hysteresis to quarter tPeakToPeak
          */
         int TriggerHysteresis = tPeakToPeak / 4;
-        int tTriggerDelta = abs(tTriggerValue - MeasurementControl.RawTriggerLevel);
 
         // keep reasonable value - avoid jitter
-        if (tTriggerDelta > TriggerHysteresis >> 2) {
-            setLevelAndHysteresis(tTriggerValue, TriggerHysteresis);
+        int tTriggerDelta = abs(tTriggerValue - MeasurementControl.RawTriggerLevel);
+        if (tTriggerDelta > TriggerHysteresis / 4) {
+            setTriggerLevelAndHysteresis(tTriggerValue, TriggerHysteresis);
         }
     }
 }
 
 /**
  * Real ADC PeakToPeakValue is multiplied by RealAttenuationFactor[MeasurementControl.TotalRangeIndex]
- * to get values of a virtual 18 bit ADC
- * Sets range index and attenuator so, that max (virtual) value fits into the new range on display.
+ * to get values of a virtual 18 bit ADC.
+ *
+ * First check for clipping (check ADC_MAX_CONVERSION_VALUE and also 0 if AC mode)
+ * If no clipping occurred, sets range index and attenuator so that max (virtual) peek to peek value fits into the new range on display.
  */
-void computeAutoRange(void) {
+void computeAutoInputRange(void) {
     if (MeasurementControl.RangeAutomatic) {
-        /*
-         * set new auto range
-         * first look for clipping (check 0 and ADC_MAX_CONVERSION_VALUE)
-         */
-        // check clipping for autoRange
+        //First check for clipping (check ADC_MAX_CONVERSION_VALUE and also 0 if AC mode)
         if (MeasurementControl.RawValueMax == ADC_MAX_CONVERSION_VALUE
-                || (MeasurementControl.ACRange && MeasurementControl.RawValueMin == 0)) {
+                || (MeasurementControl.isACMode && MeasurementControl.RawValueMin == 0)) {
             int tRangeChangeValue = 1;
-            // find next hardware range
+            // Need to change attenuator so lets find next range with greater attenuation
             for (int i = MeasurementControl.InputRangeIndex; i < NUMBER_OF_RANGES - 1; ++i) {
-                if (RangeToRawAttenuationIndexMapping[i] != RangeToRawAttenuationIndexMapping[i + 1]) {
+                if (RawAttenuationFactor[i] != RawAttenuationFactor[i + 1]) {
                     break;
                 }
             }
-            changeInputRange(tRangeChangeValue); // adjusts trigger level if needed
+            changeInputRange(tRangeChangeValue); // also adjusts trigger level if needed
             return;
         }
 
@@ -817,19 +816,19 @@ void computeAutoRange(void) {
          */
         // get relevant peak2peak value
         int tPeakToPeak = MeasurementControl.RawValueMax;
-        if (MeasurementControl.ACRange) {
-            if (RawDSOReadingACZero - MeasurementControl.RawValueMin > MeasurementControl.RawValueMax - RawDSOReadingACZero) {
+        if (MeasurementControl.isACMode) {
+            if (MeasurementControl.RawDSOReadingACZero - MeasurementControl.RawValueMin > MeasurementControl.RawValueMax - MeasurementControl.RawDSOReadingACZero) {
                 //difference between zero and min is greater than difference between zero and max => min determines the range
-                tPeakToPeak = RawDSOReadingACZero - MeasurementControl.RawValueMin;
+                tPeakToPeak = MeasurementControl.RawDSOReadingACZero - MeasurementControl.RawValueMin;
             } else {
-                tPeakToPeak -= RawDSOReadingACZero;
+                tPeakToPeak -= MeasurementControl.RawDSOReadingACZero;
             }
             // since tPeakToPeak must fit in half of display
             tPeakToPeak *= 2;
         }
 
-        // get virtual value (simulate an virtual 18 bit ADC)
-        tPeakToPeak *= getRawAttenuationFactor(MeasurementControl.InputRangeIndex);
+        // get virtual peak2peak value (simulate an virtual 18 bit ADC)
+        tPeakToPeak *= RawAttenuationFactor[MeasurementControl.InputRangeIndex];
 
         int tOldRangeIndex = MeasurementControl.InputRangeIndex;
         /*
@@ -842,17 +841,16 @@ void computeAutoRange(void) {
                 break;
             }
         }
+        uint32_t tActualMillis = getMillisSinceBoot();
         if (tOldRangeIndex != tNewRangeIndex) {
-            /*
-             * delay for changing range to higher resolution
-             */
             if (tNewRangeIndex > tOldRangeIndex) {
                 changeInputRange(tNewRangeIndex - tOldRangeIndex);
             } else {
-
-                // wait n-milliseconds before switch to higher resolution (lower index)
-                if (getMillisSinceBoot() - MeasurementControl.TimestampLastRangeChange > SCALE_CHANGE_DELAY_MILLIS) {
-                    MeasurementControl.TimestampLastRangeChange = getMillisSinceBoot();
+                /*
+                 * wait n-milliseconds before switch to higher resolution (lower index)
+                 */
+                if (tActualMillis - MeasurementControl.TimestampLastRangeChange > SCALE_CHANGE_DELAY_MILLIS) {
+                    MeasurementControl.TimestampLastRangeChange = tActualMillis;
                     // decrease range only if value is not greater than 80% of new range max value to avoid fast switching back
                     if ((tPeakToPeak * 10) / 8 <= MaxPeakToPeakValue[tNewRangeIndex]) {
                         changeInputRange(tNewRangeIndex - tOldRangeIndex);
@@ -864,7 +862,7 @@ void computeAutoRange(void) {
             }
         } else {
             // reset "delay"
-            MeasurementControl.TimestampLastRangeChange = getMillisSinceBoot();
+            MeasurementControl.TimestampLastRangeChange = tActualMillis;
         }
     }
 }
@@ -885,7 +883,7 @@ void computeAutoDisplayRange(void) {
         // increase value by OFFSET_FIT_FACTOR = 10/8 (1.25) to have margin to have minimum starting at first grid line - exact factor for this would be (6/5 = 1.2)
         tPeakToPeak = (tPeakToPeak * 10) / 8;
         // get virtual value
-        tPeakToPeak *= getRawAttenuationFactor(MeasurementControl.InputRangeIndex);
+        tPeakToPeak *= RawAttenuationFactor[MeasurementControl.InputRangeIndex];
 
         /*
          * find new display range index
@@ -926,20 +924,20 @@ void computeAutoDisplayRange(void) {
  */
 void computeAutoOffset(void) {
 
-    int tValueMiddleX = MeasurementControl.RawValueMin + ((MeasurementControl.RawValueMax - MeasurementControl.RawValueMin) / 2);
-    if (MeasurementControl.ACRange) {
-        tValueMiddleX -= RawDSOReadingACZero;
+    int tValueMiddleY = MeasurementControl.RawValueMin + ((MeasurementControl.RawValueMax - MeasurementControl.RawValueMin) / 2);
+    if (MeasurementControl.isACMode) {
+        tValueMiddleY -= MeasurementControl.RawDSOReadingACZero;
     }
-    tValueMiddleX = (tValueMiddleX * FactorFromInputToDisplayRangeShift12) >> DSO_INPUT_TO_DISPLAY_SHIFT;
+    tValueMiddleY = (tValueMiddleY * FactorFromInputToDisplayRangeShift12) >> DSO_INPUT_TO_DISPLAY_SHIFT;
 
     // Adjust to multiple of div
     // formula is: RawPerDiv[i] = HORIZONTAL_GRID_HEIGHT / ScaleFactorRawToDisplay[i]);
-    // tOffsetDivCount = tValueMiddleX / RawPerDiv[tNewDisplayRangeIndex];
-    signed int tOffsetGridCount = tValueMiddleX
+    // tOffsetDivCount = tValueMiddleY / RawPerDiv[tNewDisplayRangeIndex];
+    signed int tOffsetGridCount = tValueMiddleY
             * (ScaleFactorRawToDisplayShift18[MeasurementControl.DisplayRangeIndex] / HORIZONTAL_GRID_HEIGHT);
     tOffsetGridCount = tOffsetGridCount >> DSO_SCALE_FACTOR_SHIFT;
 
-    if (MeasurementControl.ACRange || tOffsetGridCount >= (HORIZONTAL_GRID_COUNT / 2)) {
+    if (MeasurementControl.isACMode || tOffsetGridCount >= (HORIZONTAL_GRID_COUNT / 2)) {
         // Adjust start OffsetDivCount in order to display values at center of screen
         tOffsetGridCount -= (HORIZONTAL_GRID_COUNT / 2);
     }
@@ -947,7 +945,7 @@ void computeAutoOffset(void) {
     drawGridLinesWithHorizLabelsAndTriggerLine(COLOR_GRID_LINES);
 }
 
-void setLevelAndHysteresis(int aRawTriggerValue, int aRawTriggerHysteresis) {
+void setTriggerLevelAndHysteresis(int aRawTriggerValue, int aRawTriggerHysteresis) {
     MeasurementControl.RawTriggerLevel = aRawTriggerValue;
     if (MeasurementControl.TriggerSlopeRising) {
         MeasurementControl.RawTriggerLevelHysteresis = aRawTriggerValue - aRawTriggerHysteresis;
@@ -958,7 +956,7 @@ void setLevelAndHysteresis(int aRawTriggerValue, int aRawTriggerHysteresis) {
 
 /**
  * adjusts trigger level if needed
- * sets exclusively InputRangeIndex, actualDSOReadingACZeroForInputRange
+ * sets exclusively: InputRangeIndex, actualDSOReadingACZeroForInputRange and hardware attenuator
  * @param aValue value to change range
  * @return true if range has changed false otherwise
  */ //
@@ -983,14 +981,14 @@ bool changeInputRange(int aValue) {
         MeasurementControl.InputRangeIndex = tNewRange;
         // set attenuator and conversion factor
         DSO_setAttenuator(AttenuatorHardwareValue[tNewRange]);
-        actualDSORawToVoltFactor = ADCToVoltFactor * getRawAttenuationFactor(MeasurementControl.InputRangeIndex);
+        actualDSORawToVoltFactor = ADCToVoltFactor * RawAttenuationFactor[MeasurementControl.InputRangeIndex];
 
         if (MeasurementControl.TriggerMode != TRIGGER_MODE_OFF) {
             // adjust trigger raw level if needed
             if (tOldDSORawToVoltFactor != actualDSORawToVoltFactor) {
                 int tAcCompensation = 0;
-                if (MeasurementControl.ACRange) {
-                    tAcCompensation = RawDSOReadingACZero;
+                if (MeasurementControl.isACMode) {
+                    tAcCompensation = MeasurementControl.RawDSOReadingACZero;
                 }
                 // Reuse variable here
                 tOldDSORawToVoltFactor = tOldDSORawToVoltFactor / actualDSORawToVoltFactor;
@@ -1004,7 +1002,7 @@ bool changeInputRange(int aValue) {
         if (MeasurementControl.OffsetMode == OFFSET_MODE_0_VOLT) {
             MeasurementControl.DisplayRangeIndex = MeasurementControl.InputRangeIndex;
             // adjust raw offset value for ac
-            if (MeasurementControl.ACRange) {
+            if (MeasurementControl.isACMode) {
                 MeasurementControl.RawOffsetValueForDisplayRange = getRawOffsetValueFromGridCount(
                         DISPLAY_AC_ZERO_OFFSET_GRID_COUNT);
             }
@@ -1022,10 +1020,10 @@ bool setInputRange(int aValue) {
     return changeInputRange(aValue - MeasurementControl.InputRangeIndex);
 }
 
-void setACRange(bool aACRangeEnable) {
-    MeasurementControl.ACRange = aACRangeEnable;
-    DSO_setACRange(aACRangeEnable);
-    if (aACRangeEnable) {
+void setACMode(bool aACMode) {
+    MeasurementControl.isACMode = aACMode;
+    DSO_setACMode(aACMode);
+    if (aACMode) {
         // AC range on
         // Zero line is at grid 3 if ACRange == true
         MeasurementControl.OffsetGridCount = DISPLAY_AC_ZERO_OFFSET_GRID_COUNT;
@@ -1039,29 +1037,31 @@ void setACRange(bool aACRangeEnable) {
 /**
  *
  * @param aNewDisplayRangeIndex
- * @param aClipToInputRangeIndex
- * @return false if clipping occurs
+ * @param aClipToInputRangeIndex (true for automatic display range)
+ * @return false if new value was clipped
  */ //
 bool setDisplayRange(int aNewDisplayRangeIndex, bool aClipToInputRangeIndex) {
-    bool tRetValue = false;
-    // check for clipping
+    bool tRetValue = true;
+    // check for bounds
     if (aNewDisplayRangeIndex < 0) {
         aNewDisplayRangeIndex = 0;
+        tRetValue = false;
     } else if (aNewDisplayRangeIndex > NUMBER_OF_RANGES) {
         aNewDisplayRangeIndex = NUMBER_OF_RANGES;
-    } else {
-        tRetValue = true;
+        tRetValue = false;
     }
     MeasurementControl.DisplayRangeIndex = aNewDisplayRangeIndex;
-    if (aNewDisplayRangeIndex >= MeasurementControl.InputRangeIndex && aClipToInputRangeIndex) {
+    if ((aNewDisplayRangeIndex > MeasurementControl.InputRangeIndex && aClipToInputRangeIndex)
+            || aNewDisplayRangeIndex == MeasurementControl.InputRangeIndex) {
         // Set IndexDisplayRange to InputRangeIndex
         MeasurementControl.DisplayRangeIndex = MeasurementControl.InputRangeIndex;
         FactorFromInputToDisplayRangeShift12 = 1 << DSO_INPUT_TO_DISPLAY_SHIFT;
         MeasurementControl.InputRangeIndexOtherThanDisplayRange = false;
     } else {
+        // set DisplayRangeIndex to value other (higher or lower!) than InputRangeIndex
         MeasurementControl.InputRangeIndexOtherThanDisplayRange = true;
-        FactorFromInputToDisplayRangeShift12 = (getRawAttenuationFactor(MeasurementControl.InputRangeIndex)
-                * (1 << DSO_INPUT_TO_DISPLAY_SHIFT)) / getRawAttenuationFactor(MeasurementControl.DisplayRangeIndex);
+        FactorFromInputToDisplayRangeShift12 = (RawAttenuationFactor[MeasurementControl.InputRangeIndex]
+                * (1 << DSO_INPUT_TO_DISPLAY_SHIFT)) / RawAttenuationFactor[MeasurementControl.DisplayRangeIndex];
     }
     return tRetValue;
 }
@@ -1097,7 +1097,7 @@ void setOffsetGridCount(int aOffsetGridCount) {
 
 /**
  * Real timebase change is done here
- * @param aForceSetPrescaler forces setting of prescaler (needed for initioalizing
+ * @param aForceSetPrescaler forces setting of prescaler (needed for initializing)
  */
 void changeTimeBase(bool aForceSetPrescaler) {
     int tOldIndex = MeasurementControl.TimebaseIndex;

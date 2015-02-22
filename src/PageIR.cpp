@@ -3,7 +3,7 @@
  *
  * @date 16.12.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  */
@@ -113,15 +113,16 @@ void doIRButtons(TouchButton * const aTheTouchedButton, int16_t aValue) {
     }
 
     snprintf(StringBuffer, sizeof StringBuffer, "Cmd=%4d|%3X", sCode, sCode);
-    drawText(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_5_LINE_2 + 2 * FONT_HEIGHT, StringBuffer, 2, COLOR_PAGE_INFO, COLOR_WHITE);
+    BlueDisplay1.drawText(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_5_LINE_2 + TEXT_SIZE_22_HEIGHT, StringBuffer, TEXT_SIZE_22,
+            COLOR_PAGE_INFO, COLOR_WHITE);
 }
 
 void doSetYawTrim(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
     sYawTrimValue += aValue;
     snprintf(StringBuffer, sizeof StringBuffer, "% 3d", sYawTrimValue);
-    drawText(BUTTON_WIDTH_3_POS_2 + BUTTON_WIDTH_8 + FONT_WIDTH, BUTTON_HEIGHT_4_LINE_3 + 2 * FONT_HEIGHT, StringBuffer, 1,
-            COLOR_RED, COLOR_WHITE);
+    BlueDisplay1.drawText(BUTTON_WIDTH_3_POS_2 + BUTTON_WIDTH_8 + TEXT_SIZE_11_WIDTH, BUTTON_HEIGHT_4_LINE_3 + TEXT_SIZE_22_HEIGHT,
+            StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
     TouchSliderHorizontal.setActualValueAndDraw(sYawValue + sYawTrimValue);
 }
 
@@ -178,7 +179,7 @@ extern "C" void TIM1_BRK_TIM15_IRQHandler(void) {
 }
 
 void displayIRPage(void) {
-    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
     initMainHomeButton(true);
     // skip last button until needed
     for (unsigned int i = 0; i < NUMBER_OF_IR_BUTTONS - 1; ++i) {
@@ -203,20 +204,22 @@ void startIRPage(void) {
     int tXPos = 0;
     for (unsigned int i = 0; i < NUMBER_OF_IR_BUTTONS; ++i) {
         TouchButtonsIRSend[i] = TouchButton::allocAndInitSimpleButton(tXPos, 0, BUTTON_WIDTH_4, BUTTON_HEIGHT_5, 0,
-                IRButtonStrings[i], 1, i, &doIRButtons);
+                IRButtonStrings[i], TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, i, &doIRButtons);
         tXPos += BUTTON_WIDTH_4 + BUTTON_DEFAULT_SPACING;
     }
 
     TouchButtonToggleSendReceive = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, BUTTON_HEIGHT_4_LINE_4,
-            BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, StringReceive, 2, 0, &doToggleSendReceive);
+            BUTTON_WIDTH_3, BUTTON_HEIGHT_4, COLOR_RED, StringReceive, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0,
+            &doToggleSendReceive);
 
     TouchButtonToggleLights = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_BLACK, StringLights, 2, sLightValue, &doToggleRedGreenButton);
+            BUTTON_HEIGHT_4, COLOR_BLACK, StringLights, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, sLightValue,
+            &doToggleRedGreenButton);
     TouchButtonToggleLights->setRedGreenButtonColorAndDraw();
 
     // Velocity
-    TouchSliderVertical.initSlider(FONT_WIDTH, BUTTON_HEIGHT_5_LINE_2 + 10, TOUCHSLIDER_DEFAULT_SIZE * 2, VELOCITY_SLIDER_SIZE,
-            VELOCITY_SLIDER_SIZE - 10, 0, StringVelocity, TOUCHSLIDER_DEFAULT_TOUCH_BORDER,
+    TouchSliderVertical.initSlider(TEXT_SIZE_11_WIDTH, BUTTON_HEIGHT_5_LINE_2 + 10, TOUCHSLIDER_DEFAULT_SIZE * 2,
+            VELOCITY_SLIDER_SIZE, VELOCITY_SLIDER_SIZE - 10, 0, StringVelocity, TOUCHSLIDER_DEFAULT_TOUCH_BORDER,
             TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doVelocitySlider, &mapVelocityValue);
 
     TouchSliderVertical2.initSlider(70, BUTTON_HEIGHT_5_LINE_3, TOUCHSLIDER_DEFAULT_SIZE, NICK_MAX_VALUE, NICK_ZERO_VALUE,
@@ -227,12 +230,12 @@ void startIRPage(void) {
             TOUCHSLIDER_SHOW_VALUE | TOUCHSLIDER_IS_HORIZONTAL, NULL, NULL);
 
     TouchButtonYaw_Minus = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2,
-            BUTTON_HEIGHT_4_LINE_3 + BUTTON_HEIGHT_4 - BUTTON_HEIGHT_6, BUTTON_WIDTH_10, BUTTON_HEIGHT_6, COLOR_RED, StringMinus, 2,
-            -3, &doSetYawTrim);
+            BUTTON_HEIGHT_4_LINE_3 + BUTTON_HEIGHT_4 - BUTTON_HEIGHT_6, BUTTON_WIDTH_10, BUTTON_HEIGHT_6, COLOR_RED, StringMinus,
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, -3, &doSetYawTrim);
 
     TouchButtonYaw_Plus = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2 + BUTTON_WIDTH_8 + 2 * BUTTON_DEFAULT_SPACING,
-            BUTTON_HEIGHT_4_LINE_3 + BUTTON_HEIGHT_4 - BUTTON_HEIGHT_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_6, COLOR_RED, StringPlus, 2,
-            3, &doSetYawTrim);
+            BUTTON_HEIGHT_4_LINE_3 + BUTTON_HEIGHT_4 - BUTTON_HEIGHT_6, BUTTON_WIDTH_8, BUTTON_HEIGHT_6, COLOR_RED, StringPlus,
+            TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 3, &doSetYawTrim);
 
 // enable high sink capability
 //	SYSCFG_I2CFastModePlusConfig(SYSCFG_I2CFastModePlus_PB9, ENABLE);
@@ -246,6 +249,7 @@ void startIRPage(void) {
     IR_Timer_initialize((RCC_Clocks.PCLK2_Frequency / F_INTERRUPTS) - 1);
     IR_Timer_Start();
     displayIRPage();
+    registerSimpleResizeAndReconnectCallback(&displayIRPage);
 }
 
 /**
@@ -327,11 +331,12 @@ void loopIRPage(void) {
         snprintf(StringBuffer, sizeof StringBuffer, "%2X %1X %2X %1X %1X %2X %1X %1X %s F=%d", sVelocitySendValue,
                 sIRReceiveData.address >> 7 & 0x01, sYawValue, (sIRReceiveData.command >> 11) & 0x01, tLightValue, sNickValue,
                 tChecksum, tMyChecksum, irmp_protocol_names[sIRReceiveData.protocol], sIRReceiveData.flags);
-        drawText(2, BUTTON_HEIGHT_5 + 2, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
+        BlueDisplay1.drawText(2, BUTTON_HEIGHT_5 + 2, StringBuffer, TEXT_SIZE_11, COLOR_PAGE_INFO, COLOR_WHITE);
         snprintf(StringBuffer, sizeof StringBuffer, "Addr=%6d|%4X Cmd=%6d|%4X %s F=%d", sIRReceiveData.address,
                 sIRReceiveData.address, sIRReceiveData.command, sIRReceiveData.command,
                 irmp_protocol_names[sIRReceiveData.protocol], sIRReceiveData.flags);
-        drawText(2, BUTTON_HEIGHT_5 + 2 + FONT_HEIGHT, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
+        BlueDisplay1.drawText(2, BUTTON_HEIGHT_5 + 2 + TEXT_SIZE_11_HEIGHT, StringBuffer, TEXT_SIZE_11, COLOR_PAGE_INFO,
+                COLOR_WHITE);
 
         if (sLightValue != tLightValue) {
             sLightValue = tLightValue;
@@ -360,6 +365,8 @@ void loopIRPage(void) {
     if (sSend) {
         delayMillis(IHELICOPTER_FRAME_REPEAT_PAUSE_TIME_INT);
     }
+
+    checkAndHandleEvents();
 }
 
 /**

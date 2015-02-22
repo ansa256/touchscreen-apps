@@ -3,7 +3,7 @@
  *
  * @date 20.12.2012
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
@@ -28,6 +28,10 @@
 #ifndef SIMPLETOUCHSCREENDSO_H_
 #define SIMPLETOUCHSCREENDSO_H_
 
+#ifdef LOCAL_DISPLAY_EXISTS
+#include "ADS7846.h"
+#endif
+
 #include <stdint.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -50,16 +54,15 @@ void readADS7846Channels(void);
 
 void changeTimeBase(bool aForceSetPrescaler);
 
-float getRawAttenuationFactor(int rangeIndex);
 void setOffsetGridCount(int aOffsetGridCount);
 void computeAutoTrigger(void);
-void computeAutoRange(void);
+void computeAutoInputRange(void);
 void computeAutoDisplayRange(void);
 void computeAutoOffset(void);
 
 void computePeriodFrequency(void);
 
-void setLevelAndHysteresis(int aRawTriggerValue, int aRawTriggerHysteresis);
+void setTriggerLevelAndHysteresis(int aRawTriggerValue, int aRawTriggerHysteresis);
 bool changeInputRange(int aValue);
 int changeDisplayRange(int aValue);
 bool setDisplayRange(int aNewDisplayRangeIndex, bool aClipToIndexInputRange);
@@ -67,7 +70,7 @@ void adjustPreTriggerBuffer(uint16_t* tTempBuffer);
 uint16_t computeNumberOfSamplesToTimeout(uint16_t aTimebaseIndex);
 void computeMinMaxAverageAndPeriodFrequency(void);
 bool setInputRange(int aValue);
-void setACRange(bool aACRangeEnable);
+void setACMode(bool aACRangeEnable);
 
 void drawGridLinesWithHorizLabelsAndTriggerLine(uint16_t aColor);
 //void drawHorizontalLineLabels(void);
@@ -78,7 +81,8 @@ void clearTriggerLine(uint8_t aTriggerLevelDisplayValue);
 void printTriggerInfo(void);
 
 void printInfo(void);
-void clearInfo(const uint8_t aInfoLineNumber);
+void clearInfo(void);
+void clearDiplayedChart(void);
 void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, uint16_t aClearBeforeColor);
 void drawRemainingDataBufferValues(uint16_t aDrawColor);
 
@@ -103,7 +107,7 @@ float getFloatFromDisplayValue(uint8_t aValue);
 #define TIMING_GRID_WIDTH (DSO_DISPLAY_WIDTH / 10) // 32
 #define DISPLAY_AC_ZERO_OFFSET_GRID_COUNT (-3)
 #define DISPLAY_VALUE_FOR_ZERO (DSO_DISPLAY_HEIGHT - 2) // Zero line is not exactly at bottom of display to improve readability
-#define INFO_UPPER_MARGIN 1
+#define INFO_UPPER_MARGIN (1 + TEXT_SIZE_11_ASCEND)
 #define INFO_LEFT_MARGIN 4
 
 // Timebase stuff
@@ -157,14 +161,12 @@ extern float actualDSORawToVoltFactor;
 #define DSO_ATTENUATOR_BASE_GAIN 2 // Gain if attenuator is at level 1
 #define DSO_ATTENUATOR_SHORTCUT 0 // line setting for attenuator makes shortcut to ground
 extern bool isAttenuatorAvailable;
-extern float RawAttenuationFactor[NUMBER_OF_HARDWARE_RANGES];
-extern const uint8_t RangeToRawAttenuationIndexMapping[NUMBER_OF_RANGES];
+extern float RawAttenuationFactor[NUMBER_OF_RANGES];
 extern const uint8_t AttenuatorHardwareValue[NUMBER_OF_RANGES];
 extern int FactorFromInputToDisplayRangeShift12;
 extern uint16_t RawDSOReadingACZero;
 
 // ADC channel stuff
-
 #define START_ADC_CHANNEL_INDEX 0  // see also ChannelSelectButtonString
 #define ADC_CHANNEL_NO_ATTENUATOR_INDEX 2  // see also ChannelSelectButtonString
 #define NO_ATTENUATOR_MIN_RANGE_INDEX 1
@@ -178,6 +180,7 @@ extern uint8_t ADCInputMUXChannels[ADC_CHANNEL_COUNT];
 void computeFFT(uint16_t * aDataBufferPointer, float32_t *aFFTBuffer);
 void draw128FFTValuesFast(uint16_t aColor, uint16_t * aDataBufferPointer);
 void clearFFTValuesOnDisplay(void);
+void drawFFT(void);
 extern uint8_t DisplayBufferFFT[FFT_SIZE / 2];
 
 struct MeasurementControlStruct {
@@ -188,8 +191,9 @@ struct MeasurementControlStruct {
     // Info size
     bool InfoSizeSmall;
     // Input select
+#ifdef LOCAL_DISPLAY_EXISTS
     bool ADS7846ChannelsAsDatasource;
-
+#endif
     volatile bool TriggerPhaseJustEnded; // ADC-ISR -> Thread - signal for draw while acquire
 
     // Read phase for ISR and single shot mode see SEGMENT_...
@@ -206,7 +210,7 @@ struct MeasurementControlStruct {
     uint8_t OffsetMode; //OFFSET_MODE_0_VOLT, OFFSET_MODE_AUTOMATIC, OFFSET_MODE_MANUAL
     uint8_t TriggerStatus; // Set by ISR: see TRIGGER_START etc.
     uint16_t TriggerSampleCount; // ISR: for checking trigger timeout
-    uint16_t TriggerTimeoutSampleOrLoopCount; // ISR max samples / DMA max number of loops  before trigger timeout
+    uint16_t TriggerTimeoutSampleOrLoopCount; // ISR max samples / DMA max number of loops before trigger timeout
     uint16_t RawValueBeforeTrigger; // only single shot mode: to show actual value during wait for trigger
 
     // computed values from display buffer
@@ -228,9 +232,10 @@ struct MeasurementControlStruct {
     uint8_t ADCInputMUXChannelIndex;
 
     // Range
-    bool RangeAutomatic; // RANGE_MODE_AUTOMATIC, MANUAL
-    bool ACRange; // false: unipolar range => 0V probe input -> 0V ADC input  - true: AC range => 0V probe input -> 1.5V ADC input
-    int InputRangeIndex; // index including attenuator ranges. is set so that all values fits for the ADC, 0 -> NUMBER_OF_RANGES
+    bool RangeAutomatic; // [RANGE_MODE_AUTOMATIC, MANUAL]
+    bool isACMode; // false: unipolar mode => 0V probe input -> 0V ADC input  - true: AC range => 0V probe input -> 1.5V ADC input
+    uint16_t RawDSOReadingACZero;
+    int InputRangeIndex; // index including attenuator ranges  [0 to NUMBER_OF_RANGES]
     uint32_t TimestampLastRangeChange;
 
     // Offset
@@ -240,7 +245,7 @@ struct MeasurementControlStruct {
     uint16_t RawValueOffsetClippingUpper; // ADC raw upper clipping value for offset mode
     // number of lowest horizontal grid to display for auto offset
     int16_t OffsetGridCount;
-    int DisplayRangeIndex; // == InputRangeIndex if offset is zero else it is smaller to magnify signal   0 -> NUMBER_OF_RANGES
+    int DisplayRangeIndex; // = InputRangeIndex if offset is zero else it may be smaller to magnify signal  [0 to NUMBER_OF_RANGES]
     bool InputRangeIndexOtherThanDisplayRange;
 };
 extern struct MeasurementControlStruct MeasurementControl;
@@ -259,8 +264,8 @@ extern unsigned int sDatabufferPreDisplaySize;
 #define DATABUFFER_DISPLAY_END (DATABUFFER_DISPLAY_START + DSO_DISPLAY_WIDTH - 1)
 #define DATABUFFER_POST_TRIGGER_START (&DataBuffer[DATABUFFER_PRE_TRIGGER_SIZE])
 #define DATABUFFER_POST_TRIGGER_SIZE (DATABUFFER_SIZE - DATABUFFER_PRE_TRIGGER_SIZE)
-#define DATABUFFER_INVISIBLE_RAW_VALUE 0x1000 // value for invalid data from pretrigger area
-#define DISPLAYBUFFER_INVISIBLE_VALUE 0xFF // value for invisible data in display buffer
+#define DATABUFFER_INVISIBLE_RAW_VALUE 0x1000 // Value for invalid data in/from pretrigger area
+#define DISPLAYBUFFER_INVISIBLE_VALUE 0xFF // Value for invisible data in display buffer. Used if raw value was DATABUFFER_INVISIBLE_RAW_VALUE
 struct DataBufferStruct {
     volatile bool DataBufferFull; // ISR -> main loop
     bool DrawWhileAcquire;
@@ -268,7 +273,7 @@ struct DataBufferStruct {
     uint8_t InputRangeIndexUsed; // index used for acquisition of buffer data
 
     uint16_t * DataBufferPreTriggerNextPointer; // pointer to next pre trigger value in DataBuffer - set only once at end of search trigger phase
-    uint16_t * DataBufferWritePointer; // used by ISR as main databuffer pointer - also read by draw-while-acquire mode
+    uint16_t * DataBufferNextInPointer; // used by ISR as main databuffer pointer - also read by draw-while-acquire mode
     volatile uint16_t * DataBufferNextDrawPointer; // for draw-while-acquire mode
     uint16_t NextDrawXValue; // for draw-while-acquire mode
     // to detect end of acquisition in interrupt service routine
@@ -295,14 +300,13 @@ extern struct DataBufferStruct DataBufferControl;
  * + info (and min + max lines)
  * + show active gui elements
  */
-enum DisplayModeEnum {
-    ONLY_DATA, PLUS_INFO, PLUS_GUI_ELEMENTS, LAST
+enum InfoModeEnum {
+    NO_INFO, LONG_INFO
 };
 
 enum DisplayPageEnum {
-    DATA, SETTINGS, MORE_SETTINGS
+    START, CHART, SETTINGS, MORE_SETTINGS
 };
-
 
 // Modes for DisplayBufferDrawMode
 #define DRAW_MODE_LINE 0x01    // draw as line - otherwise draw only measurement pixel
@@ -312,8 +316,8 @@ enum DisplayPageEnum {
 struct DisplayControlStruct {
     uint8_t TriggerLevelDisplayValue; // For clearing old line of manual trigger level setting
     uint8_t DisplayBufferDrawMode;
-    DisplayModeEnum DisplayMode; // DISPLAY_MODE_ONLY_DATA | DISPLAY_MODE_INFO_LINE | DISPLAY_MODE_SHOW_GUI_ELEMENTS
-    DisplayPageEnum DisplayPage;
+    InfoModeEnum showInfoMode; // ONLY_DATA | PLUS_INFO
+    DisplayPageEnum DisplayPage; // START, CHART, SETTINGS, MORE_SETTINGS
     bool ShowFFT;
 
     /**
@@ -363,5 +367,6 @@ struct FFTInfoStruct {
     uint32_t TimeElapsedMillis; // milliseconds of computing last fft
 };
 extern FFTInfoStruct FFTInfo;
+extern uint8_t DisplayBuffer[DSO_DISPLAY_WIDTH];
 
 #endif /* SIMPLETOUCHSCREENDSO_H_ */

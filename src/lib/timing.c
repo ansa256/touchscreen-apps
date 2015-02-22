@@ -3,7 +3,7 @@
  *
  * @date 21.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
@@ -20,9 +20,8 @@
 #include <stdbool.h>
 #include "stm32f30xPeripherals.h"
 
-#include "Pages.h"
 #include "misc.h"
-#include "HY32D.h"
+#include "BlueDisplay.h"
 #include <time.h>
 #include <core_cmInstr.h>
 
@@ -52,8 +51,8 @@ volatile int32_t DelayCallbackMillis[CALLBACK_ENTRIES_SIZE] = { 0, 0, 0, 0, 0 };
  * @retval 0
  */
 uint32_t LSM303DLHC_TIMEOUT_UserCallback(void) {
-	setTimeoutLED();
-	return 0;
+    setTimeoutLED();
+    return 0;
 }
 
 /**
@@ -61,15 +60,15 @@ uint32_t LSM303DLHC_TIMEOUT_UserCallback(void) {
  * @retval 0
  */
 uint32_t L3GD20_TIMEOUT_UserCallback(void) {
-	setTimeoutLED();
-	return 0;
+    setTimeoutLED();
+    return 0;
 }
 
 /**
  * @retval millis since start of program
  */
 uint32_t getMillisSinceBoot() {
-	return MillisSinceBoot;
+    return MillisSinceBoot;
 }
 
 /**
@@ -98,36 +97,36 @@ uint32_t getMillisSinceBoot() {
 #define CLOCK_TICKS_INITIAL 18
 #define CLOCK_TICKS_PER_LOOP 10
 void delayNanos(int32_t aTimeNanos) {
-	// tTimeNanos not needed if compilation with -Os
-	register int32_t tTimeNanos = aTimeNanos;
-	tTimeNanos -= ((PICOS_PER_CLOCK * CLOCK_TICKS_INITIAL) / 1000); // 249
-	if (tTimeNanos <= 0) {
-		return;
-	}
-	// for better resolution
-	tTimeNanos = tTimeNanos << 4;
-	do {
-		__NOP(); // to avoid removal of loop and function body for -Os compiler switch
-		tTimeNanos = tTimeNanos - ((PICOS_PER_CLOCK * CLOCK_TICKS_PER_LOOP * 16) / 1000); //2222 or 139*16
-	} while (tTimeNanos > 0);
+    // tTimeNanos not needed if compilation with -Os
+    register int32_t tTimeNanos = aTimeNanos;
+    tTimeNanos -= ((PICOS_PER_CLOCK * CLOCK_TICKS_INITIAL) / 1000); // 249
+    if (tTimeNanos <= 0) {
+        return;
+    }
+    // for better resolution
+    tTimeNanos = tTimeNanos << 4;
+    do {
+        __NOP(); // to avoid removal of loop and function body for -Os compiler switch
+        tTimeNanos = tTimeNanos - ((PICOS_PER_CLOCK * CLOCK_TICKS_PER_LOOP * 16) / 1000); //2222 or 139*16
+    } while (tTimeNanos > 0);
 }
 
 /**
  * poll counted flag in systic status register.
  * @note Only for use if systic interrupt is disabled,
- * otherwise 2 calls of doOneSystic() happens per systic rollover.
+ * otherwise 2 calls of doOneSystic() happens per systic count.
  */
 static void delayMillisBusy(int32_t aTimeMillis) {
-	// reset systic counted flag
-	hasSysticCounted();
-	while (aTimeMillis != 0) {
-		// detect reload of systic timer value
-		if (hasSysticCounted()) {
-			//Timer reload -> 1 ms elapsed
-			doOneSystic();
-			aTimeMillis--;
-		}
-	}
+    // reset systic counted flag
+    hasSysticCounted();
+    while (aTimeMillis != 0) {
+        // detect reload of systic timer value
+        if (hasSysticCounted()) {
+            //Timer reload -> 1 ms elapsed
+            doOneSystic();
+            aTimeMillis--;
+        }
+    }
 }
 
 /**
@@ -135,40 +134,40 @@ static void delayMillisBusy(int32_t aTimeMillis) {
  * @param  aTimeMillis: specifies the delay time length, in 1 ms.
  */
 void delayMillis(int32_t aTimeMillis) {
-	// get interrupt level
-	uint32_t tISPR = (__get_IPSR() & 0xFF);
-	// in system interrupt like bus_fault, systic etc.
-	if (tISPR < OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) {
-		// no other delay possible
-		delayMillisBusy(aTimeMillis);
-	} else if (tISPR == 0) {
-		// No interrupt here
-		if (TimingDelayForThread == 0) {
-			// value is free to use
-			TimingDelayForThread = aTimeMillis;
-			// wait for variable changed by systic handler
-			while (TimingDelayForThread != 0) {
-				// TODO FUTURE use sleep here
-				;
-			}
-		} else {
-			failParamMessage(aTimeMillis, "delay in delay for thread mode");
-		}
-	} else {
-		int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
-		if (tPreemptivePrio > (SYS_TICK_INTERRUPT_PRIO >> PREEMPTIVE_PRIO_SHIFT)) {
-			// Here in ISR with (logical) lower preemptive prio than systic handler => systic interrupt will happen
-			// value is free to use
-			TimingDelayForISR[tPreemptivePrio] = aTimeMillis;
-			// wait for variable changed by systic handler
-			while (TimingDelayForISR[tPreemptivePrio] != 0) {
-				;
-			}
-		} else {
-			// Here in ISR with equal or higher priority than systic handler itself
-			delayMillisBusy(aTimeMillis);
-		}
-	}
+    // get interrupt level
+    uint32_t tISPR = (__get_IPSR() & 0xFF);
+    // in high priority system interrupt like bus_fault, systic etc.
+    if (tISPR < OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) {
+        // no other delay possible
+        delayMillisBusy(aTimeMillis);
+    } else if (tISPR == 0) {
+        // No interrupt here
+        if (TimingDelayForThread == 0) {
+            // value is free to use
+            TimingDelayForThread = aTimeMillis;
+            // wait for variable changed by systic handler
+            while (TimingDelayForThread != 0) {
+                // TODO FUTURE use sleep here
+                ;
+            }
+        } else {
+            failParamMessage(aTimeMillis, "delay in delay for thread mode");
+        }
+    } else {
+        int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
+        if (tPreemptivePrio > (SYS_TICK_INTERRUPT_PRIO >> PREEMPTIVE_PRIO_SHIFT)) {
+            // Here in ISR with (logical) lower preemptive prio than systic handler => systic interrupt will happen
+            // value is free to use
+            TimingDelayForISR[tPreemptivePrio] = aTimeMillis;
+            // wait for variable changed by systic handler
+            while (TimingDelayForISR[tPreemptivePrio] != 0) {
+                ;
+            }
+        } else {
+            // Here in ISR with equal or higher priority than systic handler itself
+            delayMillisBusy(aTimeMillis);
+        }
+    }
 }
 
 /**
@@ -176,31 +175,31 @@ void delayMillis(int32_t aTimeMillis) {
  * if check is needed use changeDelayCallback()
  */
 void registerDelayCallback(void (*aDelayCallback)(void), int32_t aTimeMillis) {
-	int i;
-	for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
-		if (DelayCallbackMillis[i] == 0) {
-			DelayCallbackPointer[i] = aDelayCallback;
-			DelayCallbackMillis[i] = aTimeMillis;
-			return;
-		}
-	}
-	failParamMessage(aDelayCallback, "No more free callback entries");
+    int i;
+    for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
+        if (DelayCallbackMillis[i] == 0) {
+            DelayCallbackPointer[i] = aDelayCallback;
+            DelayCallbackMillis[i] = aTimeMillis;
+            return;
+        }
+    }
+    failParamMessage(aDelayCallback, "No more free callback entries");
 }
 
 /**
  * change a delay for a already registered callback or insert one
  */
 void changeDelayCallback(void (*aDelayCallback)(void), int32_t aTimeMillis) {
-	int i;
-	for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
-		if (DelayCallbackPointer[i] == aDelayCallback) {
-			DelayCallbackMillis[i] = aTimeMillis;
-			// entry found, job done
-			return;
-		}
-	}
-	// no entry found -> insert one
-	registerDelayCallback(aDelayCallback, aTimeMillis);
+    int i;
+    for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
+        if (DelayCallbackPointer[i] == aDelayCallback) {
+            DelayCallbackMillis[i] = aTimeMillis;
+            // entry found, job done
+            return;
+        }
+    }
+    // no entry found -> insert one
+    registerDelayCallback(aDelayCallback, aTimeMillis);
 }
 
 /**
@@ -209,16 +208,16 @@ void changeDelayCallback(void (*aDelayCallback)(void), int32_t aTimeMillis) {
  */
 void setTimeoutMillis(int32_t aTimeMillis) {
 // get interrupt level
-	uint32_t tISPR = (__get_IPSR() & 0xFF);
-	if (tISPR == 0) {
-		TimeoutCounterForThread = aTimeMillis;
-	} else {
-		int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
-		// Here in ISR
-		TimeoutCounterForISR[tPreemptivePrio] = aTimeMillis;
-		// reset systic counted flag
-		hasSysticCounted();
-	}
+    uint32_t tISPR = (__get_IPSR() & 0xFF);
+    if (tISPR == 0) {
+        TimeoutCounterForThread = aTimeMillis;
+    } else {
+        int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
+        // Here in ISR
+        TimeoutCounterForISR[tPreemptivePrio] = aTimeMillis;
+        // reset systic counted flag
+        hasSysticCounted();
+    }
 }
 
 /**
@@ -229,30 +228,30 @@ void setTimeoutMillis(int32_t aTimeMillis) {
 
 bool isTimeoutSimple(void) {
 // get interrupt level
-	bool tRetval = false;
-	uint32_t tISPR = (__get_IPSR() & 0xFF);
-	if (tISPR == 0) {
-		// thread
-		if (TimeoutCounterForThread == 0) {
-			setTimeoutLED();
-			tRetval = true;
-		}
-	} else {
-		// in interrupt service routine
-		int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
-		if (tPreemptivePrio <= (SYS_TICK_INTERRUPT_PRIO >> PREEMPTIVE_PRIO_SHIFT)) {
-			// with higher or same master (preemptive) priority than system clock
-			if (hasSysticCounted()) {
-				//Timer reload -> 1 ms elapsed
-				doOneSystic();
-			}
-		}
-		if (TimeoutCounterForISR[tPreemptivePrio] == 0) {
-			setTimeoutLED();
-			tRetval = true;
-		}
-	}
-	return tRetval;
+    bool tRetval = false;
+    uint32_t tISPR = (__get_IPSR() & 0xFF);
+    if (tISPR == 0) {
+        // thread
+        if (TimeoutCounterForThread == 0) {
+            setTimeoutLED();
+            tRetval = true;
+        }
+    } else {
+        // in interrupt service routine
+        int tPreemptivePrio = NVIC_GetPriority(tISPR - OFFSET_INTERRUPT_TYPE_TO_ISR_INT_NUMBER) >> PREEMPTIVE_PRIO_SHIFT;
+        if (tPreemptivePrio <= (SYS_TICK_INTERRUPT_PRIO >> PREEMPTIVE_PRIO_SHIFT)) {
+            // with higher or same master (preemptive) priority than system clock
+            if (hasSysticCounted()) {
+                //Timer reload -> 1 ms elapsed
+                doOneSystic();
+            }
+        }
+        if (TimeoutCounterForISR[tPreemptivePrio] == 0) {
+            setTimeoutLED();
+            tRetval = true;
+        }
+    }
+    return tRetval;
 }
 
 /**
@@ -260,18 +259,18 @@ bool isTimeoutSimple(void) {
  * @retval 1 if timeout period has expired, 0 else
  */bool isTimeoutVerbose(uint8_t* aFile, uint32_t aLine, uint32_t aLinkRegister, int32_t aMessageDisplayTimeMillis) {
 // get interrupt level
-	if (isTimeoutSimple()) {
-		if (isInitializedHY32D) {
-			char * tFile = (strrchr(((char*) aFile), '/') + 1);
-			int tIndex = 0;
-			tIndex += snprintf(StringBuffer, sizeof StringBuffer, "Timeout on line: %lu LR=%#X\nfile: %s", aLine,
-					(unsigned int) aLinkRegister, tFile);
-			drawMLText(0, 0, DISPLAY_WIDTH, 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_WHITE, true);
-			delayMillis(aMessageDisplayTimeMillis);
-		}
-		return true;
-	}
-	return false;
+    if (isTimeoutSimple()) {
+        if (isDisplayAvailable) {
+            char * tFile = (strrchr(((char*) aFile), '/') + 1);
+            int tIndex = 0;
+            tIndex += snprintf(StringBuffer, sizeof StringBuffer, "Timeout on line: %lu LR=%#X\nfile: %s", aLine,
+                    (unsigned int) aLinkRegister, tFile);
+            drawMLText(0, TEXT_SIZE_11_ASCEND, StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
+            delayMillis(aMessageDisplayTimeMillis);
+        }
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -279,196 +278,196 @@ bool isTimeoutSimple(void) {
  * Dims LCD after period of touch inactivity
  */
 void doOneSystic(void) {
-	/**
-	 * delays
-	 */
-	if (TimingDelayForThread != 0) {
-		TimingDelayForThread--;
-	}
-	int i;
-	for (i = 0; i < NUMBER_OF_PREEMPTIVE_PRIOS; ++i) {
-		if (TimingDelayForISR[i] != 0) {
-			TimingDelayForISR[i]--;
-		}
-	}
+    /**
+     * delays
+     */
+    if (TimingDelayForThread != 0) {
+        TimingDelayForThread--;
+    }
+    int i;
+    for (i = 0; i < NUMBER_OF_PREEMPTIVE_PRIOS; ++i) {
+        if (TimingDelayForISR[i] != 0) {
+            TimingDelayForISR[i]--;
+        }
+    }
 
-	/**
-	 * delays with callback
-	 */
-	for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
-		if (DelayCallbackMillis[i] > 0) {
-			DelayCallbackMillis[i]--;
-			if (DelayCallbackMillis[i] == 0) {
-				DelayCallbackPointer[i]();
-			}
-		}
-	}
+    /**
+     * delays with callback
+     */
+    for (i = 0; i < CALLBACK_ENTRIES_SIZE; ++i) {
+        if (DelayCallbackMillis[i] > 0) {
+            DelayCallbackMillis[i]--;
+            if (DelayCallbackMillis[i] == 0) {
+                DelayCallbackPointer[i]();
+            }
+        }
+    }
 
-	/**
-	 * timeouts
-	 */
-	if (TimeoutCounterForThread != 0) {
-		TimeoutCounterForThread--;
-	}
+    /**
+     * timeouts
+     */
+    if (TimeoutCounterForThread != 0) {
+        TimeoutCounterForThread--;
+    }
 
-	for (i = 0; i < NUMBER_OF_PREEMPTIVE_PRIOS; ++i) {
-		if (TimeoutCounterForISR[i] != 0) {
-			TimeoutCounterForISR[i]--;
-		}
-	}
+    for (i = 0; i < NUMBER_OF_PREEMPTIVE_PRIOS; ++i) {
+        if (TimeoutCounterForISR[i] != 0) {
+            TimeoutCounterForISR[i]--;
+        }
+    }
 }
 
 void SysTick_Handler(void) {
 //	Toggle_DebugPin(); // to measure crystal by external counter
-	MillisSinceBoot++;
-	doOneSystic();
+    MillisSinceBoot++;
+    doOneSystic();
 }
 
 void displayTimings(uint16_t aYDisplayPos) {
-	uint32_t tSysticReloadValue = getSysticReloadValue() + 1;
-	clearSystic(); // 1 tick
-	Set_DebugPin(); // 1 tick
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	clearSystic(); // 1 tick
-	Set_DebugPin(); // 1 tick
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	clearSystic(); // 1 tick
-	Set_DebugPin(); // 1 tick
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	clearSystic(); // 1 tick
-	Set_DebugPin(); // 1 tick
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	Set_DebugPin();
-	Reset_DebugPin();
-	uint32_t tDuration = getSysticValue(); // needs 1 tick
-	snprintf(StringBuffer, sizeof StringBuffer, "SYSTICS: reload+1=%ld 16*set+res=%ld", tSysticReloadValue,
-			tSysticReloadValue - tDuration);
-	drawText(10, aYDisplayPos, StringBuffer, 1, COLOR_RED, COLOR_BACKGROUND_DEFAULT);
-	clearSystic();
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	delayNanos(250 + NANOS_ONE_LOOP);
-	tDuration = getSysticValue();
-	int tIndex = snprintf(StringBuffer, sizeof StringBuffer, "2 loops=%ld", tSysticReloadValue - tDuration);
-	clearSystic();
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	delayNanos(250 + 2 * NANOS_ONE_LOOP);
-	tDuration = getSysticValue();
-	tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 3=%ld", tSysticReloadValue - tDuration);
-	clearSystic();
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	delayNanos(250 + 3 * NANOS_ONE_LOOP);
-	tDuration = getSysticValue();
-	tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 4=%ld", tSysticReloadValue - tDuration);
-	clearSystic();
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	delayNanos(250 + 4 * NANOS_ONE_LOOP);
-	tDuration = getSysticValue();
-	tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 5=%ld", tSysticReloadValue - tDuration);
-	clearSystic();
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	delayNanos(250 + 7 * NANOS_ONE_LOOP);
-	tDuration = getSysticValue();
-	snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 8=%ld", tSysticReloadValue - tDuration);
-	drawText(10, aYDisplayPos + FONT_HEIGHT, StringBuffer, 1, COLOR_RED, COLOR_BACKGROUND_DEFAULT);
+    uint32_t tSysticReloadValue = getSysticReloadValue() + 1;
+    clearSystic(); // 1 tick
+    Set_DebugPin(); // 1 tick
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    clearSystic(); // 1 tick
+    Set_DebugPin(); // 1 tick
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    clearSystic(); // 1 tick
+    Set_DebugPin(); // 1 tick
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    clearSystic(); // 1 tick
+    Set_DebugPin(); // 1 tick
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    Set_DebugPin();
+    Reset_DebugPin();
+    uint32_t tDuration = getSysticValue(); // needs 1 tick
+    snprintf(StringBuffer, sizeof StringBuffer, "SYSTICS: reload+1=%ld 16*set+res=%ld", tSysticReloadValue,
+            tSysticReloadValue - tDuration);
+    drawTextC(10, aYDisplayPos, StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
+    clearSystic();
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    delayNanos(250 + NANOS_ONE_LOOP);
+    tDuration = getSysticValue();
+    int tIndex = snprintf(StringBuffer, sizeof StringBuffer, "2 loops=%ld", tSysticReloadValue - tDuration);
+    clearSystic();
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    delayNanos(250 + 2 * NANOS_ONE_LOOP);
+    tDuration = getSysticValue();
+    tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 3=%ld", tSysticReloadValue - tDuration);
+    clearSystic();
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    delayNanos(250 + 3 * NANOS_ONE_LOOP);
+    tDuration = getSysticValue();
+    tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 4=%ld", tSysticReloadValue - tDuration);
+    clearSystic();
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    delayNanos(250 + 4 * NANOS_ONE_LOOP);
+    tDuration = getSysticValue();
+    tIndex += snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 5=%ld", tSysticReloadValue - tDuration);
+    clearSystic();
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    delayNanos(250 + 7 * NANOS_ONE_LOOP);
+    tDuration = getSysticValue();
+    snprintf(&StringBuffer[tIndex], sizeof StringBuffer - tIndex, " 8=%ld", tSysticReloadValue - tDuration);
+    drawTextC(10, aYDisplayPos + TEXT_SIZE_11_HEIGHT + TEXT_SIZE_11_ASCEND, StringBuffer, TEXT_SIZE_11, COLOR_RED, COLOR_WHITE);
 }
 void testTimingsLoop(int aCount) {
-	while (aCount > 0) {
-		Set_DebugPin(); // 1 tick ???
-		delayNanos(10); // call gives 18 ticks -> 250 ns
-		Reset_DebugPin();
-		delayNanos(10);
-		Set_DebugPin();
-		delayNanos(10);
-		Reset_DebugPin();
-		delayNanos(10);
+    while (aCount > 0) {
+        Set_DebugPin(); // 1 tick ???
+        delayNanos(10); // call gives 18 ticks -> 250 ns
+        Reset_DebugPin();
+        delayNanos(10);
+        Set_DebugPin();
+        delayNanos(10);
+        Reset_DebugPin();
+        delayNanos(10);
 
-		Set_DebugPin();
-		delayNanos(250); // results in app. 330 ns
-		Reset_DebugPin();
-		delayNanos(250);
-		Set_DebugPin();
-		delayNanos(250);
-		Reset_DebugPin();
-		delayNanos(250);
+        Set_DebugPin();
+        delayNanos(250); // results in app. 330 ns
+        Reset_DebugPin();
+        delayNanos(250);
+        Set_DebugPin();
+        delayNanos(250);
+        Reset_DebugPin();
+        delayNanos(250);
 
-		Set_DebugPin();
-		delayNanos(417); // // results in app. 420 ns
-		Reset_DebugPin();
-		delayNanos(417);
-		Set_DebugPin();
-		delayNanos(417);
-		Reset_DebugPin();
-		delayNanos(417);
+        Set_DebugPin();
+        delayNanos(417); // // results in app. 420 ns
+        Reset_DebugPin();
+        delayNanos(417);
+        Set_DebugPin();
+        delayNanos(417);
+        Reset_DebugPin();
+        delayNanos(417);
 
-		Set_DebugPin();
-		delayNanos(2000); // results in 2000
-		Reset_DebugPin();
-		delayNanos(2000);
-		Set_DebugPin();
-		delayNanos(2000);
-		Reset_DebugPin();
-		delayNanos(2000);
+        Set_DebugPin();
+        delayNanos(2000); // results in 2000
+        Reset_DebugPin();
+        delayNanos(2000);
+        Set_DebugPin();
+        delayNanos(2000);
+        Reset_DebugPin();
+        delayNanos(2000);
 
-		Set_DebugPin();
-		delayNanos(20000); // results in 20000
-		Reset_DebugPin();
-		delayNanos(20000);
-		Set_DebugPin();
-		delayNanos(20000);
-		Reset_DebugPin();
-		delayNanos(20000);
-		aCount--;
-	}
+        Set_DebugPin();
+        delayNanos(20000); // results in 20000
+        Reset_DebugPin();
+        delayNanos(20000);
+        Set_DebugPin();
+        delayNanos(20000);
+        Reset_DebugPin();
+        delayNanos(20000);
+        aCount--;
+    }
 }

@@ -3,7 +3,7 @@
  *
  * @date 21.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  */
@@ -11,10 +11,11 @@
 #ifndef MISC_H_
 #define MISC_H_
 
-#include "HY32D.h" // for DISPLAY_WIDTH
+#include "BlueDisplay.h" // for DISPLAY_WIDTH
+#include <stdbool.h>
+
 // for IN_INTERRUPT_SERVICE_ROUTINE
 #ifdef __cplusplus
-#include "TouchButton.h"
 extern "C" {
 #endif
 void FaultHandler(unsigned int * aFaultArgs);
@@ -38,7 +39,7 @@ extern int DebugValue5;
 extern char StringBuffer[SIZEOF_STRINGBUFFER];
 
 // stores a displayline e.g. for screenshot - +1 because first value is scrap
-#define SIZEOF_DISPLAYLINE_BUFFER (4 * DISPLAY_WIDTH)
+#define SIZEOF_DISPLAYLINE_BUFFER (4 * DISPLAY_DEFAULT_WIDTH)
 extern uint16_t FourDisplayLinesBuffer[SIZEOF_DISPLAYLINE_BUFFER];
 
 /**

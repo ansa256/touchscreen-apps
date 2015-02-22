@@ -3,12 +3,17 @@
  *
  * @date 16.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  */
 
 #include "Pages.h"
+
+#ifdef LOCAL_DISPLAY_EXISTS
+#include "ADS7846.h"
+#endif
+
 #include "misc.h"
 #include "myprint.h"
 
@@ -53,11 +58,16 @@ static uint8_t sPrintMode = PRINT_MODE_DISABLED;
 /* Private variables ---------------------------------------------------------*/
 char StringSetDateCaption[] = "Set clock  "; // spaces needed for string "minute"
 
+#ifdef LOCAL_DISPLAY_EXISTS
 TouchSlider TouchSliderBacklight;
+static TouchButton * TouchButtonTPCalibration;
+void doTPCalibration(TouchButton * const aTheTouchedButton, int16_t aValue);
+TouchButtonAutorepeat * TouchButtonAutorepeatBacklight_Plus;
+TouchButtonAutorepeat * TouchButtonAutorepeatBacklight_Minus;
+#endif
 static TouchButton * TouchButtonTogglePrintMode;
 static TouchButton * TouchButtonToggleTouchXYDisplay;
 static TouchButton * TouchButtonSetDate;
-static TouchButton * TouchButtonTPCalibration;
 
 // for misc testing purposes
 
@@ -66,11 +76,6 @@ void doToggleTouchXYDisplay(TouchButton * const aTheTouchedButton, int16_t aValu
 
 TouchButtonAutorepeat * TouchButtonAutorepeatDate_Plus;
 TouchButtonAutorepeat * TouchButtonAutorepeatDate_Minus;
-
-TouchButtonAutorepeat * TouchButtonAutorepeatBacklight_Plus;
-TouchButtonAutorepeat * TouchButtonAutorepeatBacklight_Minus;
-
-void doTPCalibration(TouchButton * const aTheTouchedButton, int16_t aValue);
 
 char StringTPCal[] = "TP-Calibr.";
 
@@ -113,61 +118,75 @@ void doTogglePrintEnable(TouchButton * const aTheTouchedButton, int16_t aValue) 
 }
 
 void showSettingsPage(void) {
-    drawBacklightElements();
     drawClockSettingElements();
+#ifdef LOCAL_DISPLAY_EXISTS
+    drawBacklightElements();
     TouchButtonTPCalibration->drawButton();
+#endif
     TouchButtonTogglePrintMode->drawButton();
     TouchButtonToggleTouchXYDisplay->drawButton();
     // display VDD voltage
     snprintf(StringBuffer, sizeof StringBuffer, "VRef=%1.6f", sVrefVoltage);
-    drawText(2, DISPLAY_HEIGHT - 3 * FONT_HEIGHT, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
+    BlueDisplay1.drawText(2, BlueDisplay1.getDisplayHeight() - 3 * TEXT_SIZE_11_HEIGHT + TEXT_SIZE_11_ASCEND, StringBuffer,
+            TEXT_SIZE_11, COLOR_PAGE_INFO, COLOR_WHITE);
     snprintf(StringBuffer, sizeof StringBuffer, "3V=%d", sReading3Volt);
-    drawText(2, DISPLAY_HEIGHT - 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_PAGE_INFO, COLOR_WHITE);
+    BlueDisplay1.drawText(2, BlueDisplay1.getDisplayHeight() - 2 * TEXT_SIZE_11_HEIGHT + TEXT_SIZE_11_ASCEND, StringBuffer,
+            TEXT_SIZE_11, COLOR_PAGE_INFO, COLOR_WHITE);
     initMainHomeButton(true);
 }
 
 void startSettingsPage(void) {
+#ifdef LOCAL_DISPLAY_EXISTS
     initBacklightElements();
+#endif
     initClockSettingElements();
 
     //1. row
     int tPosY = 0;
     TouchButtonToggleTouchXYDisplay = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_BLACK, "Touch X Y", 1, TouchPanel.getDisplayXYValuesFlag(), &doToggleTouchXYDisplay);
+            BUTTON_HEIGHT_4, COLOR_BLACK, "Touch X Y", TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, getDisplayXYValuesFlag(),
+            &doToggleTouchXYDisplay);
     TouchButtonToggleTouchXYDisplay->setRedGreenButtonColorAndDraw();
 
     //2. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
-    TouchButtonTogglePrintMode = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_BLACK, StringPrint, 2, sPrintMode, &doTogglePrintEnable);
+    TouchButtonTogglePrintMode = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
+            COLOR_BLACK, StringPrint, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, sPrintMode, &doTogglePrintEnable);
     setPrintCaptionAndColor(sPrintMode);
 
-    TouchButtonTPCalibration = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_RED, StringTPCal, 1, 0, &doTPCalibration);
-
-    //3. row
+#ifdef LOCAL_DISPLAY_EXISTS
+    TouchButtonTPCalibration = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_3, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
+            COLOR_RED, StringTPCal, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 0, &doTPCalibration);
+#endif
 
     ADC_setRawToVoltFactor();
+    registerSimpleResizeAndReconnectCallback(&showSettingsPage);
     showSettingsPage();
 }
 
 void loopSettingsPage(void) {
-    showRTCTimeEverySecond(RTC_DEFAULT_X, RTC_DEFAULT_Y, RTC_DEFAULT_COLOR, COLOR_BACKGROUND_DEFAULT);
+    showRTCTimeEverySecond(2, BlueDisplay1.getDisplayHeight() - TEXT_SIZE_11_DECEND - 1, COLOR_RED, COLOR_BACKGROUND_DEFAULT);
+    checkAndHandleEvents();
 }
 
 void stopSettingsPage(void) {
+#ifdef LOCAL_DISPLAY_EXISTS
     TouchButtonTPCalibration->setFree();
+    deinitBacklightElements();
+#endif
     TouchButtonTogglePrintMode->setFree();
     TouchButtonToggleTouchXYDisplay->setFree();
     deinitClockSettingElements();
-    deinitBacklightElements();
 }
 
-void doTPCalibration(TouchButton * const aTheTouchedButton, int16_t aValue) {
-    FeedbackToneOK();
-    //Calibration Button pressed -> calibrate touch panel
-    TouchPanel.doCalibration(false);
-    showSettingsPage();
+/**
+ *
+ * @param aTheTouchedButton
+ * @param aValue assume as boolean here
+ */
+void doToggleTouchXYDisplay(TouchButton * const aTheTouchedButton, int16_t aValue) {
+    setDisplayXYValuesFlag(!aValue);
+    doToggleRedGreenButton(aTheTouchedButton, aValue);
 }
 
 /*************************************************************
@@ -181,15 +200,15 @@ void initClockSettingElements(void) {
     strncpy(&StringSetDateCaption[SET_DATE_STRING_INDEX], DateStrings[0], sizeof StringSecond);
 
     TouchButtonSetDate = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, BUTTON_HEIGHT_4_LINE_3, BUTTON_WIDTH_3,
-            BUTTON_HEIGHT_4, COLOR_RED, StringSetDateCaption, 1, 1, &doSetDateMode);
+            BUTTON_HEIGHT_4, COLOR_RED, StringSetDateCaption, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 1, &doSetDateMode);
     // for RTC setting
     TouchButtonAutorepeatDate_Plus = TouchButtonAutorepeat::allocButton();
     TouchButtonAutorepeatDate_Plus->initSimpleButton(BUTTON_WIDTH_6_POS_4, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6, BUTTON_HEIGHT_5,
-            COLOR_RED, StringPlus, 2, 1, &doSetDate);
+            COLOR_RED, StringPlus, TEXT_SIZE_22, 1, &doSetDate);
 
     TouchButtonAutorepeatDate_Minus = TouchButtonAutorepeat::allocButton();
     TouchButtonAutorepeatDate_Minus->initSimpleButton(BUTTON_WIDTH_6_POS_3, BUTTON_HEIGHT_4_LINE_4, BUTTON_WIDTH_6, BUTTON_HEIGHT_5,
-            COLOR_RED, StringMinus, 2, -1, &doSetDate);
+            COLOR_RED, StringMinus, TEXT_SIZE_22, -1, &doSetDate);
 
     TouchButtonAutorepeatDate_Plus->setButtonAutorepeatTiming(500, 300, 5, 100);
     TouchButtonAutorepeatDate_Minus->setButtonAutorepeatTiming(500, 300, 5, 100);
@@ -284,9 +303,16 @@ void doSetDate(TouchButton * const aTheTouchedButton, int16_t aValue) {
     }
     PWR_BackupAccessCmd(DISABLE);
     FeedbackToneOK();
-    showRTCTime(RTC_DEFAULT_X, RTC_DEFAULT_Y, RTC_DEFAULT_COLOR, COLOR_BACKGROUND_DEFAULT, true);
+    showRTCTime(2, BlueDisplay1.getDisplayHeight() - TEXT_SIZE_11_DECEND - 1, COLOR_RED, COLOR_BACKGROUND_DEFAULT, true);
 }
 
+#ifdef LOCAL_DISPLAY_EXISTS
+void doTPCalibration(TouchButton * const aTheTouchedButton, int16_t aValue) {
+    FeedbackToneOK();
+    //Calibration Button pressed -> calibrate touch panel
+    TouchPanel.doCalibration(false);
+    showSettingsPage();
+}
 /*************************************************************
  * Backlight stuff
  *************************************************************/
@@ -303,8 +329,8 @@ void initBacklightElements(void) {
     TouchSlider::resetDefaults();
 
     TouchButtonAutorepeatBacklight_Plus = TouchButtonAutorepeat::allocAndInitSimpleButton(BACKLIGHT_CONTROL_X, BACKLIGHT_CONTROL_Y,
-            TOUCHSLIDER_DEFAULT_SIZE * TOUCHSLIDER_OVERALL_SIZE_FACTOR, 2 * FONT_HEIGHT, COLOR_RED, StringPlus, 1, 1,
-            &doChangeBacklight);
+            TOUCHSLIDER_DEFAULT_SIZE * TOUCHSLIDER_OVERALL_SIZE_FACTOR, 2 * TEXT_SIZE_11_HEIGHT, COLOR_RED, StringPlus,
+            TEXT_SIZE_11, 1, &doChangeBacklight);
     /*
      * Backlight slider
      */
@@ -315,7 +341,7 @@ void initBacklightElements(void) {
 
     TouchButtonAutorepeatBacklight_Minus = TouchButtonAutorepeat::allocAndInitSimpleButton(BACKLIGHT_CONTROL_X,
             TouchSliderBacklight.getPositionYBottom() + 30, TOUCHSLIDER_DEFAULT_SIZE * TOUCHSLIDER_OVERALL_SIZE_FACTOR,
-            2 * FONT_HEIGHT, COLOR_RED, StringMinus, 1, -1, &doChangeBacklight);
+            2 * TEXT_SIZE_11_HEIGHT, COLOR_RED, StringMinus, TEXT_SIZE_11, -1, &doChangeBacklight);
 
     TouchButtonAutorepeatBacklight_Plus->setButtonAutorepeatTiming(600, 100, 10, 20);
     TouchButtonAutorepeatBacklight_Minus->setButtonAutorepeatTiming(600, 100, 10, 20);
@@ -358,14 +384,5 @@ void doChangeBacklight(TouchButton * const aTheTouchedButton, int16_t aValue) {
     FeedbackToneOK();
     setActualBacklightValue(getBacklightValue() + aValue, true);
 }
-
-/**
- *
- * @param aTheTouchedButton
- * @param aValue assume as boolean here
- */
-void doToggleTouchXYDisplay(TouchButton * const aTheTouchedButton, int16_t aValue) {
-    TouchPanel.setDisplayXYValuesFlag(!aValue);
-    doToggleRedGreenButton(aTheTouchedButton, aValue);
-}
+#endif
 

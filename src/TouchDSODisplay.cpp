@@ -4,7 +4,7 @@
  *
  * @date 29.03.2012
  * @author Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.5.0
  *
@@ -14,13 +14,14 @@
 
 #include "Pages.h"
 #include "misc.h"
+#include "USART_DMA.h"
 #include <string.h>
-
+#include "Chart.h" // for drawChartDataFloat()
 /*
  * Layout
  */
-#define TRIGGER_LEVEL_INFO_LARGE_X INFO_LEFT_MARGIN + (11 * FONT_WIDTH)
-#define TRIGGER_LEVEL_INFO_SMALL_X (INFO_LEFT_MARGIN + (33 * FONT_WIDTH))
+#define TRIGGER_LEVEL_INFO_LARGE_X INFO_LEFT_MARGIN + (11 * TEXT_SIZE_11_WIDTH)
+#define TRIGGER_LEVEL_INFO_SMALL_X (INFO_LEFT_MARGIN + (33 * TEXT_SIZE_11_WIDTH))
 #define TRIGGER_HIGH_DISPLAY_OFFSET 7 // for trigger state line
 /*
  * COLORS
@@ -35,6 +36,8 @@
  * Display stuff
  *****************************/
 uint8_t DisplayBufferFFT[FFT_SIZE / 2];
+uint8_t DisplayBuffer[DSO_DISPLAY_WIDTH]; // Buffer for raw display data of current chart
+uint8_t DisplayBuffer2[DSO_DISPLAY_WIDTH]; // Buffer for trigger state line
 
 /*
  * Display control
@@ -62,28 +65,33 @@ int FactorFromInputToDisplayRangeShift12 = 1 << DSO_INPUT_TO_DISPLAY_SHIFT; // i
 
 float actualDSORawToVoltFactor;
 
+/*
+ * FFT
+ */
+Chart ChartFFT;
+#define FFT_DISPLAY_SCALE_FACTOR_X 2 // pixel per value
 /*******************************************************************************************
  * Program code starts here
  *******************************************************************************************/
 void initRawToDisplayFactors(void) {
 // used for getFloatFromRawValue() and for changeInputRange()
-    actualDSORawToVoltFactor = (ADCToVoltFactor * getRawAttenuationFactor(MeasurementControl.InputRangeIndex));
+    actualDSORawToVoltFactor = (ADCToVoltFactor * RawAttenuationFactor[MeasurementControl.InputRangeIndex]);
 
 // Reading * ScaleValueForDisplay = Display value - only used for getDisplayFrowRawValue() and getDisplayFrowRawValue()
 // use value shifted by 19 to avoid floating point multiplication by retaining correct value
-    ScaleFactorRawToDisplayShift18[11] = sADCScaleFactorShift18 * (getRawAttenuationFactor(11) / (2 * ScaleVoltagePerDiv[11])); // 50 Volt almost same value as 0.5V/div
-    ScaleFactorRawToDisplayShift18[10] = sADCScaleFactorShift18 * (getRawAttenuationFactor(10) / (2 * ScaleVoltagePerDiv[10])); // 20 almost same value as 0.5V/div
-    ScaleFactorRawToDisplayShift18[9] = sADCScaleFactorShift18 * (getRawAttenuationFactor(9) / (2 * ScaleVoltagePerDiv[9])); // 10
-    ScaleFactorRawToDisplayShift18[8] = sADCScaleFactorShift18 * (getRawAttenuationFactor(8) / (2 * ScaleVoltagePerDiv[8])); // 5
-    ScaleFactorRawToDisplayShift18[7] = sADCScaleFactorShift18 * (getRawAttenuationFactor(7) / (2 * ScaleVoltagePerDiv[7])); // 2 Volt - almost same value as 0.5V/div, since external attenuation of 4
-    ScaleFactorRawToDisplayShift18[6] = sADCScaleFactorShift18 * (getRawAttenuationFactor(6) / (2 * ScaleVoltagePerDiv[6])); // 1 Volt
+    ScaleFactorRawToDisplayShift18[11] = sADCScaleFactorShift18 * (RawAttenuationFactor[11] / (2 * ScaleVoltagePerDiv[11])); // 50 Volt almost same value as 0.5V/div
+    ScaleFactorRawToDisplayShift18[10] = sADCScaleFactorShift18 * (RawAttenuationFactor[10] / (2 * ScaleVoltagePerDiv[10])); // 20 almost same value as 0.5V/div
+    ScaleFactorRawToDisplayShift18[9] = sADCScaleFactorShift18 * (RawAttenuationFactor[9] / (2 * ScaleVoltagePerDiv[9])); // 10
+    ScaleFactorRawToDisplayShift18[8] = sADCScaleFactorShift18 * (RawAttenuationFactor[8] / (2 * ScaleVoltagePerDiv[8])); // 5
+    ScaleFactorRawToDisplayShift18[7] = sADCScaleFactorShift18 * (RawAttenuationFactor[7] / (2 * ScaleVoltagePerDiv[7])); // 2 Volt - almost same value as 0.5V/div, since external attenuation of 4
+    ScaleFactorRawToDisplayShift18[6] = sADCScaleFactorShift18 * (RawAttenuationFactor[6] / (2 * ScaleVoltagePerDiv[6])); // 1 Volt
 
-    ScaleFactorRawToDisplayShift18[5] = sADCScaleFactorShift18 * (getRawAttenuationFactor(5) / (2 * ScaleVoltagePerDiv[5])); // full scale 0,5 Volt / div
-    ScaleFactorRawToDisplayShift18[4] = sADCScaleFactorShift18 * (getRawAttenuationFactor(4) / (2 * ScaleVoltagePerDiv[4])); // 0,2
-    ScaleFactorRawToDisplayShift18[3] = sADCScaleFactorShift18 * (getRawAttenuationFactor(3) / (2 * ScaleVoltagePerDiv[3])); // 0,1
-    ScaleFactorRawToDisplayShift18[2] = sADCScaleFactorShift18 * (getRawAttenuationFactor(2) / (2 * ScaleVoltagePerDiv[2])); // 0,05
-    ScaleFactorRawToDisplayShift18[1] = sADCScaleFactorShift18 * (getRawAttenuationFactor(1) / (2 * ScaleVoltagePerDiv[1])); // 0,02
-    ScaleFactorRawToDisplayShift18[0] = sADCScaleFactorShift18 * (getRawAttenuationFactor(0) / (2 * ScaleVoltagePerDiv[0])); // 0,01
+    ScaleFactorRawToDisplayShift18[5] = sADCScaleFactorShift18 * (RawAttenuationFactor[5] / (2 * ScaleVoltagePerDiv[5])); // full scale 0,5 Volt / div
+    ScaleFactorRawToDisplayShift18[4] = sADCScaleFactorShift18 * (RawAttenuationFactor[4] / (2 * ScaleVoltagePerDiv[4])); // 0,2
+    ScaleFactorRawToDisplayShift18[3] = sADCScaleFactorShift18 * (RawAttenuationFactor[3] / (2 * ScaleVoltagePerDiv[3])); // 0,1
+    ScaleFactorRawToDisplayShift18[2] = sADCScaleFactorShift18 * (RawAttenuationFactor[2] / (2 * ScaleVoltagePerDiv[2])); // 0,05
+    ScaleFactorRawToDisplayShift18[1] = sADCScaleFactorShift18 * (RawAttenuationFactor[1] / (2 * ScaleVoltagePerDiv[1])); // 0,02
+    ScaleFactorRawToDisplayShift18[0] = sADCScaleFactorShift18 * (RawAttenuationFactor[0] / (2 * ScaleVoltagePerDiv[0])); // 0,01
 }
 
 /************************************************************************
@@ -92,19 +100,19 @@ void initRawToDisplayFactors(void) {
 
 void clearTriggerLine(uint8_t aTriggerLevelDisplayValue) {
     // clear old line
-    drawLine(0, aTriggerLevelDisplayValue, DSO_DISPLAY_WIDTH - 1, aTriggerLevelDisplayValue, COLOR_BACKGROUND_DSO);
+    BlueDisplay1.drawLineRel(0, aTriggerLevelDisplayValue, DSO_DISPLAY_WIDTH, 0, COLOR_BACKGROUND_DSO);
     // restore grid at old y position
     for (int tXPos = TIMING_GRID_WIDTH - 1; tXPos < DSO_DISPLAY_WIDTH - 1; tXPos += TIMING_GRID_WIDTH) {
-        drawPixel(tXPos, aTriggerLevelDisplayValue, COLOR_GRID_LINES);
+        BlueDisplay1.drawPixel(tXPos, aTriggerLevelDisplayValue, COLOR_GRID_LINES);
     }
     if (!MeasurementControl.isRunning) {
         // in analysis mode restore graph at old y position
-        uint8_t* ScreenBufferPointer = &DisplayBuffer1[0];
+        uint8_t* ScreenBufferPointer = &DisplayBuffer[0];
         for (int i = 0; i < DSO_DISPLAY_WIDTH; ++i) {
             int tValueByte = *ScreenBufferPointer++;
             if (tValueByte == aTriggerLevelDisplayValue) {
                 // restore old pixel
-                drawPixel(i, tValueByte, COLOR_DATA_HOLD);
+                BlueDisplay1.drawPixel(i, tValueByte, COLOR_DATA_HOLD);
             }
         }
     }
@@ -115,8 +123,7 @@ void clearTriggerLine(uint8_t aTriggerLevelDisplayValue) {
  */
 void drawTriggerLine(void) {
     if (DisplayControl.TriggerLevelDisplayValue != 0 && MeasurementControl.TriggerMode != TRIGGER_MODE_OFF) {
-        drawLine(0, DisplayControl.TriggerLevelDisplayValue, DSO_DISPLAY_WIDTH - 1, DisplayControl.TriggerLevelDisplayValue,
-                COLOR_TRIGGER_LINE);
+        BlueDisplay1.drawLineRel(0, DisplayControl.TriggerLevelDisplayValue, DSO_DISPLAY_WIDTH, 0, COLOR_TRIGGER_LINE);
     }
 }
 
@@ -126,7 +133,7 @@ void drawTriggerLine(void) {
 void drawGridLinesWithHorizLabelsAndTriggerLine(uint16_t aColor) {
     //vertical lines
     for (int tXPos = TIMING_GRID_WIDTH - 1; tXPos < DSO_DISPLAY_WIDTH; tXPos += TIMING_GRID_WIDTH) {
-        drawLine(tXPos, 0, tXPos, DSO_DISPLAY_HEIGHT - 1, aColor);
+        BlueDisplay1.drawLineRel(tXPos, 0, 0, DSO_DISPLAY_HEIGHT, aColor);
     }
     // add 0.0001 to avoid display of -0.00
     float tActualVoltage =
@@ -138,33 +145,34 @@ void drawGridLinesWithHorizLabelsAndTriggerLine(uint16_t aColor) {
         DisplayControl.LastOffsetGridCount = MeasurementControl.OffsetGridCount;
         tLabelChanged = true;
     }
-    int tCaptionOffset = FONT_HEIGHT;
+    int tCaptionOffset = 1;
     int tLabelColor;
     int tPosX;
     for (int tYPos = DISPLAY_VALUE_FOR_ZERO; tYPos > 0; tYPos -= HORIZONTAL_GRID_HEIGHT) {
         if (tLabelChanged) {
             // clear old label
-            int tXpos = DSO_DISPLAY_WIDTH - PIXEL_AFTER_LABEL - (5 * FONT_WIDTH);
+            int tXpos = DSO_DISPLAY_WIDTH - PIXEL_AFTER_LABEL - (5 * TEXT_SIZE_11_WIDTH);
             int tY = tYPos - tCaptionOffset;
-            fillRect(tXpos, tY, DSO_DISPLAY_WIDTH - PIXEL_AFTER_LABEL - 1, tY + (FONT_HEIGHT - 1), COLOR_BACKGROUND_DSO);
+            BlueDisplay1.fillRect(tXpos, tY - TEXT_SIZE_11_ASCEND, DSO_DISPLAY_WIDTH - PIXEL_AFTER_LABEL + 1,
+                    tY + TEXT_SIZE_11_HEIGHT - TEXT_SIZE_11_ASCEND, COLOR_BACKGROUND_DSO);
             // restore vertical line
-            drawLine(9 * TIMING_GRID_WIDTH - 1, tY, 9 * TIMING_GRID_WIDTH - 1, tY + (FONT_HEIGHT - 1), aColor);
+            BlueDisplay1.drawLineRel(9 * TIMING_GRID_WIDTH - 1, tY, 0, TEXT_SIZE_11_HEIGHT, aColor);
         }
         // draw horizontal line
-        drawLine(0, tYPos, DSO_DISPLAY_WIDTH - 1, tYPos, aColor);
+        BlueDisplay1.drawLineRel(0, tYPos, DSO_DISPLAY_WIDTH, 0, aColor);
 
         int tCount = snprintf(StringBuffer, sizeof StringBuffer, "%0.*f", RangePrecision[MeasurementControl.DisplayRangeIndex],
                 tActualVoltage);
         // right align but leave 2 pixel free after label for the last horizontal line
-        tPosX = DSO_DISPLAY_WIDTH - (tCount * FONT_WIDTH) - PIXEL_AFTER_LABEL;
+        tPosX = DSO_DISPLAY_WIDTH - (tCount * TEXT_SIZE_11_WIDTH) - PIXEL_AFTER_LABEL;
         // draw label over the line - use different color for negative values
         if (tActualVoltage >= 0) {
             tLabelColor = COLOR_HOR_REF_LINE_LABEL;
         } else {
             tLabelColor = COLOR_HOR_REF_LINE_LABEL_NEGATIVE;
         }
-        drawText(tPosX, tYPos - tCaptionOffset, StringBuffer, 1, tLabelColor, COLOR_BACKGROUND_DSO);
-        tCaptionOffset = (FONT_HEIGHT / 2);
+        BlueDisplay1.drawText(tPosX, tYPos - tCaptionOffset, StringBuffer, TEXT_SIZE_11, tLabelColor, COLOR_BACKGROUND_DSO);
+        tCaptionOffset = -(TEXT_SIZE_11_ASCEND / 2);
         tActualVoltage += ScaleVoltagePerDiv[MeasurementControl.DisplayRangeIndex];
     }
     drawTriggerLine();
@@ -177,12 +185,12 @@ void drawMinMaxLines(void) {
 // draw max line
     int tValueDisplay = getDisplayFrowRawInputValue(MeasurementControl.RawValueMax);
     if (tValueDisplay != 0) {
-        drawLine(0, tValueDisplay, DSO_DISPLAY_WIDTH - 1, tValueDisplay, COLOR_MAX_MIN_LINE);
+        BlueDisplay1.drawLineRel(0, tValueDisplay, DSO_DISPLAY_WIDTH, 0, COLOR_MAX_MIN_LINE);
     }
 // min line
     tValueDisplay = getDisplayFrowRawInputValue(MeasurementControl.RawValueMin);
     if (tValueDisplay != DISPLAY_VALUE_FOR_ZERO) {
-        drawLine(0, tValueDisplay, DSO_DISPLAY_WIDTH - 1, tValueDisplay, COLOR_MAX_MIN_LINE);
+        BlueDisplay1.drawLineRel(0, tValueDisplay, DSO_DISPLAY_WIDTH, 0, COLOR_MAX_MIN_LINE);
     }
 }
 /**
@@ -192,7 +200,7 @@ void drawMinMaxLines(void) {
  * @param aLength
  * @param aColor Draw color. - used for different colors for pretrigger data or different modes
  * @param aClearBeforeColor if > 0 data from DisplayBuffer is drawn(erased) with this color
- *              just before to avoid interfering with display refresh timing. - used for history modes.
+ *              just before to avoid interfering with display refresh timing. - Color is used for history modes.
  *              DataBufferPointer must not be null then!
  * @note if aClearBeforeColor >0 then DataBufferPointer must not be NULL
  * @note NOT used for drawing while acquiring
@@ -201,11 +209,13 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
     int i;
     int j = 0;
     int tValue;
+
     int tLastValue;
-    uint8_t *ScreenBufferReadPointer = &DisplayBuffer1[0];
-    uint8_t *ScreenBufferWritePointer1 = &DisplayBuffer1[0];
+    int tLastValueClear = DisplayBuffer[0];
+
+    uint8_t *ScreenBufferReadPointer = &DisplayBuffer[0];
+    uint8_t *ScreenBufferWritePointer1 = &DisplayBuffer[0];
     uint8_t *ScreenBufferWritePointer2 = &DisplayBuffer2[0]; // for trigger state line
-    int tLastValueClear = DisplayBuffer1[0];
     int tXScale = DisplayControl.XScale;
     int tXScaleCounter = tXScale;
     int tTriggerValue = getDisplayFrowRawInputValue(MeasurementControl.RawTriggerLevel);
@@ -218,11 +228,11 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
             // get data from screen buffer in order to erase it
             tValue = *ScreenBufferReadPointer++;
         } else {
+            tValue = getDisplayFrowRawInputValue(*aDataBufferPointer);
             /*
              * get data from data buffer and perform X scaling
              */
             if (tXScale == 0) {
-                tValue = getDisplayFrowRawInputValue(*aDataBufferPointer);
                 aDataBufferPointer++;
             } else if (tXScale < -1) {
                 // compress - get average of multiple values
@@ -230,7 +240,7 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
                 aDataBufferPointer += tXScaleCounter;
             } else if (tXScale == -1) {
                 // compress by factor 1.5 - every second value is the average of the next two values
-                tValue = getDisplayFrowRawInputValue(*aDataBufferPointer++);
+                aDataBufferPointer++;
                 tXScaleCounter--;
                 if (tXScaleCounter < 0) {
                     if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
@@ -241,8 +251,8 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
                     tXScaleCounter = 1;
                 }
             } else if (tXScale == 1) {
+                aDataBufferPointer++;
                 // expand by factor 1.5 - every second value will be shown 2 times
-                tValue = getDisplayFrowRawInputValue(*aDataBufferPointer++);
                 tXScaleCounter--; // starts with 1
                 if (tXScaleCounter < 0) {
                     aDataBufferPointer--;
@@ -250,22 +260,25 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
                 }
             } else {
                 // expand - show value several times
-                tValue = getDisplayFrowRawInputValue(*aDataBufferPointer);
-                tXScaleCounter--;
                 if (tXScaleCounter == 0) {
                     aDataBufferPointer++;
                     tXScaleCounter = tXScale;
                 }
+                tXScaleCounter--;
             }
         }
 
         // draw trigger state line (aka Digital mode)
         if (DisplayControl.DisplayBufferDrawMode & DRAW_MODE_TRIGGER) {
+#ifdef LOCAL_DISPLAY_EXISTS
             if (aClearBeforeColor > 0) {
-                drawPixel(i, *ScreenBufferWritePointer2, aClearBeforeColor);
+                LocalDisplay.drawPixel(i, *ScreenBufferWritePointer2, aClearBeforeColor);
             }
+#endif
             if (tValue > tTriggerValue) {
-                drawPixel(i, tTriggerValue - TRIGGER_HIGH_DISPLAY_OFFSET, COLOR_DATA_TRIGGER);
+#ifdef LOCAL_DISPLAY_EXISTS
+                LocalDisplay.drawPixel(i, tTriggerValue - TRIGGER_HIGH_DISPLAY_OFFSET, COLOR_DATA_TRIGGER);
+#endif
                 *ScreenBufferWritePointer2++ = tTriggerValue - TRIGGER_HIGH_DISPLAY_OFFSET;
             }
         }
@@ -277,35 +290,43 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
             if (aDataBufferPointer == NULL && j == TIMING_GRID_WIDTH) {
                 // Restore grid pixel instead of clearing it
                 j = 0;
+#ifdef LOCAL_DISPLAY_EXISTS
                 if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
-                    drawPixel(i, tValue, COLOR_GRID_LINES);
+                    LocalDisplay.drawPixel(i, tValue, COLOR_GRID_LINES);
                 }
+#endif
             } else {
                 j++;
                 if (aClearBeforeColor > 0) {
                     int tValueClear = *ScreenBufferReadPointer++;
+#ifdef LOCAL_DISPLAY_EXISTS
                     if (tValueClear != DISPLAYBUFFER_INVISIBLE_VALUE) {
-                        drawPixel(i, tValueClear, aClearBeforeColor);
+                        LocalDisplay.drawPixel(i, tValueClear, aClearBeforeColor);
                     }
+#endif
                     if (DisplayControl.DisplayBufferDrawMode & DRAW_MODE_LINE) {
                         // erase first line in advance and set pointer
                         tLastValueClear = tValueClear;
                         tValueClear = *ScreenBufferReadPointer++;
+#ifdef LOCAL_DISPLAY_EXISTS
                         if (tValueClear != DISPLAYBUFFER_INVISIBLE_VALUE) {
                             if (tLastValueClear != DISPLAYBUFFER_INVISIBLE_VALUE) {
                                 // Normal mode - clear line
-                                drawLineFastOneX(i, tLastValueClear, tValueClear, aClearBeforeColor);
+                                LocalDisplay.drawLineFastOneX(i, tLastValueClear, tValueClear, aClearBeforeColor);
                             } else {
                                 // first visible value just clear start pixel
-                                drawPixel(i, tValueClear, aClearBeforeColor);
+                                LocalDisplay.drawPixel(i, tValueClear, aClearBeforeColor);
                             }
                         }
+#endif
                         tLastValueClear = tValueClear;
                     }
                 }
+#ifdef LOCAL_DISPLAY_EXISTS
                 if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
-                    drawPixel(i, tValue, aColor);
+                    LocalDisplay.drawPixel(i, tValue, aColor);
                 }
+#endif
             }
         } else {
             /*
@@ -314,11 +335,14 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
             if (aClearBeforeColor > 0 && i != DSO_DISPLAY_WIDTH - 1) {
                 // erase one x value in advance in order not to overwrite the x+1 part of line just drawn before
                 int tValueClear = *ScreenBufferReadPointer++;
+#ifdef LOCAL_DISPLAY_EXISTS
                 if (tLastValueClear != DISPLAYBUFFER_INVISIBLE_VALUE && tValueClear != DISPLAYBUFFER_INVISIBLE_VALUE) {
-                    drawLineFastOneX(i, tLastValueClear, tValueClear, aClearBeforeColor);
+                    LocalDisplay.drawLineFastOneX(i, tLastValueClear, tValueClear, aClearBeforeColor);
                 }
+#endif
                 tLastValueClear = tValueClear;
             }
+#ifdef LOCAL_DISPLAY_EXISTS
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -329,30 +353,35 @@ void drawDataBuffer(uint16_t *aDataBufferPointer, int aLength, uint16_t aColor, 
                     // Normal mode - draw line
                     if (tLastValue == tValue && (tValue == DISPLAY_VALUE_FOR_ZERO || tValue == 0)) {
                         // clipping occurs draw red line
-                        drawLineFastOneX(i - 1, tLastValue, tValue, COLOR_DATA_RUN_CLIPPING);
+                        LocalDisplay.drawLineFastOneX(i - 1, tLastValue, tValue, COLOR_DATA_RUN_CLIPPING);
                     } else {
-                        drawLineFastOneX(i - 1, tLastValue, tValue, aColor);
+                        LocalDisplay.drawLineFastOneX(i - 1, tLastValue, tValue, aColor);
                     }
                 } else {
                     // first visible value just draw start pixel
-                    drawPixel(i, tValue, aColor);
+                    LocalDisplay.drawPixel(i, tValue, aColor);
                 }
             }
 #pragma GCC diagnostic pop
+#endif
         }
         tLastValue = tValue;
         // store data in screen buffer
         *ScreenBufferWritePointer1++ = tValue;
     }
+    // draw on external screen
+    if (USART_isBluetoothPaired()) {
+        sendUSART5ArgsAndByteBuffer(FUNCTION_TAG_DRAW_CHART, 0, 0, aColor, aClearBeforeColor, 0, &DisplayBuffer[0], aLength);
+    }
 }
 
 /**
- * Draws all chart values till DataBufferNextPointer is reached - used for drawing while acquiring
+ * Draws all chart values till DataBufferNextInPointer is reached - used for drawing while acquiring
  * @param aDrawColor
  */
 void drawRemainingDataBufferValues(uint16_t aDrawColor) {
     // needed for last acquisition which uses the whole data buffer
-    while (DataBufferControl.DataBufferNextDrawPointer < DataBufferControl.DataBufferWritePointer
+    while (DataBufferControl.DataBufferNextDrawPointer < DataBufferControl.DataBufferNextInPointer
             && DataBufferControl.DataBufferNextDrawPointer <= &DataBufferControl.DataBuffer[DATABUFFER_DISPLAY_END]
             && !MeasurementControl.TriggerPhaseJustEnded && !DataBufferControl.DataBufferPreTriggerAreaWrapAround) {
 
@@ -369,7 +398,7 @@ void drawRemainingDataBufferValues(uint16_t aDrawColor) {
         }
         DataBufferControl.NextDrawXValue = tDisplayX + 1;
 
-        uint8_t * tDisplayBufferPointer = &DisplayBuffer1[tDisplayX];
+        uint8_t * tDisplayBufferPointer = &DisplayBuffer[tDisplayX];
         // unsigned is faster
         unsigned int tValue = *tDisplayBufferPointer;
         int tLastValue;
@@ -386,19 +415,19 @@ void drawRemainingDataBufferValues(uint16_t aDrawColor) {
                 tColor = COLOR_GRID_LINES;
             }
             if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
-                drawPixel(tDisplayX, tValue, tColor);
+                BlueDisplay1.drawPixel(tDisplayX, tValue, tColor);
             }
         } else {
             if (tDisplayX < DSO_DISPLAY_WIDTH - 1) {
                 // fetch next value and clear line in advance
-                tNextValue = DisplayBuffer1[tDisplayX + 1];
+                tNextValue = DisplayBuffer[tDisplayX + 1];
                 if (tNextValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
                     if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
                         // normal mode
-                        drawLineFastOneX(tDisplayX, tValue, tNextValue, DisplayControl.EraseColor);
+                        BlueDisplay1.drawLineFastOneX(tDisplayX, tValue, tNextValue, DisplayControl.EraseColor);
                     } else {
                         // first visible value, draw only start pixel
-                        drawPixel(tDisplayX, tNextValue, DisplayControl.EraseColor);
+                        BlueDisplay1.drawPixel(tDisplayX, tNextValue, DisplayControl.EraseColor);
                     }
                 }
             }
@@ -413,25 +442,73 @@ void drawRemainingDataBufferValues(uint16_t aDrawColor) {
         if (!(DisplayControl.DisplayBufferDrawMode & DRAW_MODE_LINE)) {
             if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
                 //draw new pixel
-                drawPixel(tDisplayX, tValue, aDrawColor);
+                BlueDisplay1.drawPixel(tDisplayX, tValue, aDrawColor);
             }
         } else {
             if (tDisplayX != 0 && tDisplayX <= DSO_DISPLAY_WIDTH - 1) {
                 // get lastValue and draw line
                 if (tValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
-                    tLastValue = DisplayBuffer1[tDisplayX - 1];
+                    tLastValue = DisplayBuffer[tDisplayX - 1];
                     if (tLastValue != DISPLAYBUFFER_INVISIBLE_VALUE) {
                         // normal mode
-                        drawLineFastOneX(tDisplayX - 1, tLastValue, tValue, aDrawColor);
+                        BlueDisplay1.drawLineFastOneX(tDisplayX - 1, tLastValue, tValue, aDrawColor);
                     } else {
                         // first visible value, draw only start pixel
-                        drawPixel(tDisplayX, tValue, aDrawColor);
+                        BlueDisplay1.drawPixel(tDisplayX, tValue, aDrawColor);
                     }
                 }
             }
         }
         DataBufferControl.DataBufferNextDrawPointer++;
     }
+}
+
+void clearDiplayedChart(void) {
+    BlueDisplay1.drawChartByteBuffer(0, 0, COLOR_BACKGROUND_DSO, COLOR_NO_BACKGROUND, &DisplayBuffer[0], sizeof(DisplayBuffer));
+}
+
+void drawFFT(void) {
+    // compute and draw FFT
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DSO);
+    computeFFT(DataBufferControl.DataBufferDisplayStart, (float32_t*) (FourDisplayLinesBuffer)); // enough space for 640 floats);
+    // init and draw chart 12 milliseconds with -O0
+    // display with Xscale = 2
+    ChartFFT.initChart(4 * TEXT_SIZE_11_WIDTH, DSO_DISPLAY_HEIGHT - 2 * TEXT_SIZE_11_HEIGHT, FFT_SIZE, 32 * 5, 2, true, 64, 32);
+    ChartFFT.initChartColors(COLOR_FFT_DATA, COLOR_RED, RGB(0xC0,0xC0,0xC0), COLOR_RED, COLOR_BACKGROUND_DSO);
+    // compute Label for x Frequency axis
+    char tFreqUnitString[4] = { };
+    float tTimebaseExactValue = getTimebaseExactValueMicros(MeasurementControl.TimebaseIndex);
+    // compute frequency for 32.th bin (1/4 of nyquist frequency at 256 samples)
+    int tFreqAtBin32 = 4000 / tTimebaseExactValue;
+    // draw x axis
+    if (tFreqAtBin32 >= 1000) {
+        tFreqAtBin32 /= 1000;
+        tFreqUnitString[0] = 'k'; // kHz
+    }
+    ChartFFT.initXLabelInt(0, tFreqAtBin32 * FFT_DISPLAY_SCALE_FACTOR_X, FFT_DISPLAY_SCALE_FACTOR_X, 5);
+    ChartFFT.setXTitleText(tFreqUnitString);
+    // display 1.0 for input value of tMaxValue
+    ChartFFT.initYLabelFloat(0, 0.2, 1.0 / FFTInfo.MaxValue, 3, 1);
+    ChartFFT.drawAxesAndGrid();
+    ChartFFT.drawXAxisTitle();
+    // show chart
+    ChartFFT.drawChartDataFloat((float *) FourDisplayLinesBuffer, (float *) &FourDisplayLinesBuffer[2 * FFT_SIZE], CHART_MODE_AREA);
+    // print max bin frequency information
+    // compute frequency of max bin
+    tFreqUnitString[0] = ' '; // Hz
+    float tFreqAtMaxBin = FFTInfo.MaxIndex * 125000 / tTimebaseExactValue;
+    if (tFreqAtMaxBin >= 10000) {
+        tFreqAtMaxBin /= 1000;
+        tFreqUnitString[0] = 'k'; // Hz
+    }
+    snprintf(StringBuffer, sizeof(StringBuffer), "%0.2f%s", tFreqAtMaxBin, tFreqUnitString);
+    BlueDisplay1.drawText(140, 4 * TEXT_SIZE_11_HEIGHT + TEXT_SIZE_22_ASCEND, StringBuffer, TEXT_SIZE_22, COLOR_RED,
+            COLOR_BACKGROUND_DSO);
+    tFreqUnitString[0] = ' '; // Hz
+    float tFreqDeltaHalf = 62.5 / tTimebaseExactValue; // = tFreqAtBin32 / 64;
+    snprintf(StringBuffer, sizeof(StringBuffer), "[\xF1%0.1f%s]", tFreqDeltaHalf, tFreqUnitString);
+    BlueDisplay1.drawText(140, 6 * TEXT_SIZE_11_HEIGHT + TEXT_SIZE_11_ASCEND, StringBuffer, TEXT_SIZE_11, COLOR_RED,
+            COLOR_BACKGROUND_DSO);
 }
 
 /**
@@ -454,21 +531,21 @@ void draw128FFTValuesFast(uint16_t aColor, uint16_t * aDataBufferPointer) {
 
         //compute scale factor
         float tYDisplayScaleFactor = HORIZONTAL_GRID_HEIGHT / FFTInfo.MaxValue;
-        for (int tDisplayX = 0; tDisplayX < DISPLAY_WIDTH; tDisplayX += 3) {
+        for (int tDisplayX = 0; tDisplayX < DSO_DISPLAY_WIDTH; tDisplayX += 3) {
             /*
              *  get data and perform scaling
              */
             tInputValue = *tFFTDataPointer++;
             tDisplayY = tYDisplayScaleFactor * tInputValue;
             // tDisplayY now from 0 to 32
-            tDisplayY = DISPLAY_HEIGHT - tDisplayY;
+            tDisplayY = DSO_DISPLAY_HEIGHT - tDisplayY;
             DisplayYOld = *tDisplayBufferPtr;
             if (tDisplayY < DisplayYOld) {
                 // increase old bar
-                fillRect(tDisplayX, tDisplayY, tDisplayX + 2, DisplayYOld, aColor);
+                BlueDisplay1.fillRect(tDisplayX, tDisplayY, tDisplayX + 2, DisplayYOld, aColor);
             } else if (tDisplayY > DisplayYOld) {
                 // Remove part of old bar
-                fillRect(tDisplayX, DisplayYOld, tDisplayX + 2, tDisplayY, COLOR_BACKGROUND_DSO);
+                BlueDisplay1.fillRect(tDisplayX, DisplayYOld, tDisplayX + 2, tDisplayY, COLOR_BACKGROUND_DSO);
             }
             *tDisplayBufferPtr++ = tDisplayY;
         }
@@ -478,10 +555,10 @@ void draw128FFTValuesFast(uint16_t aColor, uint16_t * aDataBufferPointer) {
 void clearFFTValuesOnDisplay(void) {
     uint8_t *tDisplayBufferPtr = &DisplayBufferFFT[0];
     uint16_t DisplayYOld;
-    for (int tDisplayX = 0; tDisplayX < DISPLAY_WIDTH; tDisplayX += 3) {
+    for (int tDisplayX = 0; tDisplayX < DSO_DISPLAY_WIDTH; tDisplayX += 3) {
         DisplayYOld = *tDisplayBufferPtr;
         // Remove old bar
-        fillRect(tDisplayX, DisplayYOld, tDisplayX + 2, DISPLAY_HEIGHT - 1, COLOR_BACKGROUND_DSO);
+        BlueDisplay1.fillRect(tDisplayX, DisplayYOld, tDisplayX + 2, DSO_DISPLAY_HEIGHT - 1, COLOR_BACKGROUND_DSO);
     }
 }
 
@@ -489,18 +566,16 @@ void clearFFTValuesOnDisplay(void) {
  * Text output section
  ************************************************************************/
 
-void clearInfo(const uint8_t aInfoLineNumber) {
-    int tYPos = (aInfoLineNumber - 1) * FONT_HEIGHT;
-    fillRect(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + tYPos, INFO_LEFT_MARGIN + (39 * FONT_WIDTH)- 1,
-    INFO_UPPER_MARGIN + tYPos + FONT_HEIGHT - 1, COLOR_BACKGROUND_DSO);
+void clearInfo(void) {
+    BlueDisplay1.fillRectRel(INFO_LEFT_MARGIN, 0, DSO_DISPLAY_WIDTH,
+            3 * TEXT_SIZE_11_HEIGHT + (INFO_UPPER_MARGIN - TEXT_SIZE_11_ASCEND), COLOR_BACKGROUND_DSO);
+}
 
-    }
-
-    /*
-     * Output info line
-     */
+/*
+ * Output info line
+ */
 void printInfo(void) {
-    if (DisplayControl.DisplayPage != DATA || DisplayControl.DisplayMode != PLUS_INFO) {
+    if (DisplayControl.DisplayPage != CHART || DisplayControl.showInfoMode != LONG_INFO) {
         return;
     }
 
@@ -530,11 +605,11 @@ void printInfo(void) {
 // while printing first line to screen
     int tValueDiff = MeasurementControl.RawValueMax - MeasurementControl.RawValueMin;
 // compensate for aValue -= RawDSOReadingACZero; in getFloatFromRawValue()
-    if (MeasurementControl.ACRange) {
-        tValueDiff += RawDSOReadingACZero;
+    if (MeasurementControl.isACMode) {
+        tValueDiff += MeasurementControl.RawDSOReadingACZero;
     }
     float tMicrosPeriod = MeasurementControl.PeriodMicros;
-    char tPeriodUnitChar = 0xE6; // micro
+    char tPeriodUnitChar = 0xB5; // micro
     if (tMicrosPeriod >= 50000) {
         tMicrosPeriod = tMicrosPeriod / 1000;
         tPeriodUnitChar = 'm'; // milli
@@ -543,17 +618,17 @@ void printInfo(void) {
     if (MeasurementControl.TimebaseIndex >= TIMEBASE_INDEX_MILLIS) {
         tTimebaseUnitChar = 'm';
     } else if (MeasurementControl.TimebaseIndex >= TIMEBASE_INDEX_MICROS) {
-        tTimebaseUnitChar = 0xE6; // micro
+        tTimebaseUnitChar = 0xB5; // micro
     } else {
         tTimebaseUnitChar = 'n'; // nano
     }
     tUnitsPerGrid = TimebaseDivValues[MeasurementControl.TimebaseIndex];
 // number of digits to be printed after the decimal point
     int tPrecision = 3;
-    if ((MeasurementControl.ACRange && MeasurementControl.InputRangeIndex >= 8) || MeasurementControl.InputRangeIndex >= 10) {
+    if ((MeasurementControl.isACMode && MeasurementControl.InputRangeIndex >= 8) || MeasurementControl.InputRangeIndex >= 10) {
         tPrecision = 2;
     }
-    if (MeasurementControl.ACRange && MeasurementControl.InputRangeIndex >= 11) {
+    if (MeasurementControl.isACMode && MeasurementControl.InputRangeIndex >= 11) {
         tPrecision = 1;
     }
 
@@ -602,26 +677,28 @@ void printInfo(void) {
          * small mode
          */
         char tChannelChar = ADCInputMUXChannelChars[MeasurementControl.ADCInputMUXChannelIndex];
+#ifdef LOCAL_DISPLAY_EXISTS
         if (MeasurementControl.ADS7846ChannelsAsDatasource) {
             tChannelChar = ADS7846ChannelChars[MeasurementControl.ADCInputMUXChannelIndex];
         }
+#endif
         // first line
         snprintf(StringBuffer, sizeof StringBuffer, "%6.*f %6.*f %6.*f %6.*fV%2u %4u%cs %c", tPrecision,
                 getFloatFromRawValue(MeasurementControl.RawValueAverage), tPrecision,
                 getFloatFromRawValue(MeasurementControl.RawValueMin), tPrecision,
                 getFloatFromRawValue(MeasurementControl.RawValueMax), tPrecision, getFloatFromRawValue(tValueDiff),
                 DisplayControl.XScale, tUnitsPerGrid, tTimebaseUnitChar, tChannelChar);
-        drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+        BlueDisplay1.drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN, StringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
         // second line first part
-        drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + FONT_HEIGHT, tBufferForPeriodAndFrequency, 1, COLOR_BLACK,
-                COLOR_INFO_BACKGROUND);
+        BlueDisplay1.drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + TEXT_SIZE_11_HEIGHT, tBufferForPeriodAndFrequency, TEXT_SIZE_11,
+                COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
         // second line second part
         snprintf(StringBuffer, sizeof StringBuffer, "%c%c %5.*fV", tSlopeChar, tTriggerAutoChar, tPrecision - 1,
                 getFloatFromRawValue(MeasurementControl.RawTriggerLevel));
-        drawText(TRIGGER_LEVEL_INFO_SMALL_X - (3 * FONT_WIDTH), INFO_UPPER_MARGIN + FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK,
-        COLOR_INFO_BACKGROUND);
+        BlueDisplay1.drawText(TRIGGER_LEVEL_INFO_SMALL_X - (3 * TEXT_SIZE_11_WIDTH), INFO_UPPER_MARGIN + TEXT_SIZE_11_HEIGHT,
+                StringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
     } else {
         /**
@@ -641,18 +718,20 @@ void printInfo(void) {
                     getFloatFromRawValue(MeasurementControl.RawValueMin), tPrecision,
                     getFloatFromRawValue(MeasurementControl.RawValueMax), tPrecision, getFloatFromRawValue(tValueDiff));
         }
-        drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+        BlueDisplay1.drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN, StringBuffer, TEXT_SIZE_11, COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
         const char * tChannelString = ADCInputMUXChannelStrings[MeasurementControl.ADCInputMUXChannelIndex];
+#ifdef LOCAL_DISPLAY_EXISTS
         if (MeasurementControl.ADS7846ChannelsAsDatasource) {
             tChannelString = ADS7846ChannelStrings[MeasurementControl.ADCInputMUXChannelIndex];
         }
-
+#endif
         // Second line
         // XScale + Timebase + MicrosPerPeriod + Hertz + Channel
         snprintf(StringBuffer, sizeof StringBuffer, "%2d %4u%cs %s %s", DisplayControl.XScale, tUnitsPerGrid, tTimebaseUnitChar,
                 tBufferForPeriodAndFrequency, tChannelString);
-        drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+        BlueDisplay1.drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + TEXT_SIZE_11_HEIGHT, StringBuffer, TEXT_SIZE_11, COLOR_BLACK,
+                COLOR_INFO_BACKGROUND);
 
         // Third line
         // Trigger: Slope + Mode + Level + FFT max frequency - Empty space after string is needed for voltage picker value
@@ -668,7 +747,8 @@ void printInfo(void) {
         }
         snprintf(StringBuffer, sizeof StringBuffer, "Trigg: %c %c %5.*fV %s", tSlopeChar, tTriggerAutoChar, tPrecision - 1,
                 getFloatFromRawValue(MeasurementControl.RawTriggerLevel), tBufferForPeriodAndFrequency);
-        drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + (2 * FONT_HEIGHT), StringBuffer, 1, COLOR_BLACK, COLOR_INFO_BACKGROUND);
+        BlueDisplay1.drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + (2 * TEXT_SIZE_11_HEIGHT), StringBuffer, TEXT_SIZE_11,
+                COLOR_BLACK, COLOR_INFO_BACKGROUND);
 
         // Debug infos
 //		char tTriggerTimeoutChar = 0x20; // space
@@ -684,7 +764,7 @@ void printInfo(void) {
 //		snprintf(StringBuffer, sizeof StringBuffer, "Min%#X Average%#X Max%#X", MeasurementControl.ValueMin,
 //				MeasurementControl.ValueAverage, MeasurementControl.ValueMax);
 //
-//		drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + (3 * FONT_HEIGHT), StringBuffer, 1, COLOR_BLUE, COLOR_INFO_BACKGROUND);
+//		BlueDisplay1.drawText(INFO_LEFT_MARGIN, INFO_UPPER_MARGIN + (3 * TEXT_SIZE_11_HEIGHT), StringBuffer, 1, COLOR_BLUE, COLOR_INFO_BACKGROUND);
         // Debug end
     }
 }
@@ -693,21 +773,21 @@ void printInfo(void) {
  * prints only trigger value
  */
 void printTriggerInfo(void) {
-    if (DisplayControl.DisplayMode == PLUS_INFO) {
+    if (DisplayControl.showInfoMode == LONG_INFO) {
         int tPrecision = 2;
-        if ((MeasurementControl.ACRange && MeasurementControl.InputRangeIndex >= 8) || MeasurementControl.InputRangeIndex >= 10) {
+        if ((MeasurementControl.isACMode && MeasurementControl.InputRangeIndex >= 8) || MeasurementControl.InputRangeIndex >= 10) {
             tPrecision = 1;
         }
-        if (MeasurementControl.ACRange && MeasurementControl.InputRangeIndex >= 11) {
+        if (MeasurementControl.isACMode && MeasurementControl.InputRangeIndex >= 11) {
             tPrecision = 0;
         }
         snprintf(StringBuffer, sizeof StringBuffer, "%5.*fV", tPrecision, getFloatFromRawValue(MeasurementControl.RawTriggerLevel));
         if (MeasurementControl.InfoSizeSmall) {
-            drawText(TRIGGER_LEVEL_INFO_SMALL_X, INFO_UPPER_MARGIN + 1 * FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK,
-                    COLOR_INFO_BACKGROUND);
+            BlueDisplay1.drawText(TRIGGER_LEVEL_INFO_SMALL_X, INFO_UPPER_MARGIN + TEXT_SIZE_11_HEIGHT, StringBuffer, TEXT_SIZE_11,
+                    COLOR_BLACK, COLOR_INFO_BACKGROUND);
         } else {
-            drawText(TRIGGER_LEVEL_INFO_LARGE_X, INFO_UPPER_MARGIN + 2 * FONT_HEIGHT, StringBuffer, 1, COLOR_BLACK,
-                    COLOR_INFO_BACKGROUND);
+            BlueDisplay1.drawText(TRIGGER_LEVEL_INFO_LARGE_X, INFO_UPPER_MARGIN + 2 * TEXT_SIZE_11_HEIGHT, StringBuffer,
+                    TEXT_SIZE_11, COLOR_BLACK, COLOR_INFO_BACKGROUND);
         }
     }
 }
@@ -725,8 +805,8 @@ int getDisplayFrowRawInputValue(int aAdcValue) {
         return DISPLAYBUFFER_INVISIBLE_VALUE;
     }
 // first: convert raw to signed values if ac range is selected
-    if (MeasurementControl.ACRange) {
-        aAdcValue -= RawDSOReadingACZero;
+    if (MeasurementControl.isACMode) {
+        aAdcValue -= MeasurementControl.RawDSOReadingACZero;
     }
 
 // second: convert raw signed value from input range to display range
@@ -796,8 +876,8 @@ int getInputRawFromDisplayValue(int aValue) {
     }
 
 // adjust for zero offset
-    if (MeasurementControl.ACRange) {
-        aValue += RawDSOReadingACZero;
+    if (MeasurementControl.isACMode) {
+        aValue += MeasurementControl.RawDSOReadingACZero;
     }
     return aValue;
 }
@@ -806,8 +886,8 @@ int getInputRawFromDisplayValue(int aValue) {
  * computes corresponding voltage from raw value
  */
 float getFloatFromRawValue(int aValue) {
-    if (MeasurementControl.ACRange) {
-        aValue -= RawDSOReadingACZero;
+    if (MeasurementControl.isACMode) {
+        aValue -= MeasurementControl.RawDSOReadingACZero;
     }
     return (actualDSORawToVoltFactor * aValue);
 }
@@ -826,14 +906,14 @@ float getFloatFromDisplayValue(uint8_t aDisplayValue) {
 void testDSOConversions(void) {
 // Prerequisites
     MeasurementControl.InputRangeIndexOtherThanDisplayRange = false;
-    MeasurementControl.ACRange = false;
+    MeasurementControl.isACMode = false;
     MeasurementControl.InputRangeIndex = 6;    // 1 Volt / div  Raw-1360 / div
     MeasurementControl.DisplayRangeIndex = 3;    // 0,1 Volt / div | Raw-136 / div | 827 max
     MeasurementControl.RawOffsetValueForDisplayRange = 100;
     autoACZeroCalibration();
     initRawToDisplayFactors();
-    FactorFromInputToDisplayRangeShift12 = (getRawAttenuationFactor(MeasurementControl.InputRangeIndex)
-            * (1 << DSO_INPUT_TO_DISPLAY_SHIFT)) / getRawAttenuationFactor(MeasurementControl.DisplayRangeIndex);
+    FactorFromInputToDisplayRangeShift12 = (RawAttenuationFactor[MeasurementControl.InputRangeIndex]
+            * (1 << DSO_INPUT_TO_DISPLAY_SHIFT)) / RawAttenuationFactor[MeasurementControl.DisplayRangeIndex];
 
 // Tests of raw <-> display conversion routines
     int tValue;
@@ -843,13 +923,13 @@ void testDSOConversions(void) {
     tValue = getInputRawFromDisplayValue(tValue);
 
     MeasurementControl.InputRangeIndexOtherThanDisplayRange = true;
-    MeasurementControl.ACRange = true;
+    MeasurementControl.isACMode = true;
 
-    tValue = getDisplayFrowRawInputValue(2200);    // since it is ac range
+    tValue = getDisplayFrowRawInputValue(2200);    // since it is AC range
     tValue = getInputRawFromDisplayValue(tValue);
 
     float tFloatValue;
-    tFloatValue = getFloatFromRawValue(400 + RawDSOReadingACZero);
+    tFloatValue = getFloatFromRawValue(400 + MeasurementControl.RawDSOReadingACZero);
     tFloatValue = getFloatFromDisplayValue(getDisplayFrowRawInputValue(400));
     tFloatValue = ADCToVoltFactor * 400;
     tFloatValue = tFloatValue / ADCToVoltFactor;

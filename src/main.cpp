@@ -3,7 +3,7 @@
  *
  * @date 17.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  */
@@ -22,11 +22,26 @@ extern "C" {
 #include "ff.h"
 #include "diskio.h"
 #include "usb_misc.h"
+#include "USART_DMA.h"
 }
 
 #include "TouchDSO.h"
+#ifdef LOCAL_DISPLAY_EXISTS
+#include "ADS7846.h"
+#endif
 #include "AccuCapacity.h"
 #include "GuiDemo.h"
+
+void connectCallbackHandler(void) {
+    BlueDisplay1.setFlagsAndSize(BD_FLAG_USE_MAX_SIZE, 320, 240);
+    BlueDisplay1.setCharacterMapping(0x81, 0x03A9); // Omega in UTF16
+    BlueDisplay1.setCharacterMapping(0xD3, 0x2302); // Home in UTF16
+    BlueDisplay1.setCharacterMapping(0xF8, 0x2103); // Degree Celsius in UTF16
+    BlueDisplay1.setCharacterMapping(0xD6, 0x21B2); // Enter in UTF16
+    BlueDisplay1.setCharacterMapping(0xD1, 0x21E7); // Ascending in UTF16
+    BlueDisplay1.setCharacterMapping(0xD2, 0x21E9); // Descending in UTF16
+    BlueDisplay1.setCharacterMapping(0xE0, 0x2195); // UP/Down in UTF16
+}
 
 FATFS Fatfs[1];
 RCC_ClocksTypeDef RCC_Clocks;
@@ -61,13 +76,19 @@ int main(void) {
 
     RTC_initialize_LSE();
     initalizeTone();
+#ifdef LOCAL_DISPLAY_EXISTS
     //init display early because assertions and timeouts want to be displayed :-)
-    initHY32D();
+    LocalDisplay.init();
     setDimDelayMillis(BACKLIGHT_DIM_DEFAULT_DELAY);
+#endif
     // initialize SPI for peripherals
     SPI1_initialize();
 
     Debug_IO_initalize();
+
+    Bluetoth_IO_initalize();
+    USART3_initialize(115200);
+    USART3_DMA_initialize();
 
     // sets EXTI4 to 3 3  - redefine user button prio to 0/3
     MICROSD_IO_initalize();
@@ -81,8 +102,11 @@ int main(void) {
     GyroscopeAndSPIInitialize();
     Gyroscope_IO_initialize();
 
-    if (isInitializedHY32D) {
+    if (isDisplayAvailable) {
+        registerSimpleConnectCallback(&connectCallbackHandler);
 
+        BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
+#ifdef LOCAL_DISPLAY_EXISTS
         //init touch controller
         TouchPanel.init();
 
@@ -97,6 +121,7 @@ int main(void) {
         } else {
             TouchPanel.doCalibration(true); //check EEPROM for calibration data
         }
+#endif
 
         initMainMenuPage();
 

@@ -46,7 +46,6 @@
 #define IRSND_SUPPORT_MATSUSHITA_PROTOCOL       0       // Matsushita           >= 10000                 ~200 bytes
 #define IRSND_SUPPORT_KASEIKYO_PROTOCOL         0       // Kaseikyo             >= 10000                 ~300 bytes
 #define IRSND_SUPPORT_DENON_PROTOCOL            0       // DENON, Sharp         >= 10000                 ~200 bytes
-
 // more protocols, enable here!                 Enable  Remarks                 F_INTERRUPTS            Program Space
 #define IRSND_SUPPORT_RC5_PROTOCOL              0       // RC5                  >= 10000                 ~150 bytes
 #define IRSND_SUPPORT_RC6_PROTOCOL              0       // RC6                  >= 10000                 ~250 bytes
@@ -58,7 +57,6 @@
 #define IRSND_SUPPORT_GRUNDIG_PROTOCOL          0       // Grundig              >= 10000                 ~300 bytes
 #define IRSND_SUPPORT_SIEMENS_PROTOCOL          0       // Siemens, Gigaset     >= 15000                 ~150 bytes
 #define IRSND_SUPPORT_NOKIA_PROTOCOL            0       // Nokia                >= 10000                 ~400 bytes
-
 // exotic protocols, enable here!               Enable  Remarks                 F_INTERRUPTS            Program Space
 #define IRSND_SUPPORT_KATHREIN_PROTOCOL         0       // Kathrein             >= 10000                 DON'T CHANGE, NOT SUPPORTED YET!
 #define IRSND_SUPPORT_NUBERT_PROTOCOL           0       // NUBERT               >= 10000                 ~100 bytes
@@ -74,7 +72,6 @@
 #define IRSND_SUPPORT_A1TVBOX_PROTOCOL          0       // A1 TV BOX            >= 15000 (better 20000)  ~200 bytes
 #define IRSND_SUPPORT_LEGO_PROTOCOL             0       // LEGO Power RC        >= 20000                 ~150 bytes
 #define IRSND_SUPPORT_IHELICOPTER_PROTOCOL      1       // iHelicopter          >= 15000                 ~? bytes
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * AVR section:
  *
@@ -88,7 +85,6 @@
  */
 #if defined(ATMEL_AVR)
 #  define IRSND_OCx                             IRSND_OC2B              // use OC2B
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * PIC C18 section:
  *
@@ -98,7 +94,7 @@
  */
 #elif defined(PIC_C18)
 #  define IRSND_OCx                             IRSND_PIC_CCP2          // Use PWMx for PIC
-                                                                        // change other PIC C18 specific settings:
+// change other PIC C18 specific settings:
 #  define F_CPU                                 48000000UL              // PIC frequency: set your freq here
 #  define Pre_Scaler                            4                       // define prescaler for timer2 e.g. 1,4,16
 #  define PIC_Scaler                            2                       // PIC needs /2 extra in IRSND_FREQ_32_KHZ calculation for right value
@@ -114,13 +110,11 @@
 #  define IRSND_TIMER_NUMBER                    17                      // on STM32F03 Discovery Board use timer 17 connected to B9
 #  define IRSND_TIMER_CHANNEL_NUMBER            1                       // only channel 1 can be used at the moment, others won't work
 #  define IRSND_GPIO_AF                         GPIO_AF_1               // TIM17 CH1
-
 #elif defined (ARM_STM32)                                               // use A6 as IR output on STM32
 #  define IRSND_PORT_LETTER                     A
 #  define IRSND_BIT_NUMBER                      6
 #  define IRSND_TIMER_NUMBER                    10
 #  define IRSND_TIMER_CHANNEL_NUMBER            1                       // only channel 1 can be used at the moment, others won't work
-
 /*---------------------------------------------------------------------------------------------------------------------------------------------------
  * Other target system
  *---------------------------------------------------------------------------------------------------------------------------------------------------

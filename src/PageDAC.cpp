@@ -3,7 +3,7 @@
  *
  * @date 16.01.2013
  * @author Armin Joachimsmeyer
- *      Email:   armin.joachimsmeyer@gmx.de
+ *      Email:   armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  */
@@ -111,15 +111,17 @@ static void ComputeFrequencyAndSetTimer(uint16_t aReloadValue, bool aSetTimer) {
      * Print values
      */
     snprintf(StringBuffer, sizeof StringBuffer, "%7luHz", sFrequency);
-    drawText(FREQUENCY_SLIDER_START_X + 3, TouchSliderHorizontal.getPositionYBottom() + 6, StringBuffer, 1, COLOR_BLUE,
+    BlueDisplay1.drawText(FREQUENCY_SLIDER_START_X + 3,
+            TouchSliderHorizontal.getPositionYBottom() + 6 + getTextAscend(TEXT_SIZE_11), StringBuffer, TEXT_SIZE_11, COLOR_BLUE,
             BACKGROUND_COLOR);
     if (sPeriodMicros > 100000) {
         snprintf(StringBuffer, sizeof StringBuffer, "%5lums", sPeriodMicros / 1000);
     } else {
-        snprintf(StringBuffer, sizeof StringBuffer, "%5luus", sPeriodMicros);
+        snprintf(StringBuffer, sizeof StringBuffer, "%5lu\xB5s", sPeriodMicros);
     }
-    drawText(TouchSliderHorizontal.getPositionXRight() - 8 * FONT_WIDTH, TouchSliderHorizontal.getPositionYBottom() + 6,
-            StringBuffer, 1, COLOR_BLUE, BACKGROUND_COLOR);
+    BlueDisplay1.drawText(TouchSliderHorizontal.getPositionXRight() - 8 * TEXT_SIZE_11_WIDTH,
+            TouchSliderHorizontal.getPositionYBottom() + 6 + getTextAscend(TEXT_SIZE_11), StringBuffer, TEXT_SIZE_11, COLOR_BLUE,
+            BACKGROUND_COLOR);
 }
 
 static void doChangeDACFrequency(TouchButton * const aTheTouchedButton, int16_t aValue) {
@@ -157,15 +159,6 @@ static void doChangeDACFrequency(TouchButton * const aTheTouchedButton, int16_t 
             TouchSliderHorizontal.printValue();
         }
     }
-}
-
-void initDACPage(void) {
-    DAC_init();
-    DAC_TriangleAmplitude(10); //log2(DAC_START_AMPLITUDE)
-    sAmplitude = DAC_START_AMPLITUDE;
-    DAC_Timer_initialize(0xFF); // Don't really need value here
-    sLastFrequencySliderValue = DAC_START_FREQ_SLIDER_VALUE;
-    ComputeFrequencyAndSetTimer(ComputeReloadValue(sLastFrequencySliderValue), false);
 }
 
 uint16_t doDACVolumeSlider(TouchSlider * const aTheTouchedSlider, uint16_t aAmplitude) {
@@ -218,17 +211,37 @@ void doDACStop(TouchButton * const aTheTouchedButton, int16_t aValue) {
     aTheTouchedButton->setRedGreenButtonColorAndDraw(aValue);
 }
 
+void drawDACPage(void) {
+    TouchButtonMainHome->drawButton();
+    TouchButtonSetWaveform->drawButton();
+    TouchButtonStartStop->drawButton();
+    TouchButtonAutorepeatFrequencyPlus->drawButton();
+    TouchButtonAutorepeatFrequencyMinus->drawButton();
+
+    TouchSliderVertical.drawSlider();
+    TouchSliderVertical2.drawSlider();
+    TouchSliderHorizontal.drawSlider();
+}
+
+void initDACPage(void) {
+    DAC_init(); // sets mode triangle
+    DAC_TriangleAmplitude(10); //log2(DAC_START_AMPLITUDE)
+    sAmplitude = DAC_START_AMPLITUDE;
+    DAC_Timer_initialize(0xFF); // Don't really need value here
+    sLastFrequencySliderValue = DAC_START_FREQ_SLIDER_VALUE;
+}
+
 void startDACPage(void) {
-    clearDisplay(COLOR_BACKGROUND_DEFAULT);
+    BlueDisplay1.clearDisplay(COLOR_BACKGROUND_DEFAULT);
     TouchSlider::setDefaultBarColor(TOUCHSLIDER_DEFAULT_BAR_COLOR);
     TouchSlider::setDefaultSliderColor(COLOR_BLUE);
 
     //1. row
     int tPosY = 0;
     TouchButtonStartStop = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-            COLOR_RED, StringStop, 2, true, &doDACStop);
+            COLOR_RED, StringStop, TEXT_SIZE_22, BUTTON_FLAG_DO_BEEP_ON_TOUCH, true, &doDACStop);
     TouchButtonStartStop->setRedGreenButtonColor();
-    initMainHomeButtonWithPosition(BUTTON_WIDTH_3_POS_3, 0, true);
+    initMainHomeButtonWithPosition(BUTTON_WIDTH_3_POS_3, 0, false);
 
     //2. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
@@ -240,12 +253,12 @@ void startDACPage(void) {
     // 3. row
     tPosY += BUTTON_HEIGHT_4_LINE_2;
     TouchButtonSetWaveform = TouchButton::allocAndInitSimpleButton(BUTTON_WIDTH_3_POS_2, tPosY, BUTTON_WIDTH_3, BUTTON_HEIGHT_4,
-            COLOR_RED, StringTriangle, 1, 1, &doChangeDACWaveform);
+            COLOR_RED, StringTriangle, TEXT_SIZE_11, BUTTON_FLAG_DO_BEEP_ON_TOUCH, 1, &doChangeDACWaveform);
 
     TouchButtonAutorepeatFrequencyMinus = TouchButtonAutorepeat::allocAndInitSimpleButton(FREQUENCY_SLIDER_START_X + 6, tPosY,
-            BUTTON_WIDTH_5, BUTTON_HEIGHT_4, COLOR_RED, StringMinus, 2, 1, &doChangeDACFrequency);
+            BUTTON_WIDTH_5, BUTTON_HEIGHT_4, COLOR_RED, StringMinus, TEXT_SIZE_22, 1, &doChangeDACFrequency);
     TouchButtonAutorepeatFrequencyPlus = TouchButtonAutorepeat::allocAndInitSimpleButton(230, tPosY, BUTTON_WIDTH_5,
-            BUTTON_HEIGHT_4, COLOR_RED, StringPlus, 2, -1, &doChangeDACFrequency);
+            BUTTON_HEIGHT_4, COLOR_RED, StringPlus, TEXT_SIZE_22, -1, &doChangeDACFrequency);
     TouchButtonAutorepeatFrequencyMinus->setButtonAutorepeatTiming(600, 100, 10, 20);
     TouchButtonAutorepeatFrequencyPlus->setButtonAutorepeatTiming(600, 100, 10, 20);
 
@@ -255,23 +268,22 @@ void startDACPage(void) {
             TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doDACVolumeSlider, &mapDACVolumeValue);
 
 //Offset slider
-    TouchSliderVertical2.initSlider(DISPLAY_WIDTH - (TOUCHSLIDER_OVERALL_SIZE_FACTOR * DAC_SLIDER_SIZE) - 1, 20, DAC_SLIDER_SIZE,
-            VERTICAL_SLIDER_MAX_VALUE, VERTICAL_SLIDER_MAX_VALUE / 2, sLastOffsetSliderValue, "Offset",
+    TouchSliderVertical2.initSlider(BlueDisplay1.getDisplayWidth() - (TOUCHSLIDER_OVERALL_SIZE_FACTOR * DAC_SLIDER_SIZE) - 1, 20,
+            DAC_SLIDER_SIZE, VERTICAL_SLIDER_MAX_VALUE, VERTICAL_SLIDER_MAX_VALUE / 2, sLastOffsetSliderValue, "Offset",
             TOUCHSLIDER_DEFAULT_TOUCH_BORDER, TOUCHSLIDER_SHOW_BORDER | TOUCHSLIDER_SHOW_VALUE, &doDACOffsetSlider,
             &mapDACOffsetValue);
-    TouchSliderVertical2.setXOffsetValue(-(2 * FONT_WIDTH));
+    TouchSliderVertical2.setXOffsetValue(-(2 * TEXT_SIZE_11_WIDTH));
 
 // draw buttons and slider
-    TouchButtonSetWaveform->drawButton();
-    TouchButtonStartStop->drawButton();
-    TouchButtonAutorepeatFrequencyPlus->drawButton();
-    TouchButtonAutorepeatFrequencyMinus->drawButton();
+    drawDACPage();
+    registerSimpleResizeAndReconnectCallback(&drawDACPage);
 
-    TouchSliderVertical.drawSlider();
-    TouchSliderVertical2.drawSlider();
-    TouchSliderHorizontal.drawSlider();
     ComputeFrequencyAndSetTimer(ComputeReloadValue(sLastFrequencySliderValue), true);
     DAC_Start();
+}
+
+void loopDACPage(void) {
+    checkAndHandleEvents();
 }
 
 void stopDACPage(void) {

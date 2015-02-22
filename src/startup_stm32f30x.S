@@ -297,8 +297,10 @@ g_pfnVectors:
 	.weak	EXTI0_IRQHandler
 	.thumb_set EXTI0_IRQHandler,Default_Handler
 
-//	.weak	EXTI1_IRQHandler
-//	.thumb_set EXTI1_IRQHandler,Default_Handler
+#ifndef LOCAL_DISPLAY_EXISTS
+	.weak	EXTI1_IRQHandler
+	.thumb_set EXTI1_IRQHandler,Default_Handler
+#endif
 
 	.weak	EXTI2_TS_IRQHandler
 	.thumb_set EXTI2_TS_IRQHandler,Default_Handler
@@ -312,8 +314,8 @@ g_pfnVectors:
 //	.weak	DMA1_Channel1_IRQHandler
 //	.thumb_set DMA1_Channel1_IRQHandler,Default_Handler
 
-	.weak	DMA1_Channel2_IRQHandler
-	.thumb_set DMA1_Channel2_IRQHandler,Default_Handler
+//	.weak	DMA1_Channel2_IRQHandler
+//	.thumb_set DMA1_Channel2_IRQHandler,Default_Handler
 
 	.weak	DMA1_Channel3_IRQHandler
 	.thumb_set DMA1_Channel3_IRQHandler,Default_Handler

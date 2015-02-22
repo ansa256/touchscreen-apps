@@ -3,7 +3,7 @@
  *
  * @date 05.12.2012
  * @author Armin Joachimsmeyer
- * armin.joachimsmeyer@gmx.de
+ * armin.joachimsmeyer@gmail.com
  * @copyright LGPL v3 (http://www.gnu.org/licenses/lgpl.html)
  * @version 1.0.0
  *
@@ -49,10 +49,10 @@
  * C	|5	|SD CARD	|CS
  * C	|6	|TIM3		|Tone signal output
  * C	|7,8,9|DSO	    |Attenuator control
- * C	|10	|USART3+4	|TX - not used yet
- * C	|11	|USART3+4	|RX - not used yet
+ * C	|10	|USART3+4	|TX
+ * C	|11	|USART3+4	|RX
  * C	|12	|DSO		|AC mode of preamplifier
- * C	|13	|	        |
+ * C	|13	|Bluetooth  |HC-05 Bluetooth paired in
  * C	|14	|Intern		|Clock
  * C	|15	|Intern		|Clock
  * &nbsp;|&nbsp;|&nbsp;|&nbsp;
@@ -110,6 +110,13 @@
  * 3 0	| 0x1B | DMA1_Channel1_IRQn	    | ADC DMA
  * 3 3	| 0x46 | TIM6_DAC_IRQn		    | ADC Timer - not used yet
  * 3 3  | 0x1A | EXTI4                  | MMC card detect
+ * 3 3  | 0x27 | USART3_IRQn            | Usart3 global
+ *
+ * DMA usage
+ * ----------
+ * DMA | Channel | Prio | Peripheral
+ *   1 |       1 | high | ADC1
+ *   1 |       2 |  low | USART3_TX
  *
  */
 
@@ -119,15 +126,13 @@
 #include "stm32f30x.h"
 #include <stdbool.h>
 
-#include "integer.h" // for get_fattime
-#include <time.h>
-
+#include "integer.h" // for get_fattime#include <time.h>
 /** @addtogroup Peripherals_Library
  * @{
  */
 
 typedef enum {
-	LOW = 0, HIGH
+    LOW = 0, HIGH
 } IOLevel;
 
 /* DEBUG */
@@ -147,7 +152,6 @@ void Debug_IO_initalize(void);
 
 #define HY32D_DATA_CONTROL_PIN                GPIO_Pin_4
 #define HY32D_DATA_CONTROL_GPIO_PORT          GPIOB  // dedicated Ports are needed by HY32D.cpp for single line setting
-
 #define HY32D_RD_PIN                          GPIO_Pin_10
 #define HY32D_RD_GPIO_PORT                    GPIOB
 
@@ -159,7 +163,7 @@ void Debug_IO_initalize(void);
 
 #define DAC_TIMER_MIN_RELOAD_VALUE 4
 
-void HY32D_IO_initalize(void);
+void MI0283QT2_IO_initalize(void);
 
 void ADS7846_IO_initalize(void);
 bool ADS7846_getInteruptLineLevel(void);
@@ -179,15 +183,17 @@ void Gyroscope_IO_initialize(void);
 void GyroscopeAndSPIInitialize(void);
 void initAcceleratorCompassChip(void);
 
-// ADC
+/*
+ * ADC
+ */
 #define DSO_ADC_ID   		   	ADC1
 #define ADC1_INPUT1_CHANNEL     ADC_Channel_2
 #define ADC1_INPUT2_CHANNEL     ADC_Channel_3
 #define ADC1_INPUT3_CHANNEL     ADC_Channel_4
 
-#define DSO_DMA_CHANNEL   		DMA1_Channel1
+#define DSO_DMA_CHANNEL   		DMA1_Channel1    // The only channel for ADC1
 #define ADC_DEFAULT_TIMEOUT    2 // in microseconds
-#define ADC_MAX_CONVERSION_VALUE (4096 -1)
+#define ADC_MAX_CONVERSION_VALUE (4096 -1) // 12 bit
 
 void ADC12_init(void);
 void ADC_init(void);
@@ -203,8 +209,8 @@ uint32_t ADC_getCFGR(void);
 // ADC attenuator and range
 void DSO_initializeAttenuatorAndAC(void);
 void DSO_setAttenuator(uint8_t aValue);
-void DSO_setACRange(bool aValue);
-bool DSO_getACRange(void);
+void DSO_setACMode(bool aValue);
+bool DSO_getACMode(void);
 
 // ADC timer
 void ADC_initalizeTimer6();
@@ -247,6 +253,7 @@ extern bool RTC_DateIsValid; // true if year != 0
 void RTC_initialize_LSE(void);
 DWORD get_fattime(void);
 void fillTimeStructure(struct tm *aTimeStructurePtr);
+uint8_t RTC_getSecond(void);
 int RTC_getTimeStringForFile(char * aStringBuffer);
 int RTC_getDateStringForFile(char * aStringBuffer);
 int RTC_getTimeString(char * StringBuffer);
@@ -257,19 +264,21 @@ uint32_t RTC_ReadBackupDataRegister(uint8_t aIndex);
 
 // Misc
 __STATIC_INLINE uint32_t getSysticValue(void) {
-	return SysTick->VAL;
+    return SysTick ->VAL;
 }
 __STATIC_INLINE uint32_t getSysticReloadValue(void) {
-	return SysTick->LOAD;
+    return SysTick ->LOAD;
 }
 __STATIC_INLINE void clearSystic(void) {
-	SysTick->VAL = 0;
+    SysTick ->VAL = 0;
 }
 __STATIC_INLINE bool hasSysticCounted(void) {
-	return (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk);
+    return (SysTick ->CTRL & SysTick_CTRL_COUNTFLAG_Msk);
 }
 
-// Tone
+/*
+ * Tone
+ */
 #define FEEDBACK_TONE_NO_ERROR 0
 #define FEEDBACK_TONE_SHORT_ERROR 1
 #define FEEDBACK_TONE_LONG_ERROR 2
@@ -282,7 +291,9 @@ void FeedbackTone(unsigned int aFeedbackType);
 void EndTone(void);
 void noTone(void);
 
-// PWM
+/*
+ * PWM
+ */
 void PWM_BL_initalize(void);
 void PWM_BL_setOnRatio(uint32_t power);
 
@@ -315,6 +326,13 @@ void MICROSD_CSEnable(void);
 void MICROSD_CSDisable(void);
 void MICROSD_ClearITPendingBit(void);
 
+#ifdef LOCAL_DISPLAY_EXISTS
+void Bluetoth_IO_initalize(void);
+bool USART_isBluetoothPaired(void);
+#else
+#define void Bluetoth_IO_initalize(void) ((void)0)
+#define USART_isBluetoothPaired() (true)
+#endif
 /** @} */
 
 #endif /* STM32F30XPERIPHERALS_H_ */
